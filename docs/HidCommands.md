@@ -1,6 +1,6 @@
 # Arctis Nova Pro Wireless — HID Command Reference
 
-_Last verified: `2026-05-01` — derived from `baseStationEvents.ts`, `oled/service.ts`, Arctis-on-Linux, and Arctis Nova 7X protocol_
+_Last verified: `2026-05-01` — derived from `baseStationEvents.ts`, `oled/service.ts`, Arctis-on-Linux, Arctis Nova 7X protocol, and direct HID capture on PID `0x12E0`_
 
 This document catalogues every HID packet format discovered for the Arctis Nova Pro Wireless base station (USB receiver). It is written so another agent or developer can re-implement compatible HID communication without reading the source files.
 
@@ -182,7 +182,7 @@ sidetone_level = data[2]   // 0–3
 
 **State field:** `sidetone_level` (0–3)
 
-> Note: the `0x20` query response also contains a sidetone field at `data[3]`, but in a different (larger) raw scale. The relationship between the two representations needs further mapping.
+> The `0x20` query response encodes sidetone at `data[18]` (same 0–3 scale). `data[3]` in `0x20` is unrelated to sidetone.
 
 ---
 
@@ -315,59 +315,75 @@ mic_volume = data[2]   // 1 (min) – 10 (max)
 
 ---
 
-### 3.11 Unknown `0x83`
+### 3.11 Dim Screen Timeout — `0x83` ✅
 
-Fires when the user adjusts a setting with range 0–6. Observed in session `2026-05-01` immediately after mic volume change and before home screen toggle. **Likely: Dim Screen timeout or level.**
+Fires when the user changes the OLED dim-screen timeout.
 
 ```
-[reportId, 0x83, value, ...]
+[reportId, 0x83, timeout, ...]
 ```
 
 | Byte | Meaning |
 |---|---|
-| 2 | Setting value (0–6 observed) |
+| 0 | Report ID |
+| 1 | Command `0x83` |
+| 2 | Timeout step: `0`=off, `1`=1 min, `2`=5 min, `3`=10 min, `4`=15 min, `5`=30 min, `6`=60 min |
+
+**State field:** `dim_screen_timeout`
 
 ---
 
-### 3.12 Unknown `0x89`
+### 3.12 Home Screen Mode — `0x89` ✅
 
-Fires as a binary toggle (0 or 1). Observed immediately after `0x83` in session `2026-05-01`. **Likely: Home Screen mode (0 = detailed, 1 = simple or vice versa).**
+Fires when the user toggles the OLED home screen display style.
 
 ```
-[reportId, 0x89, value, ...]
+[reportId, 0x89, mode, ...]
 ```
 
 | Byte | Meaning |
 |---|---|
-| 2 | `0` or `1` |
+| 0 | Report ID |
+| 1 | Command `0x89` |
+| 2 | Mode: `0` or `1` (detailed / simple — exact assignment TBD) |
+
+**State field:** `home_screen_mode`
 
 ---
 
-### 3.13 Unknown `0xBF`
+### 3.13 Mic LED Brightness — `0xBF` ✅
 
-Fires when the user adjusts a setting with range 1–10. Observed immediately after `0x89` in session `2026-05-01`. **Likely: Mic LED brightness.**
+Fires when the user adjusts the microphone mute-indicator LED brightness.
 
 ```
-[reportId, 0xBF, value, ...]
+[reportId, 0xBF, level, ...]
 ```
 
 | Byte | Meaning |
 |---|---|
-| 2 | Setting value (1–10 observed) |
+| 0 | Report ID |
+| 1 | Command `0xBF` |
+| 2 | Brightness level (1–10) |
+
+**State field:** `mic_led_brightness` (1–10)
 
 ---
 
-### 3.14 Unknown `0xC1`
+### 3.14 Auto Off Timeout — `0xC1` ✅
 
-Fires when the user adjusts a setting with range 0–6. Observed immediately after `0xBF` in session `2026-05-01`. **Likely: Auto Off timeout.**
+Fires when the user changes the automatic power-off timeout.
 
 ```
-[reportId, 0xC1, value, ...]
+[reportId, 0xC1, timeout, ...]
 ```
 
 | Byte | Meaning |
 |---|---|
-| 2 | Setting value (0–6 observed; 0 = off / never?) |
+| 0 | Report ID |
+| 1 | Command `0xC1` |
+| 2 | Timeout step: `0`=off, `1`=1 min, `2`=5 min, `3`=10 min, `4`=15 min, `5`=30 min, `6`=60 min |
+
+**State field:** `auto_off_timeout`
 
 ---
 
@@ -469,25 +485,25 @@ Enables or disables the ChatMix feature on the base station.
 
 | Field | Source command | Type |
 |---|---|---|
-| `headset_battery_percent` | `0xB7` | `number \| null` (0–100) |
-| `base_battery_percent` | `0xB7` | `number \| null` (0–100) |
+| `headset_battery_percent` | `0xB7`, `0xB0`[6] | `number \| null` (0–100) |
+| `base_battery_percent` | `0xB7`, `0xB0`[7] | `number \| null` (0–100) |
 | `base_station_connected` | device presence | `boolean \| null` |
 | `headset_volume_percent` | `0x25` | `number \| null` (0–100) |
 | `anc_mode` | `0xBD`, `0xB5` | `"off" \| "transparency" \| "anc" \| null` |
-| `mic_mute` | `0xBB` | `boolean \| null` |
-| `sidetone_level` | `0x39` | `number \| null` (0–3) |
+| `mic_mute` | `0xBB`, `0xB0`[9] | `boolean \| null` |
+| `sidetone_level` | `0x39`, `0x20`[18] | `number \| null` (0–3) |
 | `connected` | `0xB5` | `boolean \| null` |
 | `wireless` | `0xB5` | `boolean \| null` |
 | `bluetooth` | `0xB5` | `boolean \| null` |
 | `oled_brightness` | `0x85` | `number \| null` (1–10) |
-| `chatmix_game` | `0x45` | `number \| null` (0–100) |
-| `chatmix_chat` | `0x45` | `number \| null` (0–100) |
-| `gain_level` | `0x27` | `number \| null` (1=low, 2=high; range TBD) |
-| `mic_volume` | `0x37` | `number \| null` (1–10) |
-| `unknown_0x83` | `0x83` | `number \| null` (0–6; dim screen?) |
-| `unknown_0x89` | `0x89` | `number \| null` (0/1; home screen mode?) |
-| `unknown_0xBF` | `0xBF` | `number \| null` (1–10; mic LED?) |
-| `unknown_0xC1` | `0xC1` | `number \| null` (0–6; auto off?) |
+| `chatmix_game` | `0x45`, `0x20`[20] candidate | `number \| null` (0–100) |
+| `chatmix_chat` | `0x45`, `0x20`[21] candidate | `number \| null` (0–100) |
+| `gain_level` | `0x27`, `0x20`[4] | `number \| null` (1=low, 2=high) |
+| `mic_volume` | `0x37`, `0x20`[17] | `number \| null` (1–10) |
+| `dim_screen_timeout` | `0x83` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
+| `home_screen_mode` | `0x89` | `number \| null` (0 or 1) |
+| `mic_led_brightness` | `0xBF` | `number \| null` (1–10) |
+| `auto_off_timeout` | `0xC1` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
 
 ---
 
@@ -499,36 +515,46 @@ All queries use: `[0x06, cmdByte, 0x00, ..., 0x00]` (64 bytes). Confirmed in ses
 
 #### `0xB0` — Status ✅
 
-Response: `[0x06, 0xB0, ?, ?, ?, ?, headset_bat, dock_bat, ?, ?, ?, ?, ?, ...]`
+Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, anc?, vol?, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0xB0` | Command echo |
-| 2–5 | `00 00 01 00` | Partially unknown; `[4]=0x01` may be charging state |
-| 6 | `0x00`–`0x08` | Headset battery raw (÷ 8 × 100 = %) |
-| 7 | `0x00`–`0x08` | Dock battery raw (÷ 8 × 100 = %) |
-| 8–15 | variable | Meaning TBD |
+| 2–3 | `0x00` | Unknown |
+| 4 | `0x01` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active (mirrors `0xB5` data[2]) ✅ |
+| 5 | `0x00` / `0x01` | **BT state** — `0x00`=off, `0x01`=BT active (mirrors `0xB5` data[3]) ✅ |
+| 6 | `0x00`–`0x08` | **Headset battery** raw (÷ 8 × 100 = %) ✅ |
+| 7 | `0x00`–`0x08` | **Dock battery** raw (÷ 8 × 100 = %) ✅ |
+| 8 | `0x08` | Constant |
+| 9 | `0x00` / `0x01` | **Mic mute** — `0x00`=unmuted, `0x01`=muted ✅ |
+| 10 | `0x01` | **ANC mode** candidate (constant `0x01`=off?); needs targeted experiment |
+| 11 | `0x0A`=10 | **Headset volume** candidate (0–10 scale?); constant at max in all sessions — needs targeted experiment |
+| 12–15 | `05 00 08 08` | TBD |
 
-> Fields [2-5] and [8+] not yet fully mapped. **Do not assume Nova 7X offsets apply here.**
+> Fields [10] and [11] are candidates only. Confirm by toggling ANC / changing volume and re-querying.
 
 #### `0x20` — Mic / EQ Params ✅
 
-Response: `[0x06, 0x20, ?, ?, ?, unk, unk, eq×10, mic_vol?, ...]`
+Response: `[0x06, 0x20, ?, ?, gain, 0, 0, eq×10, mic_vol, sidetone, ?, game?, chat?, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0x20` | Command echo |
-| 2 | `0x01` (both sessions) | **TBD** — not mic volume (0x37 events started at 9, not 1); possibly gain level |
-| 3 | `0x1A`=26, `0x1D`=29 | **TBD** — changed between sessions without a matching `0x39` event; not the 0–3 sidetone step; possibly sidetone in hardware register scale (0–100?) or another setting |
-| 4 | `0x02` | **TBD** |
+| 2 | `0x01` | Unknown (constant across all sessions) |
+| 3 | `0x1D`=29, `0x21`=33 | Unknown (not sidetone, not mic vol; candidate: raw sidetone register or dim/LED setting changed in session 210829) |
+| 4 | `0x01` / `0x02` | **Gain level** — `0x01`=low, `0x02`=high ✅ |
 | 5–6 | `0x00` | Padding/unknown |
-| 7–16 | 10 bytes | EQ band values (0–40, `0x14`=20=center=0 dB) ✓ |
-| 17 | `0x0A`=10 (both sessions) | **Candidate: mic volume** — matches 1–10 range of `0x37` events; user had vol at max both sessions |
-| 18+ | variable | TBD |
+| 7–16 | 10 bytes | **EQ band values** (0–40, `0x14`=20=flat/0 dB) ✅ |
+| 17 | `0x01`–`0x0A` | **Mic volume** (1–10) ✅ |
+| 18 | `0x00`–`0x03` | **Sidetone level** (0=off, 1=low, 2=medium, 3=high) ✅ |
+| 19 | `0x02` | Unknown |
+| 20 | `0x64`=100 | **ChatMix game** candidate (0–100) — persistent match with `0x45` event values |
+| 21 | `0x53`=83 | **ChatMix chat** candidate (0–100) — persistent match with `0x45` event values |
+| 22–25 | `0x64`, `0x00`, `0x64`, `0x64` | TBD |
 
-> **Fields [2], [3], [4]** are disputed. Do not use these values until confirmed with targeted experiments (e.g. set mic volume to a known value, run query, check data[17]; set sidetone to 0, run query, check data[3]).
+> **data[3]** requires a targeted experiment to resolve. **data[20/21]** ChatMix assignment is strongly indicated but not yet 100% confirmed.
 
 #### `0x10` — Firmware Version ✅
 
