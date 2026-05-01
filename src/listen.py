@@ -76,12 +76,17 @@ def decode_packet(data: list[int], source: str) -> str | None:
     if cmd == 0xB5 and len(data) > 4:
         wireless  = data[4] == 8
         bluetooth = data[3] == 1
-        return f"{tag}  Connectivity    → wireless={wireless} bluetooth={bluetooth}"
+        # data[2]: 0x01 = 2.4 GHz only; 0x04 = 2.4 GHz + Bluetooth active
+        # data[3]: 0x01 = BT active; 0x02 = BT transitioning/paired not streaming
+        return (
+            f"{tag}  Connectivity    → wireless={wireless} bluetooth={bluetooth}"
+            f"  [2]=0x{data[2]:02X} [3]=0x{data[3]:02X}"
+        )
 
     if cmd == 0xB7 and len(data) > 3:
         h = round(min(100, data[2] / 8 * 100))
         d = round(min(100, data[3] / 8 * 100))
-        # data[4] is consistently 0x08 – meaning TBD
+        # data[4]: 0x08 = headset in dock; 0x01 = headset removed (bat reads 0%)
         extra = f"  [4]=0x{data[4]:02X}" if len(data) > 4 and data[4] != 0 else ""
         return f"{tag}  Battery         → headset={h}% dock={d}%{extra}"
 
@@ -116,6 +121,30 @@ def decode_packet(data: list[int], source: str) -> str | None:
         label = GAIN_LABELS.get(data[2], f"unknown({data[2]})")
         return f"{tag}  Gain Level      → {label} (raw={data[2]})"
 
+    # ── Confirmed incoming event: Mic Volume ─────────────────────────────────
+    # 0x37 was assumed to be a write-only command (Nova 7X); on Nova Pro it is
+    # also an incoming event fired when the user adjusts mic volume.
+
+    if cmd == 0x37 and len(data) > 2:
+        return f"{tag}  Mic Volume      → level={data[2]}  (range observed: 1–10)"
+
+    # ── Unidentified events — user actions known, exact meanings pending ──────
+    # Triggered in session 2026-05-01 session 2. Order matches user actions:
+    # 0x83 = dim screen, 0x89 = home screen mode, 0xBF = mic LED, 0xC1 = auto off
+
+    if cmd == 0x83 and len(data) > 2:
+        return f"{tag}  0x83 (dim screen?)   → {data[2]}  (range 0–6)"
+
+    if cmd == 0x89 and len(data) > 2:
+        label = {0: "detailed?", 1: "simple?"}.get(data[2], f"?({data[2]})")
+        return f"{tag}  0x89 (home screen?)  → {data[2]} ({label})"
+
+    if cmd == 0xBF and len(data) > 2:
+        return f"{tag}  0xBF (mic LED?)      → {data[2]}  (range 1–10)"
+
+    if cmd == 0xC1 and len(data) > 2:
+        return f"{tag}  0xC1 (auto off?)     → {data[2]}  (range 0–6)"
+
     # ── Confirmed query responses ─────────────────────────────────────────────
     # Offsets: data[0]=reportId  data[1]=cmd  data[2+]=payload
 
@@ -130,12 +159,15 @@ def decode_packet(data: list[int], source: str) -> str | None:
             f"[2-5]={_raw(data[2:6])}  [8-15]={_raw(data[8:16])}"
         )
 
-    # Gain level at [2], sidetone raw at [3] (scale TBD), 10 EQ bands at [7-16].
-    if cmd == 0x20 and len(data) > 16:
+    # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).
+    # [2], [3], [4] meanings disputed – see HidCommands.md §6.1.
+    # [17] is a candidate for mic volume (range 1-10, matches 0x37 events).
+    if cmd == 0x20 and len(data) > 17:
         eq_bands = _raw(data[7:17])
         return (
             f"{tag}  Mic/EQ          → "
-            f"gain={data[2]}  sidetone_raw={data[3]}  [4]={data[4]}  "
+            f"[2]={data[2]}  [3]={data[3]}  [4]={data[4]}  "
+            f"[17]={data[17]} (mic_vol?)  "
             f"eq_bands=[{eq_bands}]"
         )
 
