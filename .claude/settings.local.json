@@ -2,7 +2,20 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebSearch",
+      "WebFetch(domain:chameth.com)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:aarol.dev)",
+      "WebFetch(domain:patchew.org)",
+      "WebFetch(domain:lkml.org)",
+      "WebFetch(domain:www.phoronix.com)",
+      "WebFetch(domain:downloads.steelseriescdn.com)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)"
     ]
   }
 }
