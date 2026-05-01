@@ -92,9 +92,9 @@ Fires on connection-state changes (wireless link established/lost, Bluetooth).
 |---|---|
 | 0 | Report ID |
 | 1 | Command `0xB5` |
-| 2 | Always `0x01` in all observations; meaning TBD (possibly "base station present") |
-| 3 | Bluetooth flag: `1` = Bluetooth active |
-| 4 | Wireless flag: `8` = wireless (2.4 GHz) active; `4` observed when headset goes out of range |
+| 2 | Connection mode: `0x01` = 2.4 GHz only; `0x04` = 2.4 GHz + Bluetooth active |
+| 3 | Bluetooth state: `0x00` = off, `0x01` = BT active, `0x02` = BT transitioning/paired |
+| 4 | Wireless link: `0x08` = 2.4 GHz active, `0x04` = wireless lost / out of range |
 
 **Decoding:**
 ```
@@ -106,7 +106,7 @@ if wireless → force anc_mode = "off"
 
 **State fields:** `connected`, `wireless`, `bluetooth`, `anc_mode` (forced `"off"` when wireless)
 
-> Observed values for data[4]: `0x08` (wireless active), `0x04` (wireless lost/out of range).
+> data[4] observed values: `0x08` (wireless active), `0x04` (wireless lost). data[2] observed: `0x01` (2.4 GHz only), `0x04` (2.4 GHz + BT active). data[3] observed: `0x00` (no BT), `0x01` (BT streaming), `0x02` (BT paired, not streaming).
 
 ---
 
@@ -124,7 +124,7 @@ Fires on battery-level updates for both the headset and the charging dock.
 | 1 | Command `0xB7` |
 | 2 | Headset battery level (0–8 raw) |
 | 3 | Dock/base battery level (0–8 raw) |
-| 4 | Observed as `0x08` consistently; meaning TBD |
+| 4 | Dock presence: `0x08` = headset physically in dock; `0x01` = headset removed (battery reads 0%) |
 
 **Decoding:**
 ```
@@ -290,6 +290,87 @@ gain_level = data[2]   // observed: 1=low, 2=high; full range TBD
 
 ---
 
+### 3.10 Mic Volume — `0x37` ✅
+
+Fires when the user adjusts microphone volume.
+
+```
+[reportId, 0x37, level, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID (`0x07`) |
+| 1 | Command `0x37` |
+| 2 | Mic volume level (1–10) |
+
+**Decoding:**
+```
+mic_volume = data[2]   // 1 (min) – 10 (max)
+```
+
+**State field:** `mic_volume` (1–10)
+
+> `0x37` was assumed to be a host→device write command only (Nova 7X origin). On the Nova Pro it is also an **incoming event**. Whether it is also writable on the Nova Pro is not yet confirmed.
+
+---
+
+### 3.11 Unknown `0x83`
+
+Fires when the user adjusts a setting with range 0–6. Observed in session `2026-05-01` immediately after mic volume change and before home screen toggle. **Likely: Dim Screen timeout or level.**
+
+```
+[reportId, 0x83, value, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 2 | Setting value (0–6 observed) |
+
+---
+
+### 3.12 Unknown `0x89`
+
+Fires as a binary toggle (0 or 1). Observed immediately after `0x83` in session `2026-05-01`. **Likely: Home Screen mode (0 = detailed, 1 = simple or vice versa).**
+
+```
+[reportId, 0x89, value, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 2 | `0` or `1` |
+
+---
+
+### 3.13 Unknown `0xBF`
+
+Fires when the user adjusts a setting with range 1–10. Observed immediately after `0x89` in session `2026-05-01`. **Likely: Mic LED brightness.**
+
+```
+[reportId, 0xBF, value, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 2 | Setting value (1–10 observed) |
+
+---
+
+### 3.14 Unknown `0xC1`
+
+Fires when the user adjusts a setting with range 0–6. Observed immediately after `0xBF` in session `2026-05-01`. **Likely: Auto Off timeout.**
+
+```
+[reportId, 0xC1, value, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 2 | Setting value (0–6 observed; 0 = off / never?) |
+
+---
+
 ## 4. Outgoing Commands (Host → Device)
 
 ### 4.1 Return to SteelSeries UI — `0x95` ✅
@@ -402,6 +483,11 @@ Enables or disables the ChatMix feature on the base station.
 | `chatmix_game` | `0x45` | `number \| null` (0–100) |
 | `chatmix_chat` | `0x45` | `number \| null` (0–100) |
 | `gain_level` | `0x27` | `number \| null` (1=low, 2=high; range TBD) |
+| `mic_volume` | `0x37` | `number \| null` (1–10) |
+| `unknown_0x83` | `0x83` | `number \| null` (0–6; dim screen?) |
+| `unknown_0x89` | `0x89` | `number \| null` (0/1; home screen mode?) |
+| `unknown_0xBF` | `0xBF` | `number \| null` (1–10; mic LED?) |
+| `unknown_0xC1` | `0xC1` | `number \| null` (0–6; auto off?) |
 
 ---
 
@@ -428,18 +514,21 @@ Response: `[0x06, 0xB0, ?, ?, ?, ?, headset_bat, dock_bat, ?, ?, ?, ?, ?, ...]`
 
 #### `0x20` — Mic / EQ Params ✅
 
-Response: `[0x06, 0x20, gain, sidetone_raw, unk, unk, unk, eq×10, ...]`
+Response: `[0x06, 0x20, ?, ?, ?, unk, unk, eq×10, mic_vol?, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0x20` | Command echo |
-| 2 | `0x01` | Gain level (matches `0x27` event value) |
-| 3 | raw value | Sidetone in a raw scale (observed `0x1A`=26); mapping to 0–3 steps TBD |
-| 4 | `0x02` | Unknown |
+| 2 | `0x01` (both sessions) | **TBD** — not mic volume (0x37 events started at 9, not 1); possibly gain level |
+| 3 | `0x1A`=26, `0x1D`=29 | **TBD** — changed between sessions without a matching `0x39` event; not the 0–3 sidetone step; possibly sidetone in hardware register scale (0–100?) or another setting |
+| 4 | `0x02` | **TBD** |
 | 5–6 | `0x00` | Padding/unknown |
-| 7–16 | 10 bytes | EQ band values (0–40, `0x14`=20=center=0 dB) |
-| 17+ | variable | Further settings TBD |
+| 7–16 | 10 bytes | EQ band values (0–40, `0x14`=20=center=0 dB) ✓ |
+| 17 | `0x0A`=10 (both sessions) | **Candidate: mic volume** — matches 1–10 range of `0x37` events; user had vol at max both sessions |
+| 18+ | variable | TBD |
+
+> **Fields [2], [3], [4]** are disputed. Do not use these values until confirmed with targeted experiments (e.g. set mic volume to a known value, run query, check data[17]; set sidetone to 0, run query, check data[3]).
 
 #### `0x10` — Firmware Version ✅
 
@@ -467,7 +556,7 @@ Not yet sent to device. Origin: Arctis Nova 7X protocol + HeadsetControl.
 
 | Command | Description | Param byte | Range | Notes |
 |---|---|---|---|---|
-| `0x37` | Set mic volume | `[2]` | 0–7 | |
+| `0x37` | Set mic volume | `[2]` | 1–10 | **Confirmed as incoming event (§3.10). Write not yet verified on Nova Pro.** |
 | `0x39` | Set sidetone | `[2]` | 0–3 | 0=off 1=low 2=medium 3=high |
 | `0x3A` | Volume limiter | `[2]` | 0/1 | 0=off, 1=on (hearing protection) |
 | `0xA3` | Set idle timeout | `[2]` | 0–90 | Minutes; 0=never sleep |
