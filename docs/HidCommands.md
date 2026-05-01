@@ -1,8 +1,12 @@
 # Arctis Nova Pro Wireless — HID Command Reference
 
-_Last verified: `2026-05-01` — derived from `baseStationEvents.ts` and `oled/service.ts`_
+_Last verified: `2026-05-01` — derived from `baseStationEvents.ts`, `oled/service.ts`, Arctis-on-Linux, and Arctis Nova 7X protocol_
 
 This document catalogues every HID packet format discovered for the Arctis Nova Pro Wireless base station (USB receiver). It is written so another agent or developer can re-implement compatible HID communication without reading the source files.
+
+Command status legend:
+- **✅ Confirmed** — observed on a Nova Pro (PID `0x12E0`) or derived from its firmware/app
+- **🔬 Candidate** — documented on the Arctis Nova 7X (closest sibling); not yet verified on Nova Pro
 
 ---
 
@@ -12,9 +16,39 @@ This document catalogues every HID packet format discovered for the Arctis Nova 
 |---|---|
 | Vendor ID | `0x1038` (SteelSeries) |
 | Interface number | `4` |
-| Supported Product IDs | `0x12CB`, `0x12CD`, `0x12E0`, `0x12E5`, `0x225D` |
+| Supported Product IDs | `0x12CB`, `0x12CD`, `0x12E0` ✓, `0x12E5`, `0x225D` |
 
-The app opens **up to two HID handles** per session (paths sorted lexicographically, reversed). Duplicate paths are deduplicated. All reads and writes target interface 4.
+All reads and writes target **interface 4**. Two HID collections exist on this interface (see Section 2).
+
+---
+
+## 2. Interface Layout
+
+Interface 4 exposes two HID collections. Both must be opened for full operation.
+
+| Collection | Usage Page | Direction | Purpose |
+|---|---|---|---|
+| `Col01` | `0xFFC0` | Bidirectional | Send commands; read query responses |
+| `Col02` | `0xFF00` | Read | Incoming device events (buttons, dials, state) |
+
+**Example paths (PID `0x12E0`, Windows):**
+
+```
+Col01  0xFFC0  \\?\HID#VID_1038&PID_12E0&MI_04&Col01#...#{4d1e55b2-...}
+Col02  0xFF00  \\?\HID#VID_1038&PID_12E0&MI_04&Col02#...#{4d1e55b2-...}
+```
+
+**Packet format (all commands):**
+
+```
+[reportId, cmdByte, param0, param1, ..., 0x00, ...]   // zero-padded to 64 bytes
+```
+
+| Field | Value | Note |
+|---|---|---|
+| Report ID (outgoing) | `0x06` | First byte of every write |
+| Report ID (incoming) | `0x06` or `0x07` | Byte 0 of every read |
+| Packet size | 64 bytes | Fixed; unused bytes padded with `0x00` |
 
 ---
 
@@ -175,7 +209,7 @@ other → discard event
 
 ---
 
-### 3.7 Microphone Mute — `0xBB`
+### 3.7 Microphone Mute — `0xBB` ✅
 
 Fires when the user presses the microphone mute button on the headset.
 
@@ -198,9 +232,37 @@ mic_mute = (data[2] === 1)
 
 ---
 
+### 3.8 ChatMix Dial — `0x45` ✅
+
+Fires when the user rotates the ChatMix dial on the base station, adjusting the game/chat audio balance.
+
+```
+[reportId, 0x45, gameVol, chatVol, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID (`0x07`) |
+| 1 | Command `0x45` |
+| 2 | Game volume (0–100 decimal, `0x00`–`0x64`) |
+| 3 | Chat volume (0–100 decimal, `0x00`–`0x64`) |
+
+**Decoding:**
+```
+chatmix_game = data[2]   // 0–100
+chatmix_chat = data[3]   // 0–100
+center position: both values = 100 (0x64)
+```
+
+**State fields:** `chatmix_game`, `chatmix_chat` (both 0–100)
+
+> Source: [Arctis-on-Linux](https://github.com/dfanara/Arctis-on-Linux), confirmed for PID `0x12E0`.
+
+---
+
 ## 4. Outgoing Commands (Host → Device)
 
-### 4.1 Return to SteelSeries UI — `0x95`
+### 4.1 Return to SteelSeries UI — `0x95` ✅
 
 Restores OLED control to the SteelSeries GG / Sonar application. Called after a custom OLED notification expires or when the OLED service stops.
 
@@ -223,7 +285,7 @@ Total size: **64 bytes**.
 
 ---
 
-### 4.2 OLED Screen Draw — `0x93`
+### 4.2 OLED Screen Draw — `0x93` ✅
 
 Draws a bitmap frame on the 128×64 OLED display. The screen is split into two 64-pixel-wide vertical halves, each sent as a separate feature report.
 
@@ -269,6 +331,29 @@ Pixels are packed column-major (x is the outer loop, y is the inner loop), LSB f
 
 ---
 
+### 4.3 ChatMix Enable/Disable — `0x49` ✅
+
+Enables or disables the ChatMix feature on the base station.
+
+**Transport:** `device.write(payload)`
+
+**Payload (64 bytes):**
+
+```
+[0x06, 0x49, state, 0x00, ..., 0x00]
+```
+
+| Byte | Value | Meaning |
+|---|---|---|
+| 0 | `0x06` | Report ID |
+| 1 | `0x49` | Command: ChatMix control |
+| 2 | `0x01` / `0x00` | `1` = enable, `0` = disable |
+| 3–63 | `0x00` | Padding |
+
+> Source: [Arctis-on-Linux](https://github.com/dfanara/Arctis-on-Linux), confirmed for PID `0x12E0`.
+
+---
+
 ## 5. State Fields Summary
 
 | Field | Source command | Type |
@@ -284,3 +369,46 @@ Pixels are packed column-major (x is the outer loop, y is the inner loop), LSB f
 | `wireless` | `0xB5` | `boolean \| null` |
 | `bluetooth` | `0xB5` | `boolean \| null` |
 | `oled_brightness` | `0x85` | `number \| null` (1–10) |
+| `chatmix_game` | `0x45` | `number \| null` (0–100) |
+| `chatmix_chat` | `0x45` | `number \| null` (0–100) |
+
+---
+
+## 6. Candidate Commands 🔬
+
+Commands listed here originate from the **Arctis Nova 7X** protocol (closest documented sibling in the Nova line) and/or HeadsetControl. They have **not yet been confirmed** on the Nova Pro Wireless. Use `src/listen.py` to probe these and update this section with observed responses.
+
+### 6.1 Query Commands (Host → Device, then read response on `0xFFC0`)
+
+All queries use the standard 64-byte format: `[0x06, cmdByte, 0x00, ..., 0x00]`.
+
+| Command | Description | Expected response bytes |
+|---|---|---|
+| `0xB0` | Full status | `[2]` sleep, `[3]` battery%, `[4]` charging, `[5]` game_vol, `[6]` chat_vol, `[10]` mute |
+| `0xA0` | Config | `[2]` idle_timeout (0–90 min), `[3]` LED brightness (0–3) |
+| `0x20` | Mic params | `[2]` volume (0–7), `[3]` sidetone (0–3), `[4]` volume_limiter (0/1) |
+| `0x10` | Firmware version | `[2+]` ASCII string |
+| `0x12` | Serial number | `[2+]` ASCII string |
+
+### 6.2 Write Commands (Host → Device, `0xFFC0`)
+
+| Command | Description | Param byte | Range | Notes |
+|---|---|---|---|---|
+| `0x37` | Set mic volume | `[2]` | 0–7 | |
+| `0x39` | Set sidetone | `[2]` | 0–3 | 0=off, 1=low, 2=medium, 3=high |
+| `0x3A` | Volume limiter | `[2]` | 0/1 | 0=off, 1=on (hearing protection) |
+| `0xA3` | Set idle timeout | `[2]` | 0–90 | Minutes; 0 = never sleep |
+| `0xAE` | LED brightness | `[2]` | 0–3 | Mute indicator LED |
+| `0x09` | Save / persist | — | — | Call after config changes to write to flash |
+
+### 6.3 EQ Commands (Host → Device, `0xFFC0`)
+
+| Command | Description | Notes |
+|---|---|---|
+| `0x32` | Query EQ params | Response: profile ID + 10 band values |
+| `0x33` | Set EQ params | Profile + 10 bands × 6 bytes each |
+| `0xA6` | Query EQ preset name | Profile ID + ASCII name |
+| `0xA7` | Set EQ preset name | Profile ID + mode + ASCII name |
+| `0x27` | Apply EQ (live preview) | No params; activates the current EQ immediately |
+
+> **EQ profile byte:** `0x00` = 2.4 GHz wireless profile, `0x01` = Bluetooth profile.
