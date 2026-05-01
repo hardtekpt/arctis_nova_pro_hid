@@ -488,8 +488,8 @@ Enables or disables the ChatMix feature on the base station.
 | `headset_battery_percent` | `0xB7`, `0xB0`[6] | `number \| null` (0–100) |
 | `base_battery_percent` | `0xB7`, `0xB0`[7] | `number \| null` (0–100) |
 | `base_station_connected` | device presence | `boolean \| null` |
-| `headset_volume_percent` | `0x25` | `number \| null` (0–100) |
-| `anc_mode` | `0xBD`, `0xB5` | `"off" \| "transparency" \| "anc" \| null` |
+| `headset_volume_percent` | `0x25`, `0x20`[3] | `number \| null` (0–100) |
+| `anc_mode` | `0xBD`, `0xB5`, `0xB0`[10] | `"off" \| "transparency" \| "anc" \| null` |
 | `mic_mute` | `0xBB`, `0xB0`[9] | `boolean \| null` |
 | `sidetone_level` | `0x39`, `0x20`[18] | `number \| null` (0–3) |
 | `connected` | `0xB5` | `boolean \| null` |
@@ -515,7 +515,7 @@ All queries use: `[0x06, cmdByte, 0x00, ..., 0x00]` (64 bytes). Confirmed in ses
 
 #### `0xB0` — Status ✅
 
-Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, anc?, vol?, ...]`
+Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, anc, ?, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
@@ -528,33 +528,29 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 | 7 | `0x00`–`0x08` | **Dock battery** raw (÷ 8 × 100 = %) ✅ |
 | 8 | `0x08` | Constant |
 | 9 | `0x00` / `0x01` | **Mic mute** — `0x00`=unmuted, `0x01`=muted ✅ |
-| 10 | `0x01` | **ANC mode** candidate (constant `0x01`=off?); needs targeted experiment |
-| 11 | `0x0A`=10 | **Headset volume** candidate (0–10 scale?); constant at max in all sessions — needs targeted experiment |
-| 12–15 | `05 00 08 08` | TBD |
-
-> Fields [10] and [11] are candidates only. Confirm by toggling ANC / changing volume and re-querying.
+| 10 | `0x00`–`0x02` | **ANC mode** — `0x00`=off, `0x01`=transparency, `0x02`=anc ✅ |
+| 11 | `0x0A` | Unknown (constant `0x0A`=10; candidate: OLED brightness — user never changed it) |
+| 12–15 | `06 00 08 08` | TBD |
 
 #### `0x20` — Mic / EQ Params ✅
 
-Response: `[0x06, 0x20, ?, ?, gain, 0, 0, eq×10, mic_vol, sidetone, ?, game?, chat?, ...]`
+Response: `[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, ?, game, chat, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0x20` | Command echo |
 | 2 | `0x01` | Unknown (constant across all sessions) |
-| 3 | `0x1D`=29, `0x21`=33 | Unknown (not sidetone, not mic vol; candidate: raw sidetone register or dim/LED setting changed in session 210829) |
+| 3 | `0x00`–`0x38` | **Headset volume raw** — same encoding as `0x25` event: `0x38`=0%, `0x00`=100% ✅ |
 | 4 | `0x01` / `0x02` | **Gain level** — `0x01`=low, `0x02`=high ✅ |
 | 5–6 | `0x00` | Padding/unknown |
 | 7–16 | 10 bytes | **EQ band values** (0–40, `0x14`=20=flat/0 dB) ✅ |
 | 17 | `0x01`–`0x0A` | **Mic volume** (1–10) ✅ |
 | 18 | `0x00`–`0x03` | **Sidetone level** (0=off, 1=low, 2=medium, 3=high) ✅ |
 | 19 | `0x02` | Unknown |
-| 20 | `0x64`=100 | **ChatMix game** candidate (0–100) — persistent match with `0x45` event values |
-| 21 | `0x53`=83 | **ChatMix chat** candidate (0–100) — persistent match with `0x45` event values |
+| 20 | `0x00`–`0x64` | **ChatMix game** (0–100) ✅ — mirrors `0x45` event data[2] |
+| 21 | `0x00`–`0x64` | **ChatMix chat** (0–100) ✅ — mirrors `0x45` event data[3] |
 | 22–25 | `0x64`, `0x00`, `0x64`, `0x64` | TBD |
-
-> **data[3]** requires a targeted experiment to resolve. **data[20/21]** ChatMix assignment is strongly indicated but not yet 100% confirmed.
 
 #### `0x10` — Firmware Version ✅
 
