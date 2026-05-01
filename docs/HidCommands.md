@@ -54,7 +54,9 @@ Col02  0xFF00  \\?\HID#VID_1038&PID_12E0&MI_04&Col02#...#{4d1e55b2-...}
 
 ## 3. Incoming Events (Device → Host)
 
-### 3.1 Volume — `0x25`
+All events confirmed in session `2026-05-01` on PID `0x12E0`. All arrive on the `0xFF00` (Col02) handle with report ID `0x07`.
+
+### 3.1 Volume — `0x25` ✅
 
 Fires when the user adjusts the hardware volume wheel on the headset.
 
@@ -78,7 +80,7 @@ percent   = round(clamp(rawLevel / 56 × 100, 0, 100))
 
 ---
 
-### 3.2 Connectivity Mode — `0xB5`
+### 3.2 Connectivity Mode — `0xB5` ✅
 
 Fires on connection-state changes (wireless link established/lost, Bluetooth).
 
@@ -90,9 +92,9 @@ Fires on connection-state changes (wireless link established/lost, Bluetooth).
 |---|---|
 | 0 | Report ID |
 | 1 | Command `0xB5` |
-| 2 | Unused |
+| 2 | Always `0x01` in all observations; meaning TBD (possibly "base station present") |
 | 3 | Bluetooth flag: `1` = Bluetooth active |
-| 4 | Wireless flag: `8` = wireless (2.4 GHz) active |
+| 4 | Wireless flag: `8` = wireless (2.4 GHz) active; `4` observed when headset goes out of range |
 
 **Decoding:**
 ```
@@ -104,16 +106,16 @@ if wireless → force anc_mode = "off"
 
 **State fields:** `connected`, `wireless`, `bluetooth`, `anc_mode` (forced `"off"` when wireless)
 
-> The wireless flag value `8` is the only observed valid value. Any other value is treated as "not connected via wireless".
+> Observed values for data[4]: `0x08` (wireless active), `0x04` (wireless lost/out of range).
 
 ---
 
-### 3.3 Battery Levels — `0xB7`
+### 3.3 Battery Levels — `0xB7` ✅
 
 Fires on battery-level updates for both the headset and the charging dock.
 
 ```
-[reportId, 0xB7, headsetLevel, dockLevel, ...]
+[reportId, 0xB7, headsetLevel, dockLevel, unknown, ...]
 ```
 
 | Byte | Meaning |
@@ -122,6 +124,7 @@ Fires on battery-level updates for both the headset and the charging dock.
 | 1 | Command `0xB7` |
 | 2 | Headset battery level (0–8 raw) |
 | 3 | Dock/base battery level (0–8 raw) |
+| 4 | Observed as `0x08` consistently; meaning TBD |
 
 **Decoding:**
 ```
@@ -134,7 +137,7 @@ base_battery_percent    = round(clamp(data[3] / 8 × 100, 0, 100))
 
 ---
 
-### 3.4 OLED Brightness — `0x85`
+### 3.4 OLED Brightness — `0x85` ✅
 
 Fires when the user changes OLED display brightness via the headset controls.
 
@@ -158,7 +161,7 @@ else → discard event
 
 ---
 
-### 3.5 Sidetone Level — `0x39`
+### 3.5 Sidetone Level — `0x39` ✅
 
 Fires when the sidetone (microphone self-monitoring) level is changed.
 
@@ -170,18 +173,20 @@ Fires when the sidetone (microphone self-monitoring) level is changed.
 |---|---|
 | 0 | Report ID |
 | 1 | Command `0x39` |
-| 2 | Sidetone level (raw numeric value) |
+| 2 | Sidetone step: `0`=off, `1`=low, `2`=medium, `3`=high |
 
 **Decoding:**
 ```
-sidetone_level = data[2]
+sidetone_level = data[2]   // 0–3
 ```
 
-**State field:** `sidetone_level`
+**State field:** `sidetone_level` (0–3)
+
+> Note: the `0x20` query response also contains a sidetone field at `data[3]`, but in a different (larger) raw scale. The relationship between the two representations needs further mapping.
 
 ---
 
-### 3.6 ANC Mode — `0xBD`
+### 3.6 ANC Mode — `0xBD` ✅
 
 Fires when the user cycles through ANC / Transparency / Off modes on the headset.
 
@@ -257,6 +262,31 @@ center position: both values = 100 (0x64)
 **State fields:** `chatmix_game`, `chatmix_chat` (both 0–100)
 
 > Source: [Arctis-on-Linux](https://github.com/dfanara/Arctis-on-Linux), confirmed for PID `0x12E0`.
+
+---
+
+### 3.9 Gain Level — `0x27` ✅
+
+Fires when the user changes the microphone gain setting on the headset.
+
+```
+[reportId, 0x27, gainLevel, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID (`0x07`) |
+| 1 | Command `0x27` |
+| 2 | Gain level: `1` = low, `2` = high |
+
+**Decoding:**
+```
+gain_level = data[2]   // observed: 1=low, 2=high; full range TBD
+```
+
+**State field:** `gain_level`
+
+> Full range of data[2] values not yet determined. Only `1` (low) and `2` (high) observed in session `2026-05-01`. Additional values may exist.
 
 ---
 
@@ -364,44 +394,87 @@ Enables or disables the ChatMix feature on the base station.
 | `headset_volume_percent` | `0x25` | `number \| null` (0–100) |
 | `anc_mode` | `0xBD`, `0xB5` | `"off" \| "transparency" \| "anc" \| null` |
 | `mic_mute` | `0xBB` | `boolean \| null` |
-| `sidetone_level` | `0x39` | `number \| null` |
+| `sidetone_level` | `0x39` | `number \| null` (0–3) |
 | `connected` | `0xB5` | `boolean \| null` |
 | `wireless` | `0xB5` | `boolean \| null` |
 | `bluetooth` | `0xB5` | `boolean \| null` |
 | `oled_brightness` | `0x85` | `number \| null` (1–10) |
 | `chatmix_game` | `0x45` | `number \| null` (0–100) |
 | `chatmix_chat` | `0x45` | `number \| null` (0–100) |
+| `gain_level` | `0x27` | `number \| null` (1=low, 2=high; range TBD) |
 
 ---
 
-## 6. Candidate Commands 🔬
+## 6. Query Commands ✅ / 🔬
 
-Commands listed here originate from the **Arctis Nova 7X** protocol (closest documented sibling in the Nova line) and/or HeadsetControl. They have **not yet been confirmed** on the Nova Pro Wireless. Use `src/listen.py` to probe these and update this section with observed responses.
+### 6.1 Confirmed Query Commands (respond on `0xFFC0`)
 
-### 6.1 Query Commands (Host → Device, then read response on `0xFFC0`)
+All queries use: `[0x06, cmdByte, 0x00, ..., 0x00]` (64 bytes). Confirmed in session `2026-05-01`.
 
-All queries use the standard 64-byte format: `[0x06, cmdByte, 0x00, ..., 0x00]`.
+#### `0xB0` — Status ✅
 
-| Command | Description | Expected response bytes |
+Response: `[0x06, 0xB0, ?, ?, ?, ?, headset_bat, dock_bat, ?, ?, ?, ?, ?, ...]`
+
+| Byte | Value observed | Meaning |
 |---|---|---|
-| `0xB0` | Full status | `[2]` sleep, `[3]` battery%, `[4]` charging, `[5]` game_vol, `[6]` chat_vol, `[10]` mute |
-| `0xA0` | Config | `[2]` idle_timeout (0–90 min), `[3]` LED brightness (0–3) |
-| `0x20` | Mic params | `[2]` volume (0–7), `[3]` sidetone (0–3), `[4]` volume_limiter (0/1) |
-| `0x10` | Firmware version | `[2+]` ASCII string |
-| `0x12` | Serial number | `[2+]` ASCII string |
+| 0 | `0x06` | Report ID |
+| 1 | `0xB0` | Command echo |
+| 2–5 | `00 00 01 00` | Partially unknown; `[4]=0x01` may be charging state |
+| 6 | `0x00`–`0x08` | Headset battery raw (÷ 8 × 100 = %) |
+| 7 | `0x00`–`0x08` | Dock battery raw (÷ 8 × 100 = %) |
+| 8–15 | variable | Meaning TBD |
 
-### 6.2 Write Commands (Host → Device, `0xFFC0`)
+> Fields [2-5] and [8+] not yet fully mapped. **Do not assume Nova 7X offsets apply here.**
+
+#### `0x20` — Mic / EQ Params ✅
+
+Response: `[0x06, 0x20, gain, sidetone_raw, unk, unk, unk, eq×10, ...]`
+
+| Byte | Value observed | Meaning |
+|---|---|---|
+| 0 | `0x06` | Report ID |
+| 1 | `0x20` | Command echo |
+| 2 | `0x01` | Gain level (matches `0x27` event value) |
+| 3 | raw value | Sidetone in a raw scale (observed `0x1A`=26); mapping to 0–3 steps TBD |
+| 4 | `0x02` | Unknown |
+| 5–6 | `0x00` | Padding/unknown |
+| 7–16 | 10 bytes | EQ band values (0–40, `0x14`=20=center=0 dB) |
+| 17+ | variable | Further settings TBD |
+
+#### `0x10` — Firmware Version ✅
+
+Response bytes `[2+]`: null-terminated ASCII string, e.g. `'0000.003.0820001.031.0000002.002.0010002.001.000'`.
+
+Also pushed **unsolicited** on the `0xFFC0` handle when the headset re-establishes its wireless link.
+
+#### `0x12` — Serial Number ✅
+
+Response bytes `[2+]`: null-terminated ASCII string, e.g. `'6152048313222500747'`.
+
+---
+
+### 6.2 Unresponsive on Nova Pro
+
+| Command | Origin | Observation |
+|---|---|---|
+| `0xA0` | Nova 7X | Query sent, **no response received** on Nova Pro (session `2026-05-01`) |
+
+---
+
+### 6.3 Candidate Write Commands 🔬
+
+Not yet sent to device. Origin: Arctis Nova 7X protocol + HeadsetControl.
 
 | Command | Description | Param byte | Range | Notes |
 |---|---|---|---|---|
 | `0x37` | Set mic volume | `[2]` | 0–7 | |
-| `0x39` | Set sidetone | `[2]` | 0–3 | 0=off, 1=low, 2=medium, 3=high |
+| `0x39` | Set sidetone | `[2]` | 0–3 | 0=off 1=low 2=medium 3=high |
 | `0x3A` | Volume limiter | `[2]` | 0/1 | 0=off, 1=on (hearing protection) |
-| `0xA3` | Set idle timeout | `[2]` | 0–90 | Minutes; 0 = never sleep |
+| `0xA3` | Set idle timeout | `[2]` | 0–90 | Minutes; 0=never sleep |
 | `0xAE` | LED brightness | `[2]` | 0–3 | Mute indicator LED |
 | `0x09` | Save / persist | — | — | Call after config changes to write to flash |
 
-### 6.3 EQ Commands (Host → Device, `0xFFC0`)
+### 6.4 Candidate EQ Commands 🔬
 
 | Command | Description | Notes |
 |---|---|---|
@@ -409,6 +482,5 @@ All queries use the standard 64-byte format: `[0x06, cmdByte, 0x00, ..., 0x00]`.
 | `0x33` | Set EQ params | Profile + 10 bands × 6 bytes each |
 | `0xA6` | Query EQ preset name | Profile ID + ASCII name |
 | `0xA7` | Set EQ preset name | Profile ID + mode + ASCII name |
-| `0x27` | Apply EQ (live preview) | No params; activates the current EQ immediately |
 
 > **EQ profile byte:** `0x00` = 2.4 GHz wireless profile, `0x01` = Bluetooth profile.

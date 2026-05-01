@@ -40,13 +40,12 @@ REPORT_ID    = 0x06    # outgoing report ID (host → device)
 PACKET_SIZE  = 64
 POLL_TIMEOUT = 50      # ms per handle per loop tick
 
-# ── Candidate query commands ──────────────────────────────────────────────────
-# These originate from the Arctis Nova 7X protocol (closest documented sibling).
-# The device response will confirm whether each command is valid on the Nova Pro.
+# ── Query commands ────────────────────────────────────────────────────────────
+# 0xB0, 0x20, 0x10, 0x12 confirmed on Nova Pro (session 2026-05-01).
+# 0xA0 sent but no response observed – likely unsupported on Nova Pro.
 QUERY_COMMANDS = [
-    (0xB0, "status        (battery %, charging, game/chat vol, sleep, mute)"),
-    (0xA0, "config        (idle timeout, LED brightness)"),
-    (0x20, "mic params    (volume, sidetone level, volume limiter)"),
+    (0xB0, "status        (battery, partial decode – see HidCommands.md §6.1)"),
+    (0x20, "mic / EQ      (gain level, sidetone raw, 10 EQ band values)"),
     (0x10, "firmware ver  (ASCII string)"),
     (0x12, "serial number (ASCII string)"),
 ]
@@ -82,7 +81,9 @@ def decode_packet(data: list[int], source: str) -> str | None:
     if cmd == 0xB7 and len(data) > 3:
         h = round(min(100, data[2] / 8 * 100))
         d = round(min(100, data[3] / 8 * 100))
-        return f"{tag}  Battery         → headset={h}% dock={d}%"
+        # data[4] is consistently 0x08 – meaning TBD
+        extra = f"  [4]=0x{data[4]:02X}" if len(data) > 4 and data[4] != 0 else ""
+        return f"{tag}  Battery         → headset={h}% dock={d}%{extra}"
 
     if cmd == 0x85 and len(data) > 2:
         lvl = data[2]
@@ -90,7 +91,9 @@ def decode_packet(data: list[int], source: str) -> str | None:
         return f"{tag}  OLED Brightness → {lvl}/10{note}"
 
     if cmd == 0x39 and len(data) > 2:
-        return f"{tag}  Sidetone        → level={data[2]}"
+        SIDETONE_LABELS = {0: "off", 1: "low", 2: "medium", 3: "high"}
+        label = SIDETONE_LABELS.get(data[2], f"unknown({data[2]})")
+        return f"{tag}  Sidetone        → {label} (level={data[2]})"
 
     if cmd == 0xBD and len(data) > 2:
         mode = ANC_MODES.get(data[2], f"unknown(0x{data[2]:02X})")
@@ -100,26 +103,41 @@ def decode_packet(data: list[int], source: str) -> str | None:
         muted = data[2] == 1
         return f"{tag}  Mic Mute        → {'muted' if muted else 'unmuted'}"
 
-    # ── Confirmed incoming event: ChatMix dial (Arctis-on-Linux, PID 0x12E0) ──
+    # ── Confirmed incoming event: ChatMix dial ──
 
     if cmd == 0x45 and len(data) > 3:
         return f"{tag}  ChatMix         → game={data[2]} chat={data[3]}"
 
-    # ── Candidate query responses (Nova 7X origin – being verified) ──────────
+    # ── Confirmed incoming event: Gain Level ─────────────────────────────────
+    # Observed values: 1=low, 2=high. Full range unknown.
+
+    if cmd == 0x27 and len(data) > 2:
+        GAIN_LABELS = {1: "low", 2: "high"}
+        label = GAIN_LABELS.get(data[2], f"unknown({data[2]})")
+        return f"{tag}  Gain Level      → {label} (raw={data[2]})"
+
+    # ── Confirmed query responses ─────────────────────────────────────────────
     # Offsets: data[0]=reportId  data[1]=cmd  data[2+]=payload
 
-    if cmd == 0xB0 and len(data) > 6:
+    # Battery confirmed at [6]/[7] (0-8 raw = 0-100%).
+    # Fields [2-5] and [8+] partially mapped – see HidCommands.md §6.1.
+    if cmd == 0xB0 and len(data) > 7:
+        h_bat = round(min(100, data[6] / 8 * 100))
+        d_bat = round(min(100, data[7] / 8 * 100))
         return (
-            f"{tag}  Status          → "
-            f"sleep=0x{data[2]:02X}  battery={data[3]}%  "
-            f"charging=0x{data[4]:02X}  game_vol={data[5]}  chat_vol={data[6]}"
+            f"{tag}  Status (partial)→ "
+            f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
+            f"[2-5]={_raw(data[2:6])}  [8-15]={_raw(data[8:16])}"
         )
 
-    if cmd == 0xA0 and len(data) > 3:
-        return f"{tag}  Config          → idle_timeout={data[2]}min  led_brightness={data[3]}"
-
-    if cmd == 0x20 and len(data) > 4:
-        return f"{tag}  Mic Params      → volume={data[2]}  sidetone={data[3]}  limiter={data[4]}"
+    # Gain level at [2], sidetone raw at [3] (scale TBD), 10 EQ bands at [7-16].
+    if cmd == 0x20 and len(data) > 16:
+        eq_bands = _raw(data[7:17])
+        return (
+            f"{tag}  Mic/EQ          → "
+            f"gain={data[2]}  sidetone_raw={data[3]}  [4]={data[4]}  "
+            f"eq_bands=[{eq_bands}]"
+        )
 
     if cmd in (0x10, 0x12) and len(data) > 2:
         label = "Firmware" if cmd == 0x10 else "Serial"
@@ -238,7 +256,7 @@ def main() -> None:
 
         log(log_f, "")
         log(log_f, "[INFO ] Event loop active – interact with the headset. Ctrl+C to stop.")
-        log(log_f, "[INFO ] Try: volume wheel, mute button, ANC button, ChatMix dial.")
+        log(log_f, "[INFO ] Try: volume wheel, mute button, ANC button, ChatMix dial, gain button.")
         log(log_f, "")
 
         # Poll both handles until the user stops the script
