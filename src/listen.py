@@ -132,42 +132,56 @@ def decode_packet(data: list[int], source: str) -> str | None:
     # Triggered in session 2026-05-01 session 2. Order matches user actions:
     # 0x83 = dim screen, 0x89 = home screen mode, 0xBF = mic LED, 0xC1 = auto off
 
+    _TIMEOUT = {0: "off", 1: "1 min", 2: "5 min", 3: "10 min", 4: "15 min", 5: "30 min", 6: "60 min"}
+
     if cmd == 0x83 and len(data) > 2:
-        return f"{tag}  0x83 (dim screen?)   → {data[2]}  (range 0–6)"
+        label = _TIMEOUT.get(data[2], f"?({data[2]})")
+        return f"{tag}  Dim Screen      → {label} (raw={data[2]})"
 
     if cmd == 0x89 and len(data) > 2:
-        label = {0: "detailed?", 1: "simple?"}.get(data[2], f"?({data[2]})")
-        return f"{tag}  0x89 (home screen?)  → {data[2]} ({label})"
+        label = {0: "detailed", 1: "simple"}.get(data[2], f"?({data[2]})")
+        return f"{tag}  Home Screen     → {label} (raw={data[2]})"
 
     if cmd == 0xBF and len(data) > 2:
-        return f"{tag}  0xBF (mic LED?)      → {data[2]}  (range 1–10)"
+        return f"{tag}  Mic LED         → {data[2]}/10"
 
     if cmd == 0xC1 and len(data) > 2:
-        return f"{tag}  0xC1 (auto off?)     → {data[2]}  (range 0–6)"
+        label = _TIMEOUT.get(data[2], f"?({data[2]})")
+        return f"{tag}  Auto Off        → {label} (raw={data[2]})"
 
     # ── Confirmed query responses ─────────────────────────────────────────────
     # Offsets: data[0]=reportId  data[1]=cmd  data[2+]=payload
 
     # Battery confirmed at [6]/[7] (0-8 raw = 0-100%).
     # Fields [2-5] and [8+] partially mapped – see HidCommands.md §6.1.
-    if cmd == 0xB0 and len(data) > 7:
+    if cmd == 0xB0 and len(data) > 11:
+        _CONN = {0x01: "2.4GHz", 0x04: "2.4GHz+BT"}
         h_bat = round(min(100, data[6] / 8 * 100))
         d_bat = round(min(100, data[7] / 8 * 100))
+        conn  = _CONN.get(data[4], f"0x{data[4]:02X}")
+        muted = "muted" if data[9] == 1 else "unmuted"
         return (
-            f"{tag}  Status (partial)→ "
+            f"{tag}  Status          → "
             f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
-            f"[2-5]={_raw(data[2:6])}  [8-15]={_raw(data[8:16])}"
+            f"conn={conn}  mic_mute={muted}  "
+            f"vol?={data[11]}  anc?=0x{data[10]:02X}  "
+            f"[2-3]={_raw(data[2:4])}  [5]={data[5]}"
         )
 
     # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).
     # [2], [3], [4] meanings disputed – see HidCommands.md §6.1.
     # [17] is a candidate for mic volume (range 1-10, matches 0x37 events).
-    if cmd == 0x20 and len(data) > 17:
+    if cmd == 0x20 and len(data) > 21:
+        _GAIN = {1: "low", 2: "high"}
+        _SIDE = {0: "off", 1: "low", 2: "medium", 3: "high"}
+        gain     = _GAIN.get(data[4], f"?({data[4]})")
+        sidetone = _SIDE.get(data[18], f"?({data[18]})")
         eq_bands = _raw(data[7:17])
         return (
             f"{tag}  Mic/EQ          → "
-            f"[2]={data[2]}  [3]={data[3]}  [4]={data[4]}  "
-            f"[17]={data[17]} (mic_vol?)  "
+            f"gain={gain}  mic_vol={data[17]}  sidetone={sidetone}  "
+            f"[2]=0x{data[2]:02X}  [3]=0x{data[3]:02X}  "
+            f"chatmix_game?={data[20]}  chatmix_chat?={data[21]}  "
             f"eq_bands=[{eq_bands}]"
         )
 
