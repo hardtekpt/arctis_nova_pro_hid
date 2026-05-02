@@ -611,6 +611,11 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0x85` | Set OLED brightness | `[2]` | 1–10 | Also an incoming event (§3.4) ✅ |
 | `0xBD` | Set ANC mode | `[2]` | 0–2 | `0x00`=off, `0x01`=transparency, `0x02`=ANC; also the incoming event byte (§3.6) ✅ |
 | `0xB9` | Set transparency level | `[2]` | 1–10 | Effective only when ANC mode=transparency; also the incoming event byte (§3.15); verify via visual/event, `0xB0` has no transparency-level field ✅ |
+| `0x83` | Set dim screen timeout | `[2]` | 0–6 | `0`=off, `1`=1 min, `2`=5 min, `3`=10 min, `4`=15 min, `5`=30 min, `6`=60 min; also the incoming event byte (§3.11) ✅ |
+| `0x89` | Set home screen mode | `[2]` | 0–1 | `0x00`=detailed, `0x01`=simple; also the incoming event byte (§3.12) ✅ |
+| `0xBF` | Set mic LED brightness | `[2]` | 1–10 | Also the incoming event byte (§3.13) ✅ |
+| `0xC1` | Set auto off timeout | `[2]` | 0–6 | `0`=off, `1`=1 min, `2`=5 min, `3`=10 min, `4`=15 min, `5`=30 min, `6`=60 min; also the incoming event byte (§3.14) ✅ |
+| `0x27` | Set gain level | `[2]` | 0–1 | **Write encoding differs from event encoding:** `0x00`=high, `0x01`=low. Incoming event (§3.9) uses `0x01`=low, `0x02`=high ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
 
 ### 6.4 Candidate Write Commands 🔬
