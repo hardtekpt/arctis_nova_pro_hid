@@ -621,6 +621,24 @@ Not yet verified on Nova Pro. Origin: Arctis Nova 7X protocol + HeadsetControl.
 | `0xA3` | Set idle timeout | `[2]` | 0–90 | Minutes; 0=never sleep |
 | `0xAE` | LED brightness | `[2]` | 0–3 | Mute indicator LED |
 
+#### ANC / Transparency Write — pending discovery
+
+No write command for ANC mode has been identified yet. `0xBD` is confirmed only as an incoming event (§3.6). Probe the following candidates in order using `src/probe_write.py`; verify via `0xB0[10]` before/after:
+
+| Candidate | Rationale | Param encoding (assumed) |
+|---|---|---|
+| `0xBD` | Same opcode as the incoming ANC event — SteelSeries often mirrors read/write | `0x00`=off, `0x01`=transparency, `0x02`=ANC |
+| `0xBE` | Adjacent to `0xBD`; listed as unknown in TestChecklist §6 | same |
+| `0xBC` | Adjacent below `0xBD` | same |
+| `0xB9` | Transparency level event byte (§3.15) — `0x37` mic vol is confirmed bidirectional | `0x01`–`0x0A` (level 1–10; transparency mode only) |
+| `0xB8`, `0xBA` | Adjacent to `0xB9` | same as `0xB9` |
+
+**Probe command:**
+```
+python src/probe_write.py --cmd 0xBD --param 0x01
+```
+A successful probe prints `✅ CHANGED` and shows `0xB0[10]` transitioning to the expected value.
+
 ### 6.5 Candidate EQ Commands 🔬
 
 | Command | Description | Notes |
