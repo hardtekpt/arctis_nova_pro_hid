@@ -207,14 +207,11 @@ def decode_packet(data: list[int], source: str) -> str | None:
         anc    = _ANC.get(data[10], f"0x{data[10]:02X}")
         bt     = "on" if data[5] == 1 else "off"
         wmode  = _WMODE.get(data[13], f"0x{data[13]:02X}") if len(data) > 13 else "?"
-        undecoded = _raw(data[14:]) if len(data) > 14 else ""
-        undecoded_note = f"  [undecoded from [14]]: {undecoded}" if undecoded else ""
         return (
             f"{tag}  Status          → "
             f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
             f"conn={conn}  mic_mute={muted}  anc={anc}  trans_level={trans}  "
             f"bt={bt}  oled_brightness={data[11]}  2.4ghz_mode={wmode}"
-            f"{undecoded_note}"
         )
 
     # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).
@@ -233,14 +230,12 @@ def decode_packet(data: list[int], source: str) -> str | None:
         stream_main  = data[22]
         stream_aux   = data[24]
         stream_mic   = data[25]
-        undecoded    = _raw(data[26:]) if len(data) > 26 else ""
-        undecoded_note = f"  [undecoded from [26]]: {undecoded}" if undecoded else ""
         return (
             f"{tag}  Mic/EQ          → "
             f"gain={gain}  mic_vol={data[17]}  sidetone={sidetone}  vol={vol_pct}%  "
             f"audio_output={audio}  chatmix_game={data[20]}  chatmix_chat={data[21]}  "
             f"stream_main={stream_main}  stream_aux={stream_aux}  stream_mic={stream_mic}  "
-            f"eq_preset={eq_preset_str}(0x{eq_preset:02X})  eq_bands=[{eq_bands}]{undecoded_note}"
+            f"eq_preset={eq_preset_str}(0x{eq_preset:02X})  eq_bands=[{eq_bands}]"
         )
 
     if cmd in (0x10, 0x12) and len(data) > 2:
