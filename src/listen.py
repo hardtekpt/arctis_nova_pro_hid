@@ -167,11 +167,12 @@ def decode_packet(data: list[int], source: str) -> str | None:
         conn  = _CONN.get(data[4], f"0x{data[4]:02X}")
         muted = "muted" if data[9] == 1 else "unmuted"
         anc   = _ANC.get(data[10], f"0x{data[10]:02X}")
+        bt    = "on" if data[5] == 1 else "off"
         return (
             f"{tag}  Status          → "
             f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
             f"conn={conn}  mic_mute={muted}  anc={anc}  "
-            f"bt_state={data[5]}  oled_brightness={data[11]}"
+            f"bt={bt}  oled_brightness={data[11]}"
         )
 
     # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).
