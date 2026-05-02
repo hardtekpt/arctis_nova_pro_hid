@@ -105,6 +105,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Command | Description | Param | Encoding |
 |---------|-------------|-------|----------|
+| `0x25` | Set headset volume | 0–56 raw | Same inverted encoding as event: `raw = round((1−pct/100)×56)`; `0x38`=0%, `0x00`=100% |
 | `0x37` | Set mic volume | 1–10 | |
 | `0x39` | Set sidetone | 0–3 | 0=off, 1=low, 2=medium, 3=high |
 | `0x85` | Set OLED brightness | 1–10 | |
@@ -147,7 +148,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 - **`0x27` gain encoding asymmetry**: write uses `0x00`=high / `0x01`=low; incoming event and `0x20` query use `0x01`=low / `0x02`=high. Abstract this in the API.
 - **`0x10` noise**: device pushes unsolicited firmware version packets on Col01 when headset wirelessly reconnects — filter by checking `data[1] == 0x10`.
 - **ChatMix**: `0x45` events only fire when ChatMix is enabled (`0x49` param `0x01`).
-- **Volume write**: no write command for headset volume found — appears hardware-controlled only.
+- **Volume write**: `0x25` confirmed writable with the same inverted encoding as the event.
 - **EQ bands**: 10 bytes at `0x20[7–16]`, range 0–40, `0x14`=flat. Write via `0x33` with profile `0x00` (2.4 GHz) or `0x01` (BT) — not yet verified on Nova Pro.
 - **Volume encoding**: `raw = round((1 − pct/100) × 56)`; `0x38`=0%, `0x00`=100%.
 
