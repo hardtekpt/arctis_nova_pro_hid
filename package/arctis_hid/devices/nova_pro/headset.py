@@ -206,10 +206,11 @@ class ArctisNovaProWireless(AbstractHeadset):
     # ── OLED ───────────────────────────────────────────────────────────────
 
     @property
-    def oled(self) -> AbstractOled | None:
-        # Returns None in Phase 2; will return ArctisNovaProOled in Phase 3
-        # after the pixel format is confirmed via Wireshark capture.
-        return None
+    def oled(self) -> "ArctisNovaProOled":
+        if self._oled_controller is None:
+            from .oled import ArctisNovaProOled
+            self._oled_controller = ArctisNovaProOled(self._transport)
+        return self._oled_controller  # type: ignore[return-value]
 
     # ── internal ───────────────────────────────────────────────────────────
 

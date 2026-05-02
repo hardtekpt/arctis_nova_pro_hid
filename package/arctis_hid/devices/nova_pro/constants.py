@@ -47,11 +47,11 @@ CMD_SAVE         = 0x09   # persist all writes to flash — always send after wr
 CMD_OLED_DRAW    = 0x93   # draw custom frame — 1024-byte HID feature reports, 2 per frame
 CMD_OLED_RELEASE = 0x95   # return OLED control to GG / Sonar
 
-OLED_REPORT_SIZE       = 1024   # bytes per feature report
-OLED_REPORTS_PER_FRAME = 2      # left half then right half
-# ⚠ Display dimensions (TBD — verify via Wireshark capture of GG OLED traffic):
-OLED_WIDTH  = 128   # pixels — likely correct for Nova Pro
-OLED_HEIGHT = 40    # pixels — likely correct for Nova Pro
+OLED_REPORT_SIZE       = 1024   # bytes per feature report (including report-ID byte)
+OLED_REPORTS_PER_FRAME = 2      # left half (x=0) then right half (x=64)
+OLED_REPORT_SPLIT_SZ   = 64     # columns per report (max width ggoled sends per chunk)
+OLED_WIDTH             = 128    # confirmed via ggoled source (ggoled SCREEN_WIDTH)
+OLED_HEIGHT            = 64     # confirmed via ggoled source (ggoled SCREEN_HEIGHT)
 
 # ── 0xB0 response byte indices ─────────────────────────────────────────────
 
