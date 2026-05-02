@@ -226,8 +226,10 @@ Last merges:
 - `feature/phase1-0xb9-rename` — 0xB9 clarified as transparency-only
 
 Cumulative changes since `feature/phase1-query-field-mapping-r4`:
-- `0xBD` write confirmed: ANC mode (0=off, 1=transparency, 2=ANC) ✅
-- `0xB9` write confirmed: Transparency level (1–10), transparency mode only ✅
+- `0xBD` write confirmed: ANC mode (0=off, 1=transparency, 2=ANC), persists ✅
+- `0xB9` write confirmed: Transparency level (1–10), transparency mode only, persists ✅
+- `0x37` mic volume write confirmed working ✅
+- `0x85` OLED brightness write confirmed working; `0xB0[11]` tracks current value ✅
 - `src/probe_write.py` added — single write probe + before/after 0xB0 diff tool ✅
 - `0xB9` — Transparency Level (1–10), transparency mode only ✅
 - `0xB0[11]` — confirmed OLED brightness (1–10) ✅
