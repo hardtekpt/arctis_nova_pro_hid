@@ -67,7 +67,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | `0x39` | Sidetone | ✅ | `0x20`[18] | ✅ | 0–3 | `0`=off · `1`=low · `2`=medium · `3`=high |
 | `0x45` | ChatMix dial | ✅ | `0x20`[20,21] | — | — | `[2]`=game (0–100) · `[3]`=chat (0–100) · only fires when ChatMix enabled |
 | `0x49` | ChatMix enable | — | — | ✅ | 0–1 | `0x00`=disable · `0x01`=enable · must enable to receive `0x45` events |
-| `0x47` | Stream volumes | ✅ | — | — | — | `[2]`=main (0–100) · `[4]`=aux (0–100) · `[5]`=mic (0–100) |
+| `0x47` | Stream volumes | ✅ | `0x20`[22,24,25] | ✅ | multi-byte | `[2]`=main (0–100) · `[3]`=0x00 · `[4]`=aux (0–100) · `[5]`=mic (0–100) |
 | `0x43` | Audio output | ✅ | — | ✅ | 1–2 | `0x01`=speakers · `0x02`=stream |
 
 ### Noise control
@@ -104,7 +104,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 |-----|------|---|---|---|-------|-------|
 | `0x09` | Save / persist | — | — | ✅ | — | **Always send after any write** — settings revert on power cycle without it |
 | `0xB0` | Status query | — | — | Q | — | Returns battery, connectivity, ANC, mute, OLED brightness, 2.4 GHz mode |
-| `0x20` | Mic/EQ query | — | — | Q | — | Returns gain, mic vol, sidetone, 10 EQ bands, ChatMix, headset vol |
+| `0x20` | Mic/EQ query | — | — | Q | — | Returns gain, mic vol, sidetone, 10 EQ bands, ChatMix, stream volumes, headset vol |
 | `0x10` | Firmware version | — | — | Q | — | ASCII string · also pushed unsolicited on Col01 at wireless reconnect |
 | `0x12` | Serial number | — | — | Q | — | ASCII string |
 | `0x95` | Return OLED to GG | — | — | ✅ | — | Restores OLED control to SteelSeries GG after custom draw |
@@ -149,6 +149,10 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | [18] | Sidetone | `0`=off · `1`=low · `2`=medium · `3`=high |
 | [20] | ChatMix game | 0–100 |
 | [21] | ChatMix chat | 0–100 |
+| [22] | Stream main volume | 0–100 |
+| [23] | (padding) | `0x00` |
+| [24] | Stream aux volume | 0–100 |
+| [25] | Stream mic volume | 0–100 |
 
 ---
 

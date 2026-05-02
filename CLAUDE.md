@@ -102,6 +102,10 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | [18] | Sidetone | 0=off, 1=low, 2=medium, 3=high |
 | [20] | ChatMix game | 0–100 |
 | [21] | ChatMix chat | 0–100 |
+| [22] | Stream main volume | 0–100 |
+| [23] | (padding) | `0x00` |
+| [24] | Stream aux volume | 0–100 |
+| [25] | Stream mic volume | 0–100 |
 
 ### Write commands (host → Col01, always follow with `0x09`)
 
@@ -123,6 +127,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0xB2` | Set BT default | 0–1 | 0=off, 1=on |
 | `0xB3` | Set BT auto-mute | 0–2 | 0=off, 1=-12dB, 2=on |
 | `0x43` | Set audio output | 1–2 | 1=speakers, 2=stream |
+| `0x47` | Set output stream volumes | multi-byte | `[0x06, 0x47, main, 0x00, aux, mic, ...]`; main/aux/mic each 0–100 |
 | `0x09` | Save / persist | — | send after every write |
 
 ### Incoming events (device → Col02, report ID `0x07`)

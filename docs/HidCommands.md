@@ -491,7 +491,7 @@ stream_mic  = data[5]   // 0–100
 
 **State fields:** `stream_main`, `stream_aux`, `stream_mic` (all 0–100)
 
-> Confirmed in session `2026-05-02` (14:11). Each channel was swept independently (0→100→0). byte[3] was `0x00` throughout. Note: `0x47` was previously a candidate alias for ChatMix; it is a distinct event with a 3-channel volume layout.
+> Confirmed in session `2026-05-02` (14:11). Each channel was swept independently (0→100→0). byte[3] was `0x00` throughout. Note: `0x47` was previously a candidate alias for ChatMix; it is a distinct event with a 3-channel volume layout. Write confirmed `2026-05-02`: `[0x06, 0x47, main, 0x00, aux, mic, 0x00×58]` — same byte layout as the event (§6.3).
 
 ---
 
@@ -704,7 +704,7 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 
 #### `0x20` — Mic / EQ Params ✅
 
-Response: `[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, ?, game, chat, ...]`
+Response: `[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, ?, game, chat, stream_main, 0, stream_aux, stream_mic, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
@@ -720,7 +720,10 @@ Response: `[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, ?, ga
 | 19 | `0x02` | Unknown |
 | 20 | `0x00`–`0x64` | **ChatMix game** (0–100) ✅ — mirrors `0x45` event data[2] |
 | 21 | `0x00`–`0x64` | **ChatMix chat** (0–100) ✅ — mirrors `0x45` event data[3] |
-| 22–25 | `0x64`, `0x00`, `0x64`, `0x64` | TBD |
+| 22 | `0x00`–`0x64` | **Stream main volume** (0–100) ✅ — mirrors `0x47` event/write data[2] |
+| 23 | `0x00` | Constant (padding) |
+| 24 | `0x00`–`0x64` | **Stream aux volume** (0–100) ✅ — mirrors `0x47` event/write data[4] |
+| 25 | `0x00`–`0x64` | **Stream mic volume** (0–100) ✅ — mirrors `0x47` event/write data[5] |
 
 #### `0x10` — Firmware Version ✅
 
@@ -765,6 +768,7 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0xB2` | Set Bluetooth default | `[2]` | 0–1 | `0x00`=off, `0x01`=on; also the incoming event byte (§3.20) ✅ |
 | `0xB3` | Set BT auto-mute | `[2]` | 0–2 | `0x00`=off, `0x01`=-12dB, `0x02`=on; also the incoming event byte (§3.17) ✅ |
 | `0x43` | Set audio output | `[2]` | 1–2 | `0x01`=speakers, `0x02`=stream; also the incoming event byte (§3.19) ✅ |
+| `0x47` | Set output stream volumes | `[2]`=main, `[4]`=aux, `[5]`=mic | 0–100 each | Multi-byte write: `[0x06, 0x47, main, 0x00, aux, mic, 0x00×58]`; mirrors incoming event layout (§3.18) ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
 
 ### 6.4 Candidate Write Commands 🔬
