@@ -131,8 +131,8 @@ Write a Python snippet for each (template at bottom of this section). Send the c
 | 4.1.2 | `0x39` Sidetone | `0x01` (low) | Send, listen for `0x39` echo event | `0x20`[18] = `0x01` | ⬜ |
 | 4.1.3 | `0x39` Sidetone | `0x02` (medium) | Send, listen for `0x39` echo event | `0x20`[18] = `0x02` | ⬜ |
 | 4.1.4 | `0x39` Sidetone | `0x03` (high) | Send, listen for `0x39` echo event | `0x20`[18] = `0x03` | ⬜ |
-| 4.1.5 | `0x37` Mic volume | `0x01`–`0x0A` | Send each level, listen for `0x37` echo | `0x20`[17] = sent value | ⬜ |
-| 4.1.6 | `0x85` OLED brightness | `0x01`–`0x0A` | Send, check base station display changes | `0xB0`[11] — watch if it tracks (currently unknown) | ⬜ |
+| 4.1.5 | `0x37` Mic volume | `0x01`–`0x0A` | Send each level, listen for `0x37` echo | `0x20`[17] = sent value ✅ |
+| 4.1.6 | `0x85` OLED brightness | `0x01`–`0x0A` | Send, check base station display changes | `0xB0`[11] reflects new value ✅ |
 | 4.1.7 | `0x09` Save/persist | — | Send after any successful write; power-cycle headset; re-query to verify setting survived | All changed fields match after reboot | ⬜ |
 
 ### 4.2 ANC mode and transparency level writes
@@ -146,7 +146,8 @@ Use `python src/probe_write.py --cmd CMD --param PARAM` or the snippet in §4.7.
 | 4.2.3 | `0xBD` ANC anc | `0x02` | Send; confirm headset OLED shows ANC | `0xB0`[10] = `0x02` ✅ |
 | 4.2.4 | `0xB9` Transparency level 1 | `0x01` | Set ANC=transparency first; send; confirm OLED level changes | Visual / `0xB9` event echo ✅ |
 | 4.2.5 | `0xB9` Transparency level 10 | `0x0A` | Same setup; confirm max level | Visual / `0xB9` event echo ✅ |
-| 4.2.6 | `0xBD` + `0x09` persist | any | Send ANC mode, send save `0x09`, power-cycle headset, query `0xB0`[10] | Setting survives reboot | ⬜ |
+| 4.2.6 | `0xBD` + `0x09` persist | any | Send ANC mode, send save `0x09`, power-cycle headset, query `0xB0`[10] | Setting survives reboot ✅ |
+| 4.2.7 | `0xB9` + `0x09` persist | any | Send transparency level, save, power-cycle, confirm OLED shows same level | Setting survives reboot ✅ |
 
 ### 4.3 ChatMix / connectivity writes
 
@@ -247,7 +248,7 @@ Send each command byte and observe whether the device responds. Log the raw resp
 
 | # | Unknown | Experiment | Hypothesis | Status |
 |---|---------|-----------|------------|--------|
-| 7.1 | `0xB0`[11] = constant `0x0A` | Change OLED brightness, re-query `0xB0` | If [11] changes → it is OLED brightness | ⬜ |
+| 7.1 | `0xB0`[11] = constant `0x0A` | Change OLED brightness, re-query `0xB0` | Confirmed: `0xB0`[11] is OLED brightness (1–10) ✅ |
 | 7.2 | `0xB0`[12] = `0x05`/`0x06` seen | Note exact headset battery %, re-query across multiple charge levels | Possible: state tied to charge tier, not setting | ⬜ |
 | 7.3 | `0x20`[2] = constant `0x01` | Try every write command, re-query `0x20` | Does [2] ever change? If not, likely a fixed protocol version byte | ⬜ |
 | 7.4 | Transparent level | `0xB9` write confirmed — same byte as the incoming event | `0xBD` sets mode, `0xB9` sets level (1–10, transparency mode only) | ✅ |
@@ -263,7 +264,7 @@ After confirming each write command works, verify the setting survives a full po
 | # | Setting | Steps | Expected | Status |
 |---|---------|-------|----------|--------|
 | 8.1 | Sidetone | Set via `0x39`, send `0x09`, power off headset, power on, query `0x20`[18] | Sidetone level persists | ⬜ |
-| 8.2 | Mic volume | Set via `0x37`, send `0x09`, power cycle, query `0x20`[17] | Mic volume persists | ⬜ |
+| 8.2 | Mic volume | Set via `0x37`, send `0x09`, power cycle, query `0x20`[17] | Mic volume persists ✅ |
 | 8.3 | EQ | Set via `0x33`, send `0x09`, power cycle, query `0x20`[7–16] | EQ bands persist | ⬜ |
 | 8.4 | Without `0x09` | Set sidetone, do NOT send `0x09`, power cycle | Setting reverts to previous value | ⬜ |
 
