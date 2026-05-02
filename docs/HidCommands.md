@@ -835,6 +835,7 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0x43` | Set audio output | `[2]` | 1–2 | `0x01`=speakers, `0x02`=stream; also the incoming event byte (§3.19) ✅ |
 | `0x47` | Set output stream volumes | `[2]`=main, `[4]`=aux, `[5]`=mic | 0–100 each | Multi-byte write: `[0x06, 0x47, main, 0x00, aux, mic, 0x00×58]`; mirrors incoming event layout (§3.18) ✅ |
 | `0x2E` | Select EQ preset / custom | `[2]` | 0–18 | `0x04`=custom EQ; `0x00–0x03` and `0x05–0x18` = named presets (19 total). Same encoding as event (§3.21) ✅ |
+| `0x33` | Set custom EQ band levels | `[2–11]` = 10 band values | 0–40 each | `[0x06, 0x33, b1, b2, ..., b10, 0x00×52]`; 20=flat/0 dB; no profile prefix; switch to custom EQ first (`0x2E` `0x04`) ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
 
 ### 6.4 Candidate Write Commands 🔬
@@ -855,13 +856,10 @@ Both are now listed in §6.3.
 
 | Command | Description | Notes |
 |---|---|---|
-| `0x32` | Query EQ params | Response: profile ID + 10 band values |
-| `0x33` | Set EQ band levels (custom) | Profile + 10 band values; **`0x31` write does NOT do this** — it switches to flat preset |
-| `0xA6` | Query EQ preset name | Profile ID + ASCII name |
-| `0xA7` | Set EQ preset name | Profile ID + mode + ASCII name |
+| `0x32` | Query EQ params | Response format unknown; not yet tested on Nova Pro |
+| `0xA6` | Query EQ preset name | Profile ID + ASCII name; not yet tested |
+| `0xA7` | Set EQ preset name | Profile ID + mode + ASCII name; not yet tested |
 
-> **EQ profile byte:** `0x00` = 2.4 GHz wireless profile, `0x01` = Bluetooth profile.
->
-> **`0x2E` write is confirmed (§6.3).** Use it to switch between custom EQ (`0x04`) and named presets (`0x00–0x03`, `0x05–0x18`). To edit custom EQ band levels, switch to custom first (`0x2E` param `0x04`), then write bands via `0x33` (not yet verified on Nova Pro).
+> **`0x33` has been confirmed and moved to §6.3.**
 >
 > **`0x31` write side-effect documented:** writing any `0x31` packet causes the device to switch to the flat preset. Do not use `0x31` as a write command.

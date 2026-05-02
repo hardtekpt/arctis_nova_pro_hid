@@ -65,8 +65,8 @@ user explicitly says so.
 
 Phase 1 mapped the full core command set (2026-05-01).
 Phase 2 discovery sessions (2026-05-02) added 6 more commands and expanded `0xB0` field knowledge.
-Phase 2 session 3 (2026-05-02 evening) confirmed two new EQ events: `0x2E` (preset selection) and `0x31` (band level change).
-The API can be built now. EQ write (`0x33`), EQ preset name mapping, and idle timeout are the only remaining unverified items.
+Phase 2 session 3 (2026-05-02 evening) confirmed two new EQ events (`0x2E`, `0x31`), the `0x2E` write, and the `0x33` custom EQ band write.
+The full EQ command set is now confirmed. Only `0xA3` (idle timeout) and EQ preset name mapping remain unverified.
 
 ---
 
@@ -242,7 +242,6 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 4. **`0x20` data[5–6]**, **data[19]**, **data[22–25]** — appear to be padding; no change observed.
 5. **Unverified write commands:**
    - `0xA3` — idle timeout (0–90 min) — not blocking Phase 2
-   - `0x33` — set EQ band levels (profile + 10 values); `0x32` — query EQ bands — still unverified
 6. **`0x47` stream volumes** — event-only so far; write command unconfirmed.
 7. **Other `0xB0` bytes** — `probe_b0_diff.py` has only been run for 2.4 GHz mode so far. Other settings changed silently from GG may be stored in unmapped bytes.
 8. **Query commands for 7 settings** — BT default (`0xB2`), BT auto-mute (`0xB3`), audio output (`0x43`), dim screen (`0x83`), home screen (`0x89`), mic LED brightness (`0xBF`), auto off (`0xC1`) have no known query command. GG shows their current values at startup, so it must read them somehow. Discovery in progress — see `probe_full_diff.py`, `probe_query_scan.py`, and `monitor_all.py`.
@@ -271,7 +270,8 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 | `set_bt_default(bool)` | `0xB2` | |
 | `set_bt_auto_mute(0–2)` | `0xB3` | 0=off, 1=-12dB, 2=on |
 | `set_audio_output(1–2)` | `0x43` | 1=speakers, 2=stream |
-| `set_eq_bands(10 values)` | `0x33` | pending EQ verification |
+| `set_eq_preset(0–18)` | `0x2E` | `0x04`=custom; `0x00–0x03`+`0x05–0x18`=named presets |
+| `set_eq_bands(10 values)` | `0x33` | call after `set_eq_preset(0x04)`; values 0–40, 20=flat |
 | `save()` | `0x09` | always call after writes |
 
 ### Technology
@@ -343,7 +343,7 @@ Branch: `development`
 Cumulative confirmed across all sessions:
 - All 20 incoming events decoded ✅
 - All 4 query commands confirmed (`0xB0`, `0x20`, `0x10`, `0x12`) ✅
-- 17 write commands confirmed (`0x25`, `0x37`, `0x39`, `0x85`, `0xBD`, `0xB9`, `0x83`, `0x89`, `0xBF`, `0xC1`, `0x27`, `0x49`, `0xC3`, `0xB2`, `0xB3`, `0x43`, `0x09`) ✅
+- 19 write commands confirmed (`0x25`, `0x37`, `0x39`, `0x85`, `0xBD`, `0xB9`, `0x83`, `0x89`, `0xBF`, `0xC1`, `0x27`, `0x49`, `0xC3`, `0xB2`, `0xB3`, `0x43`, `0x09`, `0x2E`, `0x33`) ✅
 - `0xB0[13]` confirmed as 2.4 GHz mode state field ✅
 - `probe_b0_diff.py` added — full 64-byte interactive diff tool ✅
 - `probe_write.py` upgraded — now diffs all 64 bytes, not just `[10]` ✅
@@ -363,4 +363,4 @@ Cumulative confirmed across all sessions:
 - `0x31` (EQ band level change) confirmed as incoming event; **write causes flat-preset switch — event-only** ✅
 - `listen.py` updated to decode `0x2E` and `0x31` ✅
 - EQ preset name → index mapping still unknown ⏳
-- `0x33` (set custom EQ band levels) still unverified ⏳
+- `0x33` (set custom EQ band levels) confirmed ✅ — `[0x06, 0x33, b1..b10, 0x00×52]`; 10 band values at bytes [2–11], no profile prefix, 20=flat

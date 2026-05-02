@@ -131,6 +131,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0x43` | Set audio output | 1–2 | 1=speakers, 2=stream |
 | `0x47` | Set output stream volumes | multi-byte | `[0x06, 0x47, main, 0x00, aux, mic, ...]`; main/aux/mic each 0–100 |
 | `0x2E` | Select EQ preset / custom | 0–18 | `0x04`=custom EQ; `0x00–0x03` and `0x05–0x18`=named presets (19 total; names TBD) |
+| `0x33` | Set custom EQ band levels | 10 values | `[0x06, 0x33, b1..b10, 0x00×52]`; bytes [2–11]; each 0–40; 20=flat/0 dB; switch to custom EQ first (`0x2E` `0x04`) |
 | `0x09` | Save / persist | — | send after every write |
 
 ### Incoming events (device → Col02, report ID `0x07`)
