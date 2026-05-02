@@ -65,7 +65,8 @@ user explicitly says so.
 
 Phase 1 mapped the full core command set (2026-05-01).
 Phase 2 discovery sessions (2026-05-02) added 6 more commands and expanded `0xB0` field knowledge.
-The API can be built now. EQ write and idle timeout are the only remaining unverified items.
+Phase 2 session 3 (2026-05-02 evening) confirmed two new EQ events: `0x2E` (preset selection) and `0x31` (band level change).
+The API can be built now. EQ write (`0x33`), EQ preset name mapping, and idle timeout are the only remaining unverified items.
 
 ---
 
@@ -110,7 +111,11 @@ The API can be built now. EQ write and idle timeout are the only remaining unver
 9. **`0xAE` was a wrong candidate.** Mic LED brightness is `0xBF`, not `0xAE`.
    The Nova 7X reference was incorrect for this device.
 
-10. **GG-initiated changes are invisible to listen.py.** Toggling settings in
+10. **`0x31` EQ band events fire per-band, not per-commit.** Every drag movement of a band slider fires a continuous stream of `0x31` events with `[2]`=band index (1–10) and `[3]`=current level (0–40). This is live streaming, not a final-value event. The band index aligns 1:1 with `0x20[7–16]` (band 1 = `0x20[7]`, band 10 = `0x20[16]`).
+
+11. **`0x2E` is the EQ preset selector.** Fires as the user scrolls through preset options in GG. Values 0x00–0x12 (0–18) observed. The active preset index at session start was `0x04`. Mapping of index → preset name is still unknown — needs a Wireshark capture at GG startup to see the name query/response.
+
+12. **GG-initiated changes are invisible to listen.py.** Toggling settings in
     SteelSeries GG produces no traffic on Col01 (0xFFC0) or Col02 (0xFF00) as
     seen by listen.py. The same setting changed on the physical base station
     DOES fire a Col02 event. This means either (a) GG uses a different HID
@@ -149,6 +154,8 @@ All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 | `0xB3` | BT auto-mute | `[2]`=0 off, 1 -12dB, 2 on | Also a write command |
 | `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) | `[3]`=0x00 constant; event-only |
 | `0x43` | Audio output selection | `[2]`=1 speakers, 2 stream | Also a write command |
+| `0x2E` | EQ preset selection | `[2]`=preset index (0–18 observed) | Fires when scrolling through presets in GG; index→name mapping TBD |
+| `0x31` | EQ band level change | `[2]`=band (1–10), `[3]`=level (0–40, `0x14`=flat/0 dB) | Fires per-band in custom EQ editor |
 
 ### Query commands (host → device, Col01 `0xFFC0`)
 
@@ -236,6 +243,7 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 5. **Unverified write commands:**
    - `0xA3` — idle timeout (0–90 min) — not blocking Phase 2
    - `0x33` — set EQ bands (profile + 10 values); `0x32` — query EQ bands
+   - `0x2E` write encoding — EQ preset selection write command may share the same opcode but not yet confirmed
 6. **`0x47` stream volumes** — event-only so far; write command unconfirmed.
 7. **Other `0xB0` bytes** — `probe_b0_diff.py` has only been run for 2.4 GHz mode so far. Other settings changed silently from GG may be stored in unmapped bytes.
 8. **Query commands for 7 settings** — BT default (`0xB2`), BT auto-mute (`0xB3`), audio output (`0x43`), dim screen (`0x83`), home screen (`0x89`), mic LED brightness (`0xBF`), auto off (`0xC1`) have no known query command. GG shows their current values at startup, so it must read them somehow. Discovery in progress — see `probe_full_diff.py`, `probe_query_scan.py`, and `monitor_all.py`.
@@ -352,3 +360,7 @@ Cumulative confirmed across all sessions:
 - `parse_gg_capture.py` added — decodes Wireshark JSON/pcapng capture, flags unknown GG commands ✅
 - `docs/WiresharkCaptureGuide.md` added — full step-by-step USB sniffing guide ✅
 - **Open issue**: USB sniffing capture not yet performed; query commands for 7 settings still unknown ⏳
+- `0x2E` (EQ preset selection) confirmed as incoming event ✅
+- `0x31` (EQ band level change) confirmed as incoming event ✅
+- `listen.py` updated to decode `0x2E` and `0x31` ✅
+- EQ preset name → index mapping still unknown ⏳

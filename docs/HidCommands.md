@@ -547,6 +547,59 @@ Fires when the user toggles the Bluetooth default (auto-connect) setting.
 
 ---
 
+### 3.21 EQ Preset Selection — `0x2E` ✅
+
+Fires when the user selects an EQ preset (or cycles through the preset list) in SteelSeries GG.
+
+```
+[reportId, 0x2E, preset_index, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID (`0x07`) |
+| 1 | Command `0x2E` |
+| 2 | Preset index (0–18 observed) |
+
+**Decoding:**
+```
+eq_preset_index = data[2]   // 0–18 observed range
+```
+
+**State field:** `eq_preset_index` (`number | null`)
+
+> Confirmed session `2026-05-02` (19:47). User scrolled through the full preset list in GG — values ranged 0x00–0x12 (0–18). The active preset at session start was index `0x04`. Indices scroll up/down continuously like a dial. Mapping of index → preset name (e.g. Flat, Bass Boost, Gaming, etc.) has not yet been captured; a Wireshark capture of GG startup reads is needed to correlate names.
+
+---
+
+### 3.22 EQ Band Level Change — `0x31` ✅
+
+Fires when the user drags an EQ band slider in the custom EQ editor in SteelSeries GG.
+
+```
+[reportId, 0x31, band, level, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID (`0x07`) |
+| 1 | Command `0x31` |
+| 2 | Band index (1–10; 1=lowest frequency, 10=highest frequency) |
+| 3 | Band level (0–40; `0x14`=20=flat/0 dB) |
+
+**Decoding:**
+```
+eq_band_index = data[2]     // 1–10
+eq_band_level = data[3]     // 0–40; 0x14 (20) = flat / 0 dB
+db_offset     = data[3] - 20   // negative=cut, positive=boost
+```
+
+**State fields:** `eq_bands[1..10]` (array of 10 values, each 0–40)
+
+> Confirmed session `2026-05-02` (19:49). Band 1 (`0x01`) and Band 10 (`0x0A`) were each swept from 0 to 40 and back to flat (0x14=20). Range 0–40 confirmed. Flat value `0x14`=20 consistent with `0x20` query response `data[7–16]`. The band index in this event maps directly to the 10-band EQ array: band 1 = `0x20[7]`, band 10 = `0x20[16]`.
+
+---
+
 ## 4. Outgoing Commands (Host → Device)
 
 ### 4.1 Return to SteelSeries UI — `0x95` ✅
@@ -672,6 +725,8 @@ Enables or disables the ChatMix feature on the base station.
 | `stream_aux` | `0x47` | `number \| null` (0–100) |
 | `stream_mic` | `0x47` | `number \| null` (0–100) |
 | `audio_output` | `0x43`, `0x20`[19] | `"speaker" \| "stream" \| null` |
+| `eq_preset_index` | `0x2E` | `number \| null` (0–18 observed; name mapping TBD) |
+| `eq_bands[1..10]` | `0x31`, `0x20`[7–16] | `number[] \| null` (each 0–40; 20=flat/0 dB) |
 
 ---
 

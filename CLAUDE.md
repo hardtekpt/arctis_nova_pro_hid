@@ -156,6 +156,8 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0xB3` | BT auto-mute | `[2]`=0 off, 1 -12dB, 2 on |
 | `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) |
 | `0x43` | Audio output selection | `[2]`=1 speaker, 2 stream |
+| `0x2E` | EQ preset selection | `[2]`=preset index (0–18 observed; name mapping TBD) |
+| `0x31` | EQ band level change | `[2]`=band (1–10), `[3]`=level (0–40, `0x14`=20=flat/0 dB) |
 
 ---
 

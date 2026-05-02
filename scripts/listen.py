@@ -176,6 +176,20 @@ def decode_packet(data: list[int], source: str) -> str | None:
         label = {1: "speaker", 2: "stream"}.get(data[2], f"?({data[2]})")
         return f"{tag}  Audio Output    → {label} (raw={data[2]})"
 
+    if cmd == 0x2E and len(data) > 2:
+        idx = data[2]
+        return f"{tag}  EQ Preset       → preset_index={idx}  (name mapping TBD; 0x04 was default at session start)"
+
+    if cmd == 0x31 and len(data) > 3:
+        band  = data[2]   # 1–10
+        level = data[3]   # 0–40; 0x14=20=flat/0 dB
+        offset = level - 20
+        sign = "+" if offset >= 0 else ""
+        return (
+            f"{tag}  EQ Band Level   → band={band}  level={level}  "
+            f"(flat=20; offset={sign}{offset})"
+        )
+
     # ── Confirmed query responses ─────────────────────────────────────────────
     # Offsets: data[0]=reportId  data[1]=cmd  data[2+]=payload
 
