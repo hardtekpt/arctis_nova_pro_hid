@@ -387,9 +387,9 @@ Fires when the user changes the automatic power-off timeout.
 
 ---
 
-### 3.15 Transparency / ANC Level — `0xB9` ✅
+### 3.15 Transparency Level — `0xB9` ✅
 
-Fires when the user adjusts the transparency or ANC intensity level on the base station.
+Fires when the user adjusts the transparency intensity level on the base station.
 
 ```
 [reportId, 0xB9, level, ...]
@@ -408,7 +408,7 @@ transparency_level = data[2]   // 1 (min) – 10 (max)
 
 **State field:** `transparency_level` (1–10)
 
-> Observed in session `2026-05-01` (22:22:xxx): events fired immediately after ANC mode changes while the user adjusted the intensity dial. Range 1–10 confirmed with all 10 values observed.
+> Confirmed transparency-only (not ANC intensity). Range 1–10 confirmed with all 10 values observed in session `2026-05-01` (22:22:xxx).
 
 ---
 

@@ -124,7 +124,7 @@ def decode_packet(data: list[int], source: str) -> str | None:
     if cmd == 0xB9 and len(data) > 2:
         lvl = data[2]
         note = "" if 1 <= lvl <= 10 else " ⚠ out of range"
-        return f"{tag}  Transp. Level   → {lvl}/10{note}"
+        return f"{tag}  Transparency Lvl→ {lvl}/10{note}"
 
     # ── Confirmed incoming event: Mic Volume ─────────────────────────────────
     # 0x37 was assumed to be a write-only command (Nova 7X); on Nova Pro it is

@@ -73,7 +73,7 @@ All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 | `0x89` | Home screen mode | `[2]`=0 detailed, 1 simple | |
 | `0xBF` | Mic LED brightness | `[2]`=level (1–10) | |
 | `0xC1` | Auto off timeout | `[2]`=0 off,1=1min,2=5min,3=10min,4=15min,5=30min,6=60min | |
-| `0xB9` | Transparency/ANC level | `[2]`=level (1–10) | New — found in sessions 221xxx |
+| `0xB9` | Transparency level | `[2]`=level (1–10) | Transparency mode only |
 
 #### Query commands (host → device, Col01 `0xFFC0`)
 
