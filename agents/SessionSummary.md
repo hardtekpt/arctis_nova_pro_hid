@@ -34,13 +34,15 @@ See `agents/MainIdea.md` for the original brief.
 
 ```
 scripts/
-  discover.py          # enumerate all HID devices, identify Nova Pro interface paths
-  listen.py            # start-up queries + event loop; logs everything to logs/ (IF4 only)
-  monitor_all.py       # open EVERY device interface simultaneously — find what GG uses
-  probe_write.py       # single write probe: sends one packet, diffs ALL 64 0xB0 bytes before/after
-  probe_b0_diff.py     # interactive before/after 0xB0 full-dump diff (toggle GG setting → see which byte changes)
-  probe_full_diff.py   # dual 0xB0 + 0x20 before/after diff (catches unmapped bytes in both responses)
-  probe_query_scan.py  # scan all 256 opcodes as potential query commands; finds undiscovered responses
+  discover.py           # enumerate all HID devices, identify Nova Pro interface paths
+  listen.py             # start-up queries + event loop; logs everything to logs/ (IF4 only)
+  monitor_all.py        # open EVERY device interface simultaneously — find what GG uses
+  probe_write.py        # single write probe: sends one packet, diffs ALL 64 0xB0 bytes before/after
+  probe_b0_diff.py      # interactive before/after 0xB0 full-dump diff (toggle GG setting → see which byte changes)
+  probe_full_diff.py    # dual 0xB0 + 0x20 before/after diff (catches unmapped bytes in both responses)
+  probe_query_scan.py   # scan all 256 opcodes as potential query commands; finds undiscovered responses
+  find_usb_bus.py       # identify which Wireshark USBPcap interface to use for GG traffic capture
+  parse_gg_capture.py   # decode a Wireshark .json/.pcapng capture → shows GG's host→device commands
 api/
   __init__.py        # Phase 2 API implementation (in progress)
 docs/
@@ -309,6 +311,18 @@ python scripts/probe_b0_diff.py
 
 # scan all 256 opcodes as potential query commands (~31 s)
 python scripts/probe_query_scan.py
+
+# --- USB sniffing (for discovering GG's host→device query commands) ---
+
+# find which Wireshark USBPcap interface corresponds to the headset's USB bus
+python scripts/find_usb_bus.py
+
+# decode a Wireshark JSON export or pcapng file of GG traffic
+python scripts/parse_gg_capture.py gg_capture.json
+python scripts/parse_gg_capture.py gg_capture.json --out-only   # GG→device only
+python scripts/parse_gg_capture.py gg_capture.pcapng             # needs: pip install pyshark
+
+# full capture procedure: see docs/WiresharkCaptureGuide.md
 ```
 
 Interact with the headset. All packets are decoded and logged to `logs/hid_session_<timestamp>.log`.
@@ -333,4 +347,8 @@ Cumulative confirmed across all sessions:
 - `monitor_all.py` added — opens every device interface to identify GG's communication path ✅
 - `probe_full_diff.py` added — dual 0xB0 + 0x20 diff tool for unmapped byte detection ✅
 - `probe_query_scan.py` added — full opcode scanner for undiscovered query commands ✅
-- **Open issue**: GG writes are invisible to listen.py; `monitor_all.py` needed to diagnose ⏳
+- **Root cause confirmed**: `hidapi` only sees device→host (Interrupt IN) traffic. GG's host→device writes (Interrupt OUT) are invisible at the Python HID level — fundamental OS limitation ✅
+- `find_usb_bus.py` added — identifies the correct Wireshark USBPcap interface for the headset ✅
+- `parse_gg_capture.py` added — decodes Wireshark JSON/pcapng capture, flags unknown GG commands ✅
+- `docs/WiresharkCaptureGuide.md` added — full step-by-step USB sniffing guide ✅
+- **Open issue**: USB sniffing capture not yet performed; query commands for 7 settings still unknown ⏳
