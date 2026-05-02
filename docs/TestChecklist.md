@@ -169,8 +169,8 @@ Use `python src/probe_write.py --cmd CMD --param PARAM` or the snippet in §4.7.
 
 | # | Command | Param | What to do | Verify via | Status |
 |---|---------|-------|-----------|------------|--------|
-| 4.3.1 | `0x49` ChatMix enable | `[2]=0x01` | Enable ChatMix; confirm `0x45` events fire when dial moves | `0x45` events appear | ⬜ |
-| 4.3.2 | `0x49` ChatMix disable | `[2]=0x00` | Disable ChatMix; confirm `0x45` events stop | `0x45` events stop | ⬜ |
+| 4.3.1 | `0x49` ChatMix enable | `[2]=0x01` | Enable ChatMix; confirm `0x45` events fire when dial moves | `0x45` events appear ✅ |
+| 4.3.2 | `0x49` ChatMix disable | `[2]=0x00` | Disable ChatMix; confirm `0x45` events stop | `0x45` events stop ✅ |
 
 ### 4.4 Timeout / power writes
 
@@ -179,21 +179,7 @@ Use `python src/probe_write.py --cmd CMD --param PARAM` or the snippet in §4.7.
 | 4.4.1 | `0xA3` Idle timeout | `0x05` (5 min) | Send; let headset idle; confirm it powers off at 5 min | Headset auto-off | ⬜ |
 | 4.4.2 | `0xA3` Idle timeout | `0x00` (never) | Send; verify headset no longer auto-off after idle | Headset stays on | ⬜ |
 
-### 4.5 LED writes
-
-| # | Command | Param | What to do | Verify via | Status |
-|---|---------|-------|-----------|------------|--------|
-| 4.5.1 | `0xAE` LED brightness | `0x00` (off) | Send; check mute LED off | Visual | ⬜ |
-| 4.5.2 | `0xAE` LED brightness | `0x01`–`0x03` | Send each level; check LED changes | Visual | ⬜ |
-
-### 4.6 Volume limiter
-
-| # | Command | Param | What to do | Verify via | Status |
-|---|---------|-------|-----------|------------|--------|
-| 4.6.1 | `0x3A` Volume limiter | `0x01` (on) | Send; verify volume wheel cannot exceed ~85% | Try scrolling past limit | ⬜ |
-| 4.6.2 | `0x3A` Volume limiter | `0x00` (off) | Send; verify volume wheel reaches 100% | Scroll to max | ⬜ |
-
-### 4.7 Write packet snippet
+### 4.5 Write packet snippet
 
 ```python
 import hid, time

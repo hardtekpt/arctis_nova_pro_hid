@@ -134,11 +134,9 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 3. **`0xB0` data[2–3]** and **`0xB0` data[8]** — constant `0x00` / `0x08`, no hypothesis.
 4. **`0x20` data[5–6]**, **data[19]**, **data[22–25]** — padding or unknown, no change observed.
 5. **Candidate write commands** — still unverified on Nova Pro:
-   - `0x3A` — volume limiter (0/1)
    - `0xA3` — idle timeout (0–90 min)
-   - `0xAE` — mute LED brightness (0–3)
    - EQ writes: `0x32`/`0x33`/`0xA6`/`0xA7`
-   - `0x49` — ChatMix enable/disable
+   - `0x49` — ChatMix enable/disable ✅
 6. **USB Input selection** — no command observed yet.
 
 ---
@@ -161,16 +159,14 @@ Phase 2 is writing the actual API. Before that, the remaining Phase 1 work is:
 0xC1  auto off          [0x06, 0xC1, timeout, 0x00×61] timeout=0(off),1-6 (1/5/10/15/30/60 min)  ✅
 0x27  gain level        [0x06, 0x27, gain,  0x00×61]   gain=0(high),1(low)  ✅
       NOTE: write uses 0=high/1=low; incoming event uses 1=low/2=high
+0x49  ChatMix enable    [0x06, 0x49, state, 0x00×61]   state=0(disable),1(enable)  ✅
 0x09  save              [0x06, 0x09, 0x00×62]           call after any write  ✅
 ```
 
 ### Remaining write commands to verify
 
 ```
-0x3A  vol limiter  [0x06, 0x3A, 0x00|0x01, 0x00×61]
 0xA3  idle timeout [0x06, 0xA3, minutes, 0x00×61]   minutes=0-90
-0xAE  LED bright   [0x06, 0xAE, level, 0x00×61]     level=0-3
-0x49  ChatMix en   [0x06, 0x49, 0x01, 0x00×61]      0=disable, 1=enable
 EQ:   0x33 set bands, 0x32 query bands
 ```
 
