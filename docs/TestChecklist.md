@@ -135,35 +135,48 @@ Write a Python snippet for each (template at bottom of this section). Send the c
 | 4.1.6 | `0x85` OLED brightness | `0x01`–`0x0A` | Send, check base station display changes | `0xB0`[11] — watch if it tracks (currently unknown) | ⬜ |
 | 4.1.7 | `0x09` Save/persist | — | Send after any successful write; power-cycle headset; re-query to verify setting survived | All changed fields match after reboot | ⬜ |
 
-### 4.2 ChatMix / connectivity writes
+### 4.2 ANC mode and transparency level writes
+
+Use `python src/probe_write.py --cmd CMD --param PARAM` or the snippet in §4.7.
 
 | # | Command | Param | What to do | Verify via | Status |
 |---|---------|-------|-----------|------------|--------|
-| 4.2.1 | `0x49` ChatMix enable | `[2]=0x01` | Enable ChatMix; confirm `0x45` events fire when dial moves | `0x45` events appear | ⬜ |
-| 4.2.2 | `0x49` ChatMix disable | `[2]=0x00` | Disable ChatMix; confirm `0x45` events stop | `0x45` events stop | ⬜ |
+| 4.2.1 | `0xBD` ANC off | `0x00` | Send; confirm headset OLED shows ANC off | `0xB0`[10] = `0x00` ✅ |
+| 4.2.2 | `0xBD` ANC transparency | `0x01` | Send; confirm headset OLED shows Transparency | `0xB0`[10] = `0x01` ✅ |
+| 4.2.3 | `0xBD` ANC anc | `0x02` | Send; confirm headset OLED shows ANC | `0xB0`[10] = `0x02` ✅ |
+| 4.2.4 | `0xB9` Transparency level 1 | `0x01` | Set ANC=transparency first; send; confirm OLED level changes | Visual / `0xB9` event echo ✅ |
+| 4.2.5 | `0xB9` Transparency level 10 | `0x0A` | Same setup; confirm max level | Visual / `0xB9` event echo ✅ |
+| 4.2.6 | `0xBD` + `0x09` persist | any | Send ANC mode, send save `0x09`, power-cycle headset, query `0xB0`[10] | Setting survives reboot | ⬜ |
 
-### 4.3 Timeout / power writes
-
-| # | Command | Param | What to do | Verify via | Status |
-|---|---------|-------|-----------|------------|--------|
-| 4.3.1 | `0xA3` Idle timeout | `0x05` (5 min) | Send; let headset idle; confirm it powers off at 5 min | Headset auto-off | ⬜ |
-| 4.3.2 | `0xA3` Idle timeout | `0x00` (never) | Send; verify headset no longer auto-off after idle | Headset stays on | ⬜ |
-
-### 4.4 LED writes
+### 4.3 ChatMix / connectivity writes
 
 | # | Command | Param | What to do | Verify via | Status |
 |---|---------|-------|-----------|------------|--------|
-| 4.4.1 | `0xAE` LED brightness | `0x00` (off) | Send; check mute LED off | Visual | ⬜ |
-| 4.4.2 | `0xAE` LED brightness | `0x01`–`0x03` | Send each level; check LED changes | Visual | ⬜ |
+| 4.3.1 | `0x49` ChatMix enable | `[2]=0x01` | Enable ChatMix; confirm `0x45` events fire when dial moves | `0x45` events appear | ⬜ |
+| 4.3.2 | `0x49` ChatMix disable | `[2]=0x00` | Disable ChatMix; confirm `0x45` events stop | `0x45` events stop | ⬜ |
 
-### 4.5 Volume limiter
+### 4.4 Timeout / power writes
 
 | # | Command | Param | What to do | Verify via | Status |
 |---|---------|-------|-----------|------------|--------|
-| 4.5.1 | `0x3A` Volume limiter | `0x01` (on) | Send; verify volume wheel cannot exceed ~85% | Try scrolling past limit | ⬜ |
-| 4.5.2 | `0x3A` Volume limiter | `0x00` (off) | Send; verify volume wheel reaches 100% | Scroll to max | ⬜ |
+| 4.4.1 | `0xA3` Idle timeout | `0x05` (5 min) | Send; let headset idle; confirm it powers off at 5 min | Headset auto-off | ⬜ |
+| 4.4.2 | `0xA3` Idle timeout | `0x00` (never) | Send; verify headset no longer auto-off after idle | Headset stays on | ⬜ |
 
-### 4.6 Write packet snippet
+### 4.5 LED writes
+
+| # | Command | Param | What to do | Verify via | Status |
+|---|---------|-------|-----------|------------|--------|
+| 4.5.1 | `0xAE` LED brightness | `0x00` (off) | Send; check mute LED off | Visual | ⬜ |
+| 4.5.2 | `0xAE` LED brightness | `0x01`–`0x03` | Send each level; check LED changes | Visual | ⬜ |
+
+### 4.6 Volume limiter
+
+| # | Command | Param | What to do | Verify via | Status |
+|---|---------|-------|-----------|------------|--------|
+| 4.6.1 | `0x3A` Volume limiter | `0x01` (on) | Send; verify volume wheel cannot exceed ~85% | Try scrolling past limit | ⬜ |
+| 4.6.2 | `0x3A` Volume limiter | `0x00` (off) | Send; verify volume wheel reaches 100% | Scroll to max | ⬜ |
+
+### 4.7 Write packet snippet
 
 ```python
 import hid, time
@@ -237,7 +250,7 @@ Send each command byte and observe whether the device responds. Log the raw resp
 | 7.1 | `0xB0`[11] = constant `0x0A` | Change OLED brightness, re-query `0xB0` | If [11] changes → it is OLED brightness | ⬜ |
 | 7.2 | `0xB0`[12] = `0x05`/`0x06` seen | Note exact headset battery %, re-query across multiple charge levels | Possible: state tied to charge tier, not setting | ⬜ |
 | 7.3 | `0x20`[2] = constant `0x01` | Try every write command, re-query `0x20` | Does [2] ever change? If not, likely a fixed protocol version byte | ⬜ |
-| 7.4 | Transparent level | Search for a separate control for transparency intensity | Is there a sub-command or byte within `0xBD`? | ⬜ |
+| 7.4 | Transparent level | `0xB9` write confirmed — same byte as the incoming event | `0xBD` sets mode, `0xB9` sets level (1–10, transparency mode only) | ✅ |
 | 7.5 | USB input select | Cycle USB input on base station, watch for any event | Confirm command byte and encoding | ⬜ |
 | 7.6 | `0x10` unsolicited on `0xFFC0` | Power-cycle headset wirelessly, watch for unrequested firmware packet on CTRL handle | Confirm it fires on reconnect | ⬜ |
 
