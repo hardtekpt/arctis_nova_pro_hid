@@ -31,10 +31,13 @@ See `agents/MainIdea.md` for the original brief.
 ## Repository layout
 
 ```
-src/
+scripts/
   discover.py       # enumerate all HID devices, identify Nova Pro interface paths
   listen.py         # start-up queries + event loop; logs everything to logs/
   probe_write.py    # single write probe: sends one packet, diffs 0xB0 before/after
+  write_packet.py   # scratch pad used during Phase 1 write testing
+api/
+  __init__.py       # Phase 2 API implementation (in progress)
 docs/
   HidCommands.md    # the full protocol reference (keep this authoritative)
   TestChecklist.md  # per-command test rows with pass/fail status
@@ -242,13 +245,13 @@ Per `agents/MainIdea.md`: Python 3, lightweight backend API framework, simple CL
 pip install -r requirements.txt
 
 # queries at startup + event loop
-python src/listen.py
+python scripts/listen.py
 
 # listen only (no writes)
-python src/listen.py --no-query
+python scripts/listen.py --no-query
 
 # single write probe (for testing candidates)
-python src/probe_write.py --cmd 0xBD --param 0x01
+python scripts/probe_write.py --cmd 0xBD --param 0x01
 ```
 
 Interact with the headset. All packets are decoded and logged to `logs/hid_session_<timestamp>.log`.
