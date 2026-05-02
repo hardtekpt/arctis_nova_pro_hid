@@ -286,7 +286,7 @@ gain_level = data[2]   // observed: 1=low, 2=high; full range TBD
 
 **State field:** `gain_level`
 
-> Full range of data[2] values not yet determined. Only `1` (low) and `2` (high) observed in session `2026-05-01`. Additional values may exist.
+> Full range confirmed: exactly 2 discrete levels. Raw value `1` = low, `2` = high. No other values exist.
 
 ---
 
@@ -345,7 +345,7 @@ Fires when the user toggles the OLED home screen display style.
 |---|---|
 | 0 | Report ID |
 | 1 | Command `0x89` |
-| 2 | Mode: `0` or `1` (detailed / simple — exact assignment TBD) |
+| 2 | Mode: `0` = detailed, `1` = simple ✅ |
 
 **State field:** `home_screen_mode`
 
@@ -384,6 +384,31 @@ Fires when the user changes the automatic power-off timeout.
 | 2 | Timeout step: `0`=off, `1`=1 min, `2`=5 min, `3`=10 min, `4`=15 min, `5`=30 min, `6`=60 min |
 
 **State field:** `auto_off_timeout`
+
+---
+
+### 3.15 Transparency / ANC Level — `0xB9` ✅
+
+Fires when the user adjusts the transparency or ANC intensity level on the base station.
+
+```
+[reportId, 0xB9, level, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID |
+| 1 | Command `0xB9` |
+| 2 | Level (1–10) |
+
+**Decoding:**
+```
+transparency_level = data[2]   // 1 (min) – 10 (max)
+```
+
+**State field:** `transparency_level` (1–10)
+
+> Observed in session `2026-05-01` (22:22:xxx): events fired immediately after ANC mode changes while the user adjusted the intensity dial. Range 1–10 confirmed with all 10 values observed.
 
 ---
 
@@ -495,9 +520,10 @@ Enables or disables the ChatMix feature on the base station.
 | `connected` | `0xB5` | `boolean \| null` |
 | `wireless` | `0xB5` | `boolean \| null` |
 | `bluetooth` | `0xB5` | `boolean \| null` |
-| `oled_brightness` | `0x85` | `number \| null` (1–10) |
-| `chatmix_game` | `0x45`, `0x20`[20] candidate | `number \| null` (0–100) |
-| `chatmix_chat` | `0x45`, `0x20`[21] candidate | `number \| null` (0–100) |
+| `oled_brightness` | `0x85`, `0xB0`[11] | `number \| null` (1–10) |
+| `chatmix_game` | `0x45`, `0x20`[20] | `number \| null` (0–100) |
+| `chatmix_chat` | `0x45`, `0x20`[21] | `number \| null` (0–100) |
+| `transparency_level` | `0xB9` | `number \| null` (1–10) |
 | `gain_level` | `0x27`, `0x20`[4] | `number \| null` (1=low, 2=high) |
 | `mic_volume` | `0x37`, `0x20`[17] | `number \| null` (1–10) |
 | `dim_screen_timeout` | `0x83` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
@@ -529,7 +555,7 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 | 8 | `0x08` | Constant |
 | 9 | `0x00` / `0x01` | **Mic mute** — `0x00`=unmuted, `0x01`=muted ✅ |
 | 10 | `0x00`–`0x02` | **ANC mode** — `0x00`=off, `0x01`=transparency, `0x02`=anc ✅ |
-| 11 | `0x0A` | Unknown (constant `0x0A`=10; candidate: OLED brightness — user never changed it) |
+| 11 | `0x01`–`0x0A` | **OLED brightness** (1–10; `0x0A`=10=max) ✅ |
 | 12–15 | `06 00 08 08` | TBD |
 
 #### `0x20` — Mic / EQ Params ✅
@@ -569,23 +595,33 @@ Response bytes `[2+]`: null-terminated ASCII string, e.g. `'6152048313222500747'
 | Command | Origin | Observation |
 |---|---|---|
 | `0xA0` | Nova 7X | Query sent, **no response received** on Nova Pro (session `2026-05-01`) |
+| `0xB2` | Adjacent candidate | Write sent (`send(0xB2, 0x00)`), **no visible effect or response** (session `2026-05-02`) |
 
 ---
 
-### 6.3 Candidate Write Commands 🔬
+### 6.3 Confirmed Write Commands ✅
 
-Not yet sent to device. Origin: Arctis Nova 7X protocol + HeadsetControl.
+All confirmed working on Nova Pro (PID `0x12E0`, session `2026-05-01/02`).
+Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persist.
 
 | Command | Description | Param byte | Range | Notes |
 |---|---|---|---|---|
-| `0x37` | Set mic volume | `[2]` | 1–10 | **Confirmed as incoming event (§3.10). Write not yet verified on Nova Pro.** |
-| `0x39` | Set sidetone | `[2]` | 0–3 | 0=off 1=low 2=medium 3=high |
+| `0x37` | Set mic volume | `[2]` | 1–10 | Also an incoming event (§3.10) ✅ |
+| `0x39` | Set sidetone | `[2]` | 0–3 | 0=off, 1=low, 2=medium, 3=high ✅ |
+| `0x85` | Set OLED brightness | `[2]` | 1–10 | Also an incoming event (§3.4) ✅ |
+| `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
+
+### 6.4 Candidate Write Commands 🔬
+
+Not yet verified on Nova Pro. Origin: Arctis Nova 7X protocol + HeadsetControl.
+
+| Command | Description | Param byte | Range | Notes |
+|---|---|---|---|---|
 | `0x3A` | Volume limiter | `[2]` | 0/1 | 0=off, 1=on (hearing protection) |
 | `0xA3` | Set idle timeout | `[2]` | 0–90 | Minutes; 0=never sleep |
 | `0xAE` | LED brightness | `[2]` | 0–3 | Mute indicator LED |
-| `0x09` | Save / persist | — | — | Call after config changes to write to flash |
 
-### 6.4 Candidate EQ Commands 🔬
+### 6.5 Candidate EQ Commands 🔬
 
 | Command | Description | Notes |
 |---|---|---|

@@ -1,4 +1,4 @@
-# Session Summary — Phase 1 HID Discovery (2026-05-01)
+# Session Summary — Phase 1 HID Discovery (2026-05-01 / 2026-05-02)
 
 ## What this project is
 
@@ -67,12 +67,13 @@ All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 | `0xBD` | ANC mode | `[2]`=0 off, 1 transparency, 2 anc | |
 | `0xBB` | Mic mute | `[2]`=0 unmuted, 1 muted | |
 | `0x45` | ChatMix dial | `[2]`=game (0–100), `[3]`=chat (0–100) | center = both 100 |
-| `0x27` | Gain level | `[2]`=1 low, 2 high | |
+| `0x27` | Gain level | `[2]`=1 low, 2 high | Full range confirmed: only these 2 values |
 | `0x37` | Mic volume | `[2]`=level (1–10) | also an incoming event (not write-only) |
 | `0x83` | Dim screen timeout | `[2]`=0 off,1=1min,2=5min,3=10min,4=15min,5=30min,6=60min | |
 | `0x89` | Home screen mode | `[2]`=0 detailed, 1 simple | |
 | `0xBF` | Mic LED brightness | `[2]`=level (1–10) | |
 | `0xC1` | Auto off timeout | `[2]`=0 off,1=1min,2=5min,3=10min,4=15min,5=30min,6=60min | |
+| `0xB9` | Transparency/ANC level | `[2]`=level (1–10) | New — found in sessions 221xxx |
 
 #### Query commands (host → device, Col01 `0xFFC0`)
 
@@ -104,7 +105,7 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 | [7] | Dock battery raw | ÷ 8 × 100 = % |
 | [9] | Mic mute | `0x00`=unmuted, `0x01`=muted |
 | [10] | ANC mode | `0x00`=off, `0x01`=transparency, `0x02`=anc |
-| [11] | Unknown | constant `0x0A`=10; candidate: OLED brightness |
+| [11] | **OLED brightness** | 1–10; `0x0A`=10=max ✅ |
 
 #### `0x20` response field map (64 bytes)
 
@@ -128,20 +129,17 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 
 ### What is still unknown / needs more work
 
-1. **`0x20` data[2]** — constant `0x01` in all 24 sessions. Meaning unknown.
-2. **`0xB0` data[11]** — constant `0x0A`=10 even when volume=0%, so NOT headset volume. Candidate: OLED brightness (never changed during any session).
-3. **`0xB0` data[12]** — changed from `0x05` to `0x06` in later sessions. Correlates with headset battery dropping from 62% to 50% in the same batch of sessions, but an opposite direction makes this unclear. Could be something unrelated.
-4. **Write commands** — none have been sent yet. These candidates come from the Nova 7X protocol and HeadsetControl but are unverified on the Nova Pro:
-   - `0x37` — set mic volume (confirmed as incoming event; write not verified)
-   - `0x39` — set sidetone (0–3)
+1. **`0x20` data[2]** — constant `0x01` in all sessions. Meaning unknown. Likely a protocol version byte.
+2. **`0xB0` data[12]** — changed from `0x05` to `0x06` across sessions; weak correlation with battery level. Meaning unclear.
+3. **`0xB0` data[2–3]** and **`0xB0` data[8]** — constant `0x00` / `0x08`, no hypothesis.
+4. **`0x20` data[5–6]**, **data[19]**, **data[22–25]** — padding or unknown, no change observed.
+5. **Candidate write commands** — still unverified on Nova Pro:
    - `0x3A` — volume limiter (0/1)
    - `0xA3` — idle timeout (0–90 min)
-   - `0xAE` — LED brightness (0–3)
-   - `0x09` — save/persist to flash (call after any write)
+   - `0xAE` — mute LED brightness (0–3)
    - EQ writes: `0x32`/`0x33`/`0xA6`/`0xA7`
-5. **`0x89` home screen label order** — `0`=detailed, `1`=simple, but which is which was not explicitly confirmed by the user.
-6. **Transparent Level** — not yet found. ANC transparency intensity may be a separate control.
-7. **USB Input selection** — not yet found.
+   - `0x49` — ChatMix enable/disable
+6. **USB Input selection** — no command observed yet.
 
 ---
 
@@ -149,16 +147,23 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 
 Phase 2 is writing the actual API. Before that, the remaining Phase 1 work is:
 
-### Verify write commands
-
-For each candidate write, send the command, observe the effect on the headset,
-and query back to confirm the change persisted. Start with safe, reversible ones:
+### Confirmed write commands (verified on Nova Pro)
 
 ```
-0x39  sidetone    [0x06, 0x39, level, 0x00×61]   level=0,1,2,3
-0x37  mic volume  [0x06, 0x37, level, 0x00×61]   level=1-10
-0x85  OLED bright [0x06, 0x85, level, 0x00×61]   level=1-10
-0x09  save        [0x06, 0x09, 0x00×62]           call after any write
+0x37  mic volume  [0x06, 0x37, level, 0x00×61]   level=1-10  ✅
+0x39  sidetone    [0x06, 0x39, level, 0x00×61]   level=0,1,2,3  ✅
+0x85  OLED bright [0x06, 0x85, level, 0x00×61]   level=1-10  ✅
+0x09  save        [0x06, 0x09, 0x00×62]           call after any write  ✅
+```
+
+### Remaining write commands to verify
+
+```
+0x3A  vol limiter [0x06, 0x3A, 0x00|0x01, 0x00×61]
+0xA3  idle timeout [0x06, 0xA3, minutes, 0x00×61]   minutes=0-90
+0xAE  LED bright  [0x06, 0xAE, level, 0x00×61]   level=0-3
+0x49  ChatMix en  [0x06, 0x49, 0x01, 0x00×61]    0=disable, 1=enable
+EQ:   0x33 set bands, 0x32 query bands
 ```
 
 For each: send, query `0x20` or `0xB0`, verify the relevant field changed.
@@ -211,13 +216,13 @@ Interact with the headset. All packets are decoded and logged to `logs/hid_sessi
 ## Git state at end of session
 
 Branch: `development`  
-Last merge: `feature/phase1-query-field-mapping-r4`
+Last merge: `feature/phase1-write-confirm-0xb9`
 
-```
-99a7583 Merge feature/phase1-query-field-mapping-r4
-81ad698 feat: confirm ANC/volume/ChatMix query fields
-fac9e0e Merge feature/phase1-query-field-mapping-r3
-e35c6e6 feat: decode confirmed 0x20/0xB0 query fields and named events
-422a8b0 Merge feature/phase1-discoveries-r2
-...
-```
+New in this merge:
+- `0xB9` transparency/ANC level event added (1–10)
+- `0xB0[11]` confirmed as OLED brightness
+- `0x89` label order confirmed: 0=detailed, 1=simple
+- Gain full range confirmed: 2 discrete levels only (1=low, 2=high)
+- Write commands 0x37/0x39/0x85/0x09 confirmed working
+- `0xB2` added to unresponsive list
+- `docs/TestChecklist.md` created

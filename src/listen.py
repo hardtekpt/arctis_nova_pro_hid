@@ -119,7 +119,12 @@ def decode_packet(data: list[int], source: str) -> str | None:
     if cmd == 0x27 and len(data) > 2:
         GAIN_LABELS = {1: "low", 2: "high"}
         label = GAIN_LABELS.get(data[2], f"unknown({data[2]})")
-        return f"{tag}  Gain Level      → {label} (raw={data[2]})"
+        return f"{tag}  Gain Level      → {label} (raw={data[2]})  [range: 1=low, 2=high only]"
+
+    if cmd == 0xB9 and len(data) > 2:
+        lvl = data[2]
+        note = "" if 1 <= lvl <= 10 else " ⚠ out of range"
+        return f"{tag}  Transp. Level   → {lvl}/10{note}"
 
     # ── Confirmed incoming event: Mic Volume ─────────────────────────────────
     # 0x37 was assumed to be a write-only command (Nova 7X); on Nova Pro it is
@@ -166,7 +171,7 @@ def decode_packet(data: list[int], source: str) -> str | None:
             f"{tag}  Status          → "
             f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
             f"conn={conn}  mic_mute={muted}  anc={anc}  "
-            f"[5]={data[5]}  [11]=0x{data[11]:02X}"
+            f"bt_state={data[5]}  oled_brightness={data[11]}"
         )
 
     # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).
