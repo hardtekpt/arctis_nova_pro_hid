@@ -616,6 +616,7 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0xBF` | Set mic LED brightness | `[2]` | 1–10 | Also the incoming event byte (§3.13) ✅ |
 | `0xC1` | Set auto off timeout | `[2]` | 0–6 | `0`=off, `1`=1 min, `2`=5 min, `3`=10 min, `4`=15 min, `5`=30 min, `6`=60 min; also the incoming event byte (§3.14) ✅ |
 | `0x27` | Set gain level | `[2]` | 0–1 | **Write encoding differs from event encoding:** `0x00`=high, `0x01`=low. Incoming event (§3.9) uses `0x01`=low, `0x02`=high ✅ |
+| `0x49` | ChatMix enable/disable | `[2]` | 0–1 | `0x00`=disable, `0x01`=enable; `0x45` dial events only fire when enabled (§4.3) ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
 
 ### 6.4 Candidate Write Commands 🔬
@@ -624,9 +625,7 @@ Not yet verified on Nova Pro. Origin: Arctis Nova 7X protocol + HeadsetControl.
 
 | Command | Description | Param byte | Range | Notes |
 |---|---|---|---|---|
-| `0x3A` | Volume limiter | `[2]` | 0/1 | 0=off, 1=on (hearing protection) |
 | `0xA3` | Set idle timeout | `[2]` | 0–90 | Minutes; 0=never sleep |
-| `0xAE` | LED brightness | `[2]` | 0–3 | Mute indicator LED |
 
 #### ANC / Transparency Write — ✅ Resolved (2026-05-02)
 
