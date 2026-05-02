@@ -438,6 +438,89 @@ Fires when the user changes the 2.4 GHz wireless mode between performance and ex
 
 ---
 
+### 3.17 BT Auto-Mute — `0xB3` ✅
+
+Fires when the user changes the Bluetooth auto-mute setting in SteelSeries GG.
+
+```
+[reportId, 0xB3, mode, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID (`0x07`) |
+| 1 | Command `0xB3` |
+| 2 | Mode: `0x00` = off, `0x01` = on, `0x02` = -12 dB |
+
+**Decoding:**
+```
+0x00 → bt_auto_mute = "off"
+0x01 → bt_auto_mute = "on"
+0x02 → bt_auto_mute = "-12dB"
+```
+
+**State field:** `bt_auto_mute` (`"off"` | `"on"` | `"-12dB"`)
+
+> Confirmed in session `2026-05-02` (14:10). Three distinct values observed matching GG's three options.
+
+---
+
+### 3.18 Output Stream Volumes — `0x47` ✅
+
+Fires when the user adjusts any of the three output stream channel volumes (main, aux, mic) in SteelSeries GG. All three values are present in every packet.
+
+```
+[reportId, 0x47, main, 0x00, aux, mic, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID (`0x07`) |
+| 1 | Command `0x47` |
+| 2 | Main channel volume (0–100) |
+| 3 | `0x00` (constant) |
+| 4 | Aux channel volume (0–100) |
+| 5 | Mic channel volume (0–100) |
+
+**Decoding:**
+```
+stream_main = data[2]   // 0–100
+stream_aux  = data[4]   // 0–100
+stream_mic  = data[5]   // 0–100
+```
+
+**State fields:** `stream_main`, `stream_aux`, `stream_mic` (all 0–100)
+
+> Confirmed in session `2026-05-02` (14:11). Each channel was swept independently (0→100→0). byte[3] was `0x00` throughout. Note: `0x47` was previously a candidate alias for ChatMix; it is a distinct event with a 3-channel volume layout.
+
+---
+
+### 3.19 Audio Output Selection — `0x43` ✅
+
+Fires when the user switches the audio output routing between speaker and stream in SteelSeries GG.
+
+```
+[reportId, 0x43, output, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID (`0x07`) |
+| 1 | Command `0x43` |
+| 2 | Output: `0x01` = speaker, `0x02` = stream |
+
+**Decoding:**
+```
+0x01 → audio_output = "speaker"
+0x02 → audio_output = "stream"
+```
+
+**State field:** `audio_output` (`"speaker"` | `"stream"`)
+
+> Confirmed in session `2026-05-02` (14:11–14:12). Toggled six times alternating 01/02.
+
+---
+
 ## 4. Outgoing Commands (Host → Device)
 
 ### 4.1 Return to SteelSeries UI — `0x95` ✅
@@ -557,6 +640,11 @@ Enables or disables the ChatMix feature on the base station.
 | `mic_led_brightness` | `0xBF` | `number \| null` (1–10) |
 | `auto_off_timeout` | `0xC1` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
 | `wireless_2ghz_mode` | `0xC3`, `0xB0`[13] | `"performance" \| "range" \| null` |
+| `bt_auto_mute` | `0xB3` | `"off" \| "on" \| "-12dB" \| null` |
+| `stream_main` | `0x47` | `number \| null` (0–100) |
+| `stream_aux` | `0x47` | `number \| null` (0–100) |
+| `stream_mic` | `0x47` | `number \| null` (0–100) |
+| `audio_output` | `0x43` | `"speaker" \| "stream" \| null` |
 
 ---
 
