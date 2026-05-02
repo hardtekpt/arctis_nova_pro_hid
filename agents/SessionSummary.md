@@ -34,11 +34,13 @@ See `agents/MainIdea.md` for the original brief.
 
 ```
 scripts/
-  discover.py        # enumerate all HID devices, identify Nova Pro interface paths
-  listen.py          # start-up queries + event loop; logs everything to logs/
-  probe_write.py     # single write probe: sends one packet, diffs ALL 64 0xB0 bytes before/after
-  probe_b0_diff.py   # interactive before/after 0xB0 full-dump diff (toggle GG setting → see which byte changes)
-  write_packet.py    # scratch pad used during Phase 1 write testing
+  discover.py          # enumerate all HID devices, identify Nova Pro interface paths
+  listen.py            # start-up queries + event loop; logs everything to logs/ (IF4 only)
+  monitor_all.py       # open EVERY device interface simultaneously — find what GG uses
+  probe_write.py       # single write probe: sends one packet, diffs ALL 64 0xB0 bytes before/after
+  probe_b0_diff.py     # interactive before/after 0xB0 full-dump diff (toggle GG setting → see which byte changes)
+  probe_full_diff.py   # dual 0xB0 + 0x20 before/after diff (catches unmapped bytes in both responses)
+  probe_query_scan.py  # scan all 256 opcodes as potential query commands; finds undiscovered responses
 api/
   __init__.py        # Phase 2 API implementation (in progress)
 docs/
@@ -105,6 +107,15 @@ The API can be built now. EQ write and idle timeout are the only remaining unver
 
 9. **`0xAE` was a wrong candidate.** Mic LED brightness is `0xBF`, not `0xAE`.
    The Nova 7X reference was incorrect for this device.
+
+10. **GG-initiated changes are invisible to listen.py.** Toggling settings in
+    SteelSeries GG produces no traffic on Col01 (0xFFC0) or Col02 (0xFF00) as
+    seen by listen.py. The same setting changed on the physical base station
+    DOES fire a Col02 event. This means either (a) GG uses a different HID
+    interface that listen.py never opens, or (b) GG writes to Col01 but the
+    device fires no Col02 event for software-initiated changes (only hardware
+    actions trigger Col02 events). Use `monitor_all.py` to distinguish between
+    these cases — it opens every interface the device exposes.
 
 ---
 
@@ -225,6 +236,8 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
    - `0x33` — set EQ bands (profile + 10 values); `0x32` — query EQ bands
 6. **`0x47` stream volumes** — event-only so far; write command unconfirmed.
 7. **Other `0xB0` bytes** — `probe_b0_diff.py` has only been run for 2.4 GHz mode so far. Other settings changed silently from GG may be stored in unmapped bytes.
+8. **Query commands for 7 settings** — BT default (`0xB2`), BT auto-mute (`0xB3`), audio output (`0x43`), dim screen (`0x83`), home screen (`0x89`), mic LED brightness (`0xBF`), auto off (`0xC1`) have no known query command. GG shows their current values at startup, so it must read them somehow. Discovery in progress — see `probe_full_diff.py`, `probe_query_scan.py`, and `monitor_all.py`.
+9. **GG communication interface unknown** — when settings are changed via GG software, NO traffic appears in `listen.py` (which only monitors IF4 / 0xFFC0 + 0xFF00). When the same settings are changed via the physical base station controls, events DO appear on Col02. Two hypotheses: (a) GG uses a different HID interface (not IF4), or (b) GG writes to Col01 are silent — no Col02 event fires for software-initiated changes, only for hardware-initiated ones. Run `monitor_all.py` while toggling GG settings to determine which interface (if any) carries GG traffic.
 
 ---
 
@@ -276,17 +289,26 @@ Per `agents/MainIdea.md`: Python 3, lightweight backend API framework, simple CL
 ```bash
 pip install -r requirements.txt
 
-# queries at startup + event loop
+# queries at startup + event loop (IF4 only: 0xFFC0 + 0xFF00)
 python scripts/listen.py
 
 # listen only (no writes)
 python scripts/listen.py --no-query
 
+# open ALL device interfaces simultaneously — use to find which interface GG uses
+python scripts/monitor_all.py
+
 # single write probe — diffs ALL 64 bytes of 0xB0 before/after
 python scripts/probe_write.py --cmd 0xBD --param 0x01
 
-# interactive before/after 0xB0 diff (for finding silent-write state bytes)
+# interactive before/after 0xB0 + 0x20 dual diff (for finding unmapped state bytes)
+python scripts/probe_full_diff.py
+
+# interactive before/after 0xB0-only diff (original single-response tool)
 python scripts/probe_b0_diff.py
+
+# scan all 256 opcodes as potential query commands (~31 s)
+python scripts/probe_query_scan.py
 ```
 
 Interact with the headset. All packets are decoded and logged to `logs/hid_session_<timestamp>.log`.
@@ -308,3 +330,7 @@ Cumulative confirmed across all sessions:
 - `0xC3` silent-write discovery methodology established ✅
 - `0x3A` volume limiter confirmed absent on Nova Pro ✅
 - `0xAE` corrected to `0xBF` for mic LED brightness ✅
+- `monitor_all.py` added — opens every device interface to identify GG's communication path ✅
+- `probe_full_diff.py` added — dual 0xB0 + 0x20 diff tool for unmapped byte detection ✅
+- `probe_query_scan.py` added — full opcode scanner for undiscovered query commands ✅
+- **Open issue**: GG writes are invisible to listen.py; `monitor_all.py` needed to diagnose ⏳
