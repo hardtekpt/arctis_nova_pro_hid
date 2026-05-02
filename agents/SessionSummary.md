@@ -155,6 +155,12 @@ Phase 2 is writing the actual API. Before that, the remaining Phase 1 work is:
 0x85  OLED brightness   [0x06, 0x85, level, 0x00×61]   level=1-10  ✅
 0xBD  ANC mode          [0x06, 0xBD, mode,  0x00×61]   mode=0(off),1(transparency),2(ANC)  ✅
 0xB9  transparency lvl  [0x06, 0xB9, level, 0x00×61]   level=1-10 (transparency mode only)  ✅
+0x83  dim screen        [0x06, 0x83, timeout, 0x00×61] timeout=0(off),1-6 (1/5/10/15/30/60 min)  ✅
+0x89  home screen mode  [0x06, 0x89, mode,  0x00×61]   mode=0(detailed),1(simple)  ✅
+0xBF  mic LED bright    [0x06, 0xBF, level, 0x00×61]   level=1-10  ✅
+0xC1  auto off          [0x06, 0xC1, timeout, 0x00×61] timeout=0(off),1-6 (1/5/10/15/30/60 min)  ✅
+0x27  gain level        [0x06, 0x27, gain,  0x00×61]   gain=0(high),1(low)  ✅
+      NOTE: write uses 0=high/1=low; incoming event uses 1=low/2=high
 0x09  save              [0x06, 0x09, 0x00×62]           call after any write  ✅
 ```
 
@@ -230,6 +236,11 @@ Cumulative changes since `feature/phase1-query-field-mapping-r4`:
 - `0xB9` write confirmed: Transparency level (1–10), transparency mode only, persists ✅
 - `0x37` mic volume write confirmed working ✅
 - `0x85` OLED brightness write confirmed working; `0xB0[11]` tracks current value ✅
+- `0x83` dim screen timeout write confirmed working ✅
+- `0x89` home screen mode write confirmed working ✅
+- `0xBF` mic LED brightness write confirmed working ✅
+- `0xC1` auto off timeout write confirmed working ✅
+- `0x27` gain write confirmed working ✅ — write encoding: `0x00`=high, `0x01`=low (different from event 1=low/2=high)
 - `src/probe_write.py` added — single write probe + before/after 0xB0 diff tool ✅
 - `0xB9` — Transparency Level (1–10), transparency mode only ✅
 - `0xB0[11]` — confirmed OLED brightness (1–10) ✅

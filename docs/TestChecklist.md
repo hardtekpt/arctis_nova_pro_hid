@@ -135,19 +135,35 @@ Write a Python snippet for each (template at bottom of this section). Send the c
 | 4.1.6 | `0x85` OLED brightness | `0x01`–`0x0A` | Send, check base station display changes | `0xB0`[11] reflects new value ✅ |
 | 4.1.7 | `0x09` Save/persist | — | Send after any successful write; power-cycle headset; re-query to verify setting survived | All changed fields match after reboot | ⬜ |
 
-### 4.2 ANC mode and transparency level writes
+### 4.2 Display and audio setting writes
+
+| # | Command | Param | What to do | Verify via | Status |
+|---|---------|-------|-----------|------------|--------|
+| 4.2.1 | `0x83` Dim screen off | `0x00` | Send; confirm OLED dim timer disabled | `0x83` event echo or OLED stays on ✅ |
+| 4.2.2 | `0x83` Dim screen 5 min | `0x02` | Send; leave idle 5 min | OLED dims at 5 min ✅ |
+| 4.2.3 | `0x89` Home screen detailed | `0x00` | Send; check OLED home screen style | OLED shows detailed view ✅ |
+| 4.2.4 | `0x89` Home screen simple | `0x01` | Send; check OLED home screen style | OLED shows simple view ✅ |
+| 4.2.5 | `0xBF` Mic LED brightness | `0x01`–`0x0A` | Send each level; confirm LED changes | Visual ✅ |
+| 4.2.6 | `0xC1` Auto off off | `0x00` | Send; leave idle | Headset stays on ✅ |
+| 4.2.7 | `0xC1` Auto off 5 min | `0x02` | Send; leave idle 5 min | Headset powers off ✅ |
+| 4.2.8 | `0x27` Gain high | `0x00` | Send; confirm gain is high | `0x20`[4] = `0x02`; `0x27` event fires with `0x02` ✅ |
+| 4.2.9 | `0x27` Gain low | `0x01` | Send; confirm gain is low | `0x20`[4] = `0x01`; `0x27` event fires with `0x01` ✅ |
+
+> **`0x27` write encoding note:** write param `0x00`=high, `0x01`=low — inverted from the event/query encoding (`0x01`=low, `0x02`=high).
+
+### 4.3 ANC mode and transparency level writes
 
 Use `python src/probe_write.py --cmd CMD --param PARAM` or the snippet in §4.7.
 
 | # | Command | Param | What to do | Verify via | Status |
 |---|---------|-------|-----------|------------|--------|
-| 4.2.1 | `0xBD` ANC off | `0x00` | Send; confirm headset OLED shows ANC off | `0xB0`[10] = `0x00` ✅ |
-| 4.2.2 | `0xBD` ANC transparency | `0x01` | Send; confirm headset OLED shows Transparency | `0xB0`[10] = `0x01` ✅ |
-| 4.2.3 | `0xBD` ANC anc | `0x02` | Send; confirm headset OLED shows ANC | `0xB0`[10] = `0x02` ✅ |
-| 4.2.4 | `0xB9` Transparency level 1 | `0x01` | Set ANC=transparency first; send; confirm OLED level changes | Visual / `0xB9` event echo ✅ |
-| 4.2.5 | `0xB9` Transparency level 10 | `0x0A` | Same setup; confirm max level | Visual / `0xB9` event echo ✅ |
-| 4.2.6 | `0xBD` + `0x09` persist | any | Send ANC mode, send save `0x09`, power-cycle headset, query `0xB0`[10] | Setting survives reboot ✅ |
-| 4.2.7 | `0xB9` + `0x09` persist | any | Send transparency level, save, power-cycle, confirm OLED shows same level | Setting survives reboot ✅ |
+| 4.3.1 | `0xBD` ANC off | `0x00` | Send; confirm headset OLED shows ANC off | `0xB0`[10] = `0x00` ✅ |
+| 4.3.2 | `0xBD` ANC transparency | `0x01` | Send; confirm headset OLED shows Transparency | `0xB0`[10] = `0x01` ✅ |
+| 4.3.3 | `0xBD` ANC anc | `0x02` | Send; confirm headset OLED shows ANC | `0xB0`[10] = `0x02` ✅ |
+| 4.3.4 | `0xB9` Transparency level 1 | `0x01` | Set ANC=transparency first; send; confirm OLED level changes | Visual / `0xB9` event echo ✅ |
+| 4.3.5 | `0xB9` Transparency level 10 | `0x0A` | Same setup; confirm max level | Visual / `0xB9` event echo ✅ |
+| 4.3.6 | `0xBD` + `0x09` persist | any | Send ANC mode, send save `0x09`, power-cycle headset, query `0xB0`[10] | Setting survives reboot ✅ |
+| 4.3.7 | `0xB9` + `0x09` persist | any | Send transparency level, save, power-cycle, confirm OLED shows same level | Setting survives reboot ✅ |
 
 ### 4.3 ChatMix / connectivity writes
 
