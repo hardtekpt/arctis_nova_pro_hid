@@ -14,8 +14,8 @@ Full programmatic control of the **SteelSeries Arctis Nova Pro Wireless** (and X
 ## Features
 
 - **Read all device state** via two query commands (`0xB0` status, `0x20` mic/EQ)
-- **Write every confirmed setting**: headset volume, mic volume, sidetone, OLED brightness, ANC mode, transparency level, gain, mic LED, screen timeouts, home screen mode, auto-off, ChatMix enable, 2.4 GHz wireless mode
-- **Live event stream** from Col02: volume wheel, mute button, ANC button, ChatMix dial, battery updates, connectivity changes, Bluetooth state, stream volumes, audio output routing, BT auto-mute
+- **Write every confirmed setting**: headset volume, mic volume, sidetone, OLED brightness, ANC mode, transparency level, gain, mic LED, screen timeouts, home screen mode, auto-off, ChatMix enable, 2.4 GHz wireless mode, EQ preset selection, custom EQ band levels
+- **Live event stream** from Col02: volume wheel, mute button, ANC button, ChatMix dial, battery updates, connectivity changes, Bluetooth state, stream volumes, audio output routing, BT auto-mute, EQ preset changes, per-band EQ level changes
 - **Discovery tools**: interactive `0xB0` diff probe and write-probe scripts for mapping unknown commands
 
 ---
@@ -70,6 +70,14 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | `0x47` | Stream volumes | ✅ | `0x20`[22,24,25] | ✅ | multi-byte | `[2]`=main (0–100) · `[3]`=0x00 · `[4]`=aux (0–100) · `[5]`=mic (0–100) |
 | `0x43` | Audio output | ✅ | `0x20`[19] | ✅ | 1–2 | `0x01`=speakers · `0x02`=stream |
 
+### EQ
+
+| Cmd | Name | E | Q | W | Param | Notes |
+|-----|------|---|---|---|-------|-------|
+| `0x2E` | EQ preset select | ✅ | — | ✅ | 0–18 | `0x04`=custom EQ · `0x00–0x03` and `0x05–0x18`=named presets (19 total; names TBD) |
+| `0x33` | Set custom EQ bands | — | — | ✅ | 10 values | `[0x06, 0x33, b1..b10, 0x00×52]` · bytes [2–11] · each 0–40 · 20=flat/0 dB · switch to custom first (`0x2E` `0x04`) |
+| `0x31` | EQ band level | ✅ | `0x20`[7–16] | ⚠ | — | **Event only** — fires per-band while dragging a slider · `[2]`=band (1–10) · `[3]`=level (0–40) · writing this command switches to flat preset |
+
 ### Noise control
 
 | Cmd | Name | E | Q | W | Param | Notes |
@@ -115,8 +123,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | Cmd | Name | E | Q | W | Param | Notes |
 |-----|------|---|---|---|-------|-------|
 | `0xA3` | Idle timeout | — | — | 🔬 | 0–90 | Minutes · 0=never · not yet confirmed on Nova Pro |
-| `0x33` | Set EQ bands | — | — | 🔬 | — | Profile `0x00`=2.4 GHz · `0x01`=BT · 10 band values 0–40 |
-| `0x32` | Query EQ bands | — | — | 🔬 | — | Returns profile ID + 10 band values |
+| `0x32` | Query EQ bands | — | — | 🔬 | — | Not yet tested on Nova Pro |
 
 ---
 
@@ -170,3 +177,5 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 - `0x27` gain has an encoding asymmetry: write `0x00`=high/`0x01`=low; event and query use `0x01`=low/`0x02`=high.
 - `0x45` ChatMix dial events only fire after sending `0x49` with param `0x01`.
 - `0xC3` (2.4 GHz mode) does not fire a Col02 event when changed — it is a silent write. Read current value from `0xB0[13]`.
+- **EQ write sequence**: (1) select custom EQ with `0x2E` param `0x04`; (2) write 10 band values with `0x33` at bytes [2–11]; (3) save with `0x09`. Do not use `0x31` as a write command — it switches to the flat preset instead of setting band levels.
+- `0x31` EQ band events stream continuously while a slider is dragged in GG. The final resting value matches what `0x20[7–16]` reports after saving.
