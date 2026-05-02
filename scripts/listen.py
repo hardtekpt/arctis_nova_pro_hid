@@ -180,40 +180,45 @@ def decode_packet(data: list[int], source: str) -> str | None:
     # Offsets: data[0]=reportId  data[1]=cmd  data[2+]=payload
 
     # Battery confirmed at [6]/[7] (0-8 raw = 0-100%).
-    # Fields [2-5] and [8+] partially mapped – see HidCommands.md §6.1.
-    if cmd == 0xB0 and len(data) > 11:
+    # Audio output at [3], all fields mapped – see HidCommands.md §6.1.
+    if cmd == 0xB0 and len(data) > 13:
         _CONN    = {0x01: "2.4GHz", 0x04: "2.4GHz+BT"}
         _ANC     = {0x00: "off", 0x01: "transparency", 0x02: "anc"}
         _WMODE   = {0x00: "performance", 0x01: "range"}
-        h_bat  = round(min(100, data[6] / 8 * 100))
-        d_bat  = round(min(100, data[7] / 8 * 100))
-        conn   = _CONN.get(data[4], f"0x{data[4]:02X}")
-        muted  = "muted" if data[9] == 1 else "unmuted"
-        anc    = _ANC.get(data[10], f"0x{data[10]:02X}")
-        bt     = "on" if data[5] == 1 else "off"
-        wmode  = _WMODE.get(data[13], f"0x{data[13]:02X}") if len(data) > 13 else "?"
+        _AUDIO   = {0x01: "speaker", 0x02: "stream"}
+        h_bat    = round(min(100, data[6] / 8 * 100))
+        d_bat    = round(min(100, data[7] / 8 * 100))
+        conn     = _CONN.get(data[4], f"0x{data[4]:02X}")
+        muted    = "muted" if data[9] == 1 else "unmuted"
+        anc      = _ANC.get(data[10], f"0x{data[10]:02X}")
+        audio    = _AUDIO.get(data[3], f"0x{data[3]:02X}")
+        bt       = "on" if data[5] == 1 else "off"
+        wmode    = _WMODE.get(data[13], f"0x{data[13]:02X}")
         return (
             f"{tag}  Status          → "
             f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
             f"conn={conn}  mic_mute={muted}  anc={anc}  "
-            f"bt={bt}  oled_brightness={data[11]}  2.4ghz_mode={wmode}"
+            f"bt={bt}  oled_brightness={data[11]}  audio_output={audio}  2.4ghz_mode={wmode}"
         )
 
     # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).
-    # [2], [3], [4] meanings disputed – see HidCommands.md §6.1.
-    # [17] is a candidate for mic volume (range 1-10, matches 0x37 events).
-    if cmd == 0x20 and len(data) > 21:
+    # [22-25] = stream output volumes (main, padding, aux, mic) – see HidCommands.md §6.1.
+    if cmd == 0x20 and len(data) > 25:
         _GAIN = {1: "low", 2: "high"}
         _SIDE = {0: "off", 1: "low", 2: "medium", 3: "high"}
-        gain     = _GAIN.get(data[4], f"?({data[4]})")
-        sidetone = _SIDE.get(data[18], f"?({data[18]})")
-        vol_pct  = round(max(0, min(100, (0x38 - data[3]) / 56 * 100)))
-        eq_bands = _raw(data[7:17])
+        gain         = _GAIN.get(data[4], f"?({data[4]})")
+        sidetone     = _SIDE.get(data[18], f"?({data[18]})")
+        vol_pct      = round(max(0, min(100, (0x38 - data[3]) / 56 * 100)))
+        eq_bands     = _raw(data[7:17])
+        stream_main  = data[22]
+        stream_aux   = data[24]
+        stream_mic   = data[25]
         return (
             f"{tag}  Mic/EQ          → "
             f"gain={gain}  mic_vol={data[17]}  sidetone={sidetone}  "
             f"vol={vol_pct}%  chatmix_game={data[20]}  chatmix_chat={data[21]}  "
-            f"[2]=0x{data[2]:02X}  eq_bands=[{eq_bands}]"
+            f"stream_main={stream_main}  stream_aux={stream_aux}  stream_mic={stream_mic}  "
+            f"eq_bands=[{eq_bands}]"
         )
 
     if cmd in (0x10, 0x12) and len(data) > 2:
