@@ -111,6 +111,9 @@ All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 | `0xC1` | Auto off timeout | `[2]`=0 off, 1–6 (1/5/10/15/30/60 min) | |
 | `0xB9` | Transparency level | `[2]`=level (1–10) | Transparency mode only |
 | `0xC3` | 2.4 GHz mode | `[2]`=0 performance/speed, 1 extended range | Also `0xB0[13]` |
+| `0xB3` | BT auto-mute | `[2]`=0 off, 1 on, 2 -12dB | |
+| `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) | `[3]`=0x00 constant |
+| `0x43` | Audio output selection | `[2]`=1 speaker, 2 stream | |
 
 #### Query commands (host → device, Col01 `0xFFC0`)
 

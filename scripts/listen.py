@@ -158,6 +158,20 @@ def decode_packet(data: list[int], source: str) -> str | None:
         label = {0: "performance/speed", 1: "extended range"}.get(data[2], f"?({data[2]})")
         return f"{tag}  2.4 GHz Mode    → {label} (raw={data[2]})"
 
+    if cmd == 0xB3 and len(data) > 2:
+        label = {0: "off", 1: "on", 2: "-12dB"}.get(data[2], f"?({data[2]})")
+        return f"{tag}  BT Auto-Mute    → {label} (raw={data[2]})"
+
+    if cmd == 0x47 and len(data) > 5:
+        return (
+            f"{tag}  Stream Volumes  → "
+            f"main={data[2]}  aux={data[4]}  mic={data[5]}"
+        )
+
+    if cmd == 0x43 and len(data) > 2:
+        label = {1: "speaker", 2: "stream"}.get(data[2], f"?({data[2]})")
+        return f"{tag}  Audio Output    → {label} (raw={data[2]})"
+
     # ── Confirmed query responses ─────────────────────────────────────────────
     # Offsets: data[0]=reportId  data[1]=cmd  data[2+]=payload
 
