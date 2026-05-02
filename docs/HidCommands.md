@@ -517,7 +517,7 @@ Fires when the user switches the audio output routing between speaker and stream
 
 **State field:** `audio_output` (`"speaker"` | `"stream"`)
 
-> Confirmed in session `2026-05-02` (14:11–14:12). Toggled six times alternating 01/02. **Write command is `0x42`** with different encoding: `0x01`=speakers, `0x00`=stream (see §6.3).
+> Confirmed in session `2026-05-02` (14:11–14:12). Toggled six times alternating 01/02. Write command uses same opcode and encoding (§6.3).
 
 ---
 
@@ -764,7 +764,7 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0xC3` | Set 2.4 GHz mode | `[2]` | 0–1 | `0x00`=performance/speed, `0x01`=extended range; `0xB0[13]` reflects current value; also the incoming event byte (§3.16) ✅ |
 | `0xB2` | Set Bluetooth default | `[2]` | 0–1 | `0x00`=off, `0x01`=on; also the incoming event byte (§3.20) ✅ |
 | `0xB3` | Set BT auto-mute | `[2]` | 0–2 | `0x00`=off, `0x01`=-12dB, `0x02`=on; also the incoming event byte (§3.17) ✅ |
-| `0x42` | Set audio output | `[2]` | 0–1 | `0x00`=stream, `0x01`=speakers ⚠ encoding differs from event `0x43` (`0x01`=speaker, `0x02`=stream) ✅ |
+| `0x43` | Set audio output | `[2]` | 1–2 | `0x01`=speakers, `0x02`=stream; also the incoming event byte (§3.19) ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
 
 ### 6.4 Candidate Write Commands 🔬
