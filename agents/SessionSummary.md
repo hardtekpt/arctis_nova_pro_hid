@@ -110,6 +110,7 @@ All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 | `0xBF` | Mic LED brightness | `[2]`=level (1–10) | |
 | `0xC1` | Auto off timeout | `[2]`=0 off, 1–6 (1/5/10/15/30/60 min) | |
 | `0xB9` | Transparency level | `[2]`=level (1–10) | Transparency mode only |
+| `0xC3` | 2.4 GHz mode | `[2]`=0 performance/speed, 1 extended range | Also `0xB0[13]` |
 
 #### Query commands (host → device, Col01 `0xFFC0`)
 
@@ -142,6 +143,7 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 | [9] | Mic mute | `0x00`=unmuted, `0x01`=muted |
 | [10] | ANC mode | `0x00`=off, `0x01`=transparency, `0x02`=anc |
 | [11] | OLED brightness | 1–10; `0x0A`=10=max |
+| [13] | 2.4 GHz mode | `0x00`=performance/speed, `0x01`=extended range |
 
 #### `0x20` response field map (64 bytes)
 
@@ -179,6 +181,7 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 | `0xC1` | Set auto off timeout | 0–6 | 0=off, 1–6 = 1/5/10/15/30/60 min |
 | `0x27` | Set gain level | 0–1 | **0=high, 1=low** (inverted vs event: 1=low, 2=high) |
 | `0x49` | ChatMix enable | 0–1 | 0=disable, 1=enable; `0x45` events only fire when enabled |
+| `0xC3` | Set 2.4 GHz mode | 0–1 | 0=performance/speed, 1=extended range; `0xB0[13]` reflects value |
 | `0x09` | Save / persist | — | Send after every write to commit to flash |
 
 ---
