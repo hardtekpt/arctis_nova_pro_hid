@@ -71,7 +71,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Command | Returns |
 |---------|---------|
-| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, OLED brightness, 2.4 GHz mode |
+| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, mic LED brightness, 2.4 GHz mode |
 | `0x20` | Mic/EQ: gain, mic vol, sidetone, audio output, ChatMix, stream volumes, 10 EQ bands, headset vol |
 | `0x10` | Firmware version (ASCII, null-terminated) |
 | `0x12` | Serial number (ASCII, null-terminated) |
@@ -89,7 +89,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | [8] | Transparency level | 1–10 |
 | [9] | Mic mute | `0x00`=unmuted, `0x01`=muted |
 | [10] | ANC mode | `0x00`=off, `0x01`=transparency, `0x02`=ANC |
-| [11] | OLED brightness | 1–10 |
+| [11] | Mic LED brightness | 1–10 |
 | [13] | 2.4 GHz mode | `0x00`=performance/speed, `0x01`=extended range |
 
 ### `0x20` response field map

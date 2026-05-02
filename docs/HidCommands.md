@@ -718,7 +718,7 @@ Enables or disables the ChatMix feature on the base station.
 | `connected` | `0xB5` | `boolean \| null` |
 | `wireless` | `0xB5` | `boolean \| null` |
 | `bluetooth` | `0xB5` | `boolean \| null` |
-| `oled_brightness` | `0x85`, `0xB0`[11] | `number \| null` (1–10) |
+| `oled_brightness` | `0x85` | `number \| null` (1–10) |
 | `chatmix_game` | `0x45`, `0x20`[20] | `number \| null` (0–100) |
 | `chatmix_chat` | `0x45`, `0x20`[21] | `number \| null` (0–100) |
 | `transparency_level` | `0xB9`, `0xB0`[8] | `number \| null` (1–10) |
@@ -726,7 +726,7 @@ Enables or disables the ChatMix feature on the base station.
 | `mic_volume` | `0x37`, `0x20`[17] | `number \| null` (1–10) |
 | `dim_screen_timeout` | `0x83` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
 | `home_screen_mode` | `0x89` | `number \| null` (0 or 1) |
-| `mic_led_brightness` | `0xBF` | `number \| null` (1–10) |
+| `mic_led_brightness` | `0xBF`, `0xB0`[11] | `number \| null` (1–10) |
 | `auto_off_timeout` | `0xC1` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
 | `wireless_2ghz_mode` | `0xC3`, `0xB0`[13] | `"performance" \| "range" \| null` |
 | `bt_auto_mute` | `0xB3` | `"off" \| "-12dB" \| "on" \| null` |
@@ -748,7 +748,7 @@ All queries use: `[0x06, cmdByte, 0x00, ..., 0x00]` (64 bytes). Confirmed in ses
 
 #### `0xB0` — Status ✅
 
-Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, anc, oled, ...]`
+Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, anc, mic_led, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
@@ -762,7 +762,7 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 | 8 | `0x01`–`0x0A` | **Transparency level** (1–10; only valid when ANC mode = transparency) ✅ |
 | 9 | `0x00` / `0x01` | **Mic mute** — `0x00`=unmuted, `0x01`=muted ✅ |
 | 10 | `0x00`–`0x02` | **ANC mode** — `0x00`=off, `0x01`=transparency, `0x02`=anc ✅ |
-| 11 | `0x01`–`0x0A` | **OLED brightness** (1–10; `0x0A`=10=max) ✅ |
+| 11 | `0x01`–`0x0A` | **Mic LED brightness** (1–10; `0x0A`=10=max) ✅ |
 | 12 | `0x00` | Constant |
 | 13 | `0x00` / `0x01` | **2.4 GHz mode** — `0x00`=performance/speed, `0x01`=extended range ✅ |
 | 14–15 | `0x08 0x08` | Constant |

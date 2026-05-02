@@ -146,7 +146,7 @@ All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 | `0x37` | Mic volume | `[2]`=level (1–10) | Also a write command |
 | `0x83` | Dim screen timeout | `[2]`=0 off, 1–6 (1/5/10/15/30/60 min) | |
 | `0x89` | Home screen mode | `[2]`=0 detailed, 1 simple | |
-| `0xBF` | Mic LED brightness | `[2]`=level (1–10) | |
+| `0xBF` | Mic LED brightness | `[2]`=level (1–10) | Also readable from `0xB0[11]` ✅ |
 | `0xC1` | Auto off timeout | `[2]`=0 off, 1–6 (1/5/10/15/30/60 min) | |
 | `0xB9` | Transparency level | `[2]`=level (1–10) | Transparency mode only |
 | `0xC3` | 2.4 GHz mode | `[2]`=0 performance/speed, 1 extended range | Also `0xB0[13]`; silent from GG (no Col02 event) |
@@ -163,7 +163,7 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 
 | Command | Response content |
 |---------|-----------------|
-| `0xB0` | Status (battery, connectivity, ANC, mic mute, OLED brightness, 2.4 GHz mode) |
+| `0xB0` | Status (battery, connectivity, ANC, mic mute, mic LED brightness, 2.4 GHz mode) |
 | `0x20` | Mic/EQ params (gain, mic vol, sidetone, EQ bands, ChatMix, headset vol) |
 | `0x10` | Firmware version (ASCII string) |
 | `0x12` | Serial number (ASCII string) |
@@ -175,7 +175,7 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 ### `0xB0` response field map (64 bytes)
 
 ```
-[0x06, 0xB0, 0x00, 0x00, conn, bt, hbat, dbat, 0x08, mute, anc, oled, 0x00, mode2g, 0x08, 0x08, ...]
+[0x06, 0xB0, 0x00, 0x00, conn, bt, hbat, dbat, 0x08, mute, anc, mic_led, 0x00, mode2g, 0x08, 0x08, ...]
   [0]   [1]   [2]   [3]   [4]  [5]  [6]   [7]   [8]   [9]  [10]  [11]  [12]  [13]   [14]  [15]
 ```
 
@@ -187,7 +187,7 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 | [7] | Dock battery raw | ÷ 8 × 100 = % |
 | [9] | Mic mute | `0x00`=unmuted, `0x01`=muted |
 | [10] | ANC mode | `0x00`=off, `0x01`=transparency, `0x02`=ANC |
-| [11] | OLED brightness | 1–10; `0x0A`=10=max |
+| [11] | Mic LED brightness | 1–10; `0x0A`=10=max |
 | [13] | 2.4 GHz mode | `0x00`=performance/speed, `0x01`=extended range |
 
 ### `0x20` response field map (64 bytes)
@@ -218,12 +218,12 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 | `0x25` | Set headset volume | 0–56 raw | Inverted: `raw = round((1−pct/100)×56)`; `0x38`=0%, `0x00`=100% |
 | `0x37` | Set mic volume | 1–10 | |
 | `0x39` | Set sidetone | 0–3 | 0=off, 1=low, 2=medium, 3=high |
-| `0x85` | Set OLED brightness | 1–10 | `0xB0[11]` reflects current value |
+| `0x85` | Set OLED brightness | 1–10 | |
 | `0xBD` | Set ANC mode | 0–2 | 0=off, 1=transparency, 2=ANC |
 | `0xB9` | Set transparency level | 1–10 | Effective in transparency mode only |
 | `0x83` | Set dim screen timeout | 0–6 | 0=off, 1–6 = 1/5/10/15/30/60 min |
 | `0x89` | Set home screen mode | 0–1 | 0=detailed, 1=simple |
-| `0xBF` | Set mic LED brightness | 1–10 | |
+| `0xBF` | Set mic LED brightness | 1–10 | `0xB0[11]` reflects current value |
 | `0xC1` | Set auto off timeout | 0–6 | 0=off, 1–6 = 1/5/10/15/30/60 min |
 | `0x27` | Set gain level | 0–1 | **0=high, 1=low** (inverted vs event: 1=low, 2=high) |
 | `0x49` | ChatMix enable | 0–1 | 0=disable, 1=enable; `0x45` events only fire when enabled |
@@ -254,7 +254,7 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 
 | Method | Command | Notes |
 |--------|---------|-------|
-| `get_status()` | `0xB0` + `0x20` | battery %, ANC, mute, connectivity, vol, gain, mic vol, sidetone, ChatMix, OLED brightness, 2.4 GHz mode |
+| `get_status()` | `0xB0` + `0x20` | battery %, ANC, mute, connectivity, vol, gain, mic vol, sidetone, ChatMix, mic LED brightness, 2.4 GHz mode |
 | `set_volume(pct)` | `0x25` | inverted raw encoding: `raw = round((1−pct/100)×56)` |
 | `set_mic_volume(1–10)` | `0x37` | |
 | `set_sidetone(0–3)` | `0x39` | 0=off, 1=low, 2=medium, 3=high |

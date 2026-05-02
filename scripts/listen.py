@@ -211,7 +211,7 @@ def decode_packet(data: list[int], source: str) -> str | None:
             f"{tag}  Status          → "
             f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
             f"conn={conn}  mic_mute={muted}  anc={anc}  trans_level={trans}  "
-            f"bt={bt}  oled_brightness={data[11]}  2.4ghz_mode={wmode}"
+            f"bt={bt}  mic_led_brightness={data[11]}  2.4ghz_mode={wmode}"
         )
 
     # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).

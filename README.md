@@ -89,9 +89,9 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 
 | Cmd | Name | E | Q | W | Param | Notes |
 |-----|------|---|---|---|-------|-------|
-| `0x85` | OLED brightness | ✅ | `0xB0`[11] | ✅ | 1–10 | |
+| `0x85` | OLED brightness | ✅ | — | ✅ | 1–10 | |
 | `0x89` | Home screen mode | ✅ | — | ✅ | 0–1 | `0`=detailed · `1`=simple |
-| `0xBF` | Mic LED brightness | ✅ | — | ✅ | 1–10 | |
+| `0xBF` | Mic LED brightness | ✅ | `0xB0`[11] | ✅ | 1–10 | |
 | `0x83` | Dim screen timeout | ✅ | — | ✅ | 0–6 | `0`=off · `1`=1 min · `2`=5 min · `3`=10 min · `4`=15 min · `5`=30 min · `6`=60 min |
 
 ### Power & connectivity
@@ -111,7 +111,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | Cmd | Name | E | Q | W | Param | Notes |
 |-----|------|---|---|---|-------|-------|
 | `0x09` | Save / persist | — | — | ✅ | — | **Always send after any write** — settings revert on power cycle without it |
-| `0xB0` | Status query | — | — | Q | — | Returns battery, connectivity, ANC, mute, OLED brightness, 2.4 GHz mode |
+| `0xB0` | Status query | — | — | Q | — | Returns battery, connectivity, ANC, mute, mic LED brightness, 2.4 GHz mode |
 | `0x20` | Mic/EQ query | — | — | Q | — | Returns gain, mic vol, sidetone, 10 EQ bands, ChatMix, stream volumes, headset vol |
 | `0x10` | Firmware version | — | — | Q | — | ASCII string · also pushed unsolicited on Col01 at wireless reconnect |
 | `0x12` | Serial number | — | — | Q | — | ASCII string |
@@ -130,7 +130,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 ## `0xB0` status response — field map
 
 ```
-[0x06, 0xB0, 0x00, 0x00, conn, bt, hbat, dbat, trans, mute, anc, oled, 0x00, mode2g, 0x08, 0x08, ...]
+[0x06, 0xB0, 0x00, 0x00, conn, bt, hbat, dbat, trans, mute, anc, mic_led, 0x00, mode2g, 0x08, 0x08, ...]
   [0]   [1]   [2]   [3]   [4]  [5]  [6]   [7]   [8]   [9]  [10]  [11]  [12]  [13]   [14]  [15]
 ```
 
@@ -143,7 +143,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | [8] | Transparency level | 1–10 (only valid when ANC = transparency) |
 | [9] | Mic mute | `0x00`=unmuted · `0x01`=muted |
 | [10] | ANC mode | `0x00`=off · `0x01`=transparency · `0x02`=ANC |
-| [11] | OLED brightness | 1–10 |
+| [11] | Mic LED brightness | 1–10 |
 | [13] | 2.4 GHz mode | `0x00`=performance · `0x01`=extended range |
 
 ## `0x20` mic/EQ response — field map
