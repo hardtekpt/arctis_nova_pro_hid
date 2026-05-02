@@ -112,9 +112,9 @@ All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 | `0xB9` | Transparency level | `[2]`=level (1–10) | Transparency mode only |
 | `0xC3` | 2.4 GHz mode | `[2]`=0 performance/speed, 1 extended range | Also `0xB0[13]` |
 | `0xB2` | BT default | `[2]`=0 off, 1 on | Also a write command |
-| `0xB3` | BT auto-mute | `[2]`=0 off, 1 on, 2 -12dB | |
+| `0xB3` | BT auto-mute | `[2]`=0 off, 1 -12dB, 2 on | Also a write command |
 | `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) | `[3]`=0x00 constant |
-| `0x43` | Audio output selection | `[2]`=1 speaker, 2 stream | |
+| `0x43` | Audio output selection (event) | `[2]`=1 speaker, 2 stream | Write via `0x42` |
 
 #### Query commands (host → device, Col01 `0xFFC0`)
 
@@ -187,6 +187,8 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 | `0x49` | ChatMix enable | 0–1 | 0=disable, 1=enable; `0x45` events only fire when enabled |
 | `0xC3` | Set 2.4 GHz mode | 0–1 | 0=performance/speed, 1=extended range; `0xB0[13]` reflects value |
 | `0xB2` | Set BT default | 0–1 | 0=off, 1=on |
+| `0xB3` | Set BT auto-mute | 0–2 | 0=off, 1=-12dB, 2=on |
+| `0x42` | Set audio output | 0–1 | 0=stream, 1=speakers ⚠ inverted from event `0x43` (1=speaker, 2=stream) |
 | `0x09` | Save / persist | — | Send after every write to commit to flash |
 
 ---
