@@ -75,7 +75,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | Cmd | Name | E | Q | W | Param | Notes |
 |-----|------|---|---|---|-------|-------|
 | `0xBD` | ANC mode | ✅ | `0xB0`[10] | ✅ | 0–2 | `0`=off · `1`=transparency · `2`=ANC |
-| `0xB9` | Transparency level | ✅ | — | ✅ | 1–10 | Only effective when ANC mode = transparency |
+| `0xB9` | Transparency level | ✅ | `0xB0`[8] | ✅ | 1–10 | Only effective when ANC mode = transparency |
 
 ### Display & LEDs
 
