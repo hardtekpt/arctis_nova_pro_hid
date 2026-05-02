@@ -566,9 +566,17 @@ Fires when the user selects an EQ preset (or cycles through the preset list) in 
 eq_preset_index = data[2]   // 0–18 observed range
 ```
 
+**Preset index map (confirmed):**
+
+| Index | Meaning |
+|---|---|
+| `0x04` | Custom EQ (user-defined band levels) |
+| `0x00–0x03`, `0x05–0x18` | Named presets (19 presets; exact names not yet captured) |
+
 **State field:** `eq_preset_index` (`number | null`)
 
-> Confirmed session `2026-05-02` (19:47). User scrolled through the full preset list in GG — values ranged 0x00–0x12 (0–18). The active preset at session start was index `0x04`. Indices scroll up/down continuously like a dial. Mapping of index → preset name (e.g. Flat, Bass Boost, Gaming, etc.) has not yet been captured; a Wireshark capture of GG startup reads is needed to correlate names.
+> Confirmed session `2026-05-02` (19:47). User scrolled through the full preset list in GG — values ranged 0x00–0x12 (0–18). The active preset at session start was index `0x04`.
+> Write command confirmed: `[0x06, 0x2E, preset_index, 0x00×61]` selects a preset or custom EQ. Index `0x04` = custom EQ. Indices `0x00–0x03` and `0x05–0x18` select named presets. Exact preset name → index mapping not yet captured (needs Wireshark or GG UI correlation).
 
 ---
 
@@ -597,6 +605,8 @@ db_offset     = data[3] - 20   // negative=cut, positive=boost
 **State fields:** `eq_bands[1..10]` (array of 10 values, each 0–40)
 
 > Confirmed session `2026-05-02` (19:49). Band 1 (`0x01`) and Band 10 (`0x0A`) were each swept from 0 to 40 and back to flat (0x14=20). Range 0–40 confirmed. Flat value `0x14`=20 consistent with `0x20` query response `data[7–16]`. The band index in this event maps directly to the 10-band EQ array: band 1 = `0x20[7]`, band 10 = `0x20[16]`.
+>
+> **⚠ `0x31` is an incoming event only — do NOT use as a write command.** Writing `[0x06, 0x31, band, level]` does not set EQ band levels; it switches the device to the flat preset instead. Use `0x33` (§6.5) to write custom EQ band values.
 
 ---
 
@@ -824,6 +834,7 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0xB3` | Set BT auto-mute | `[2]` | 0–2 | `0x00`=off, `0x01`=-12dB, `0x02`=on; also the incoming event byte (§3.17) ✅ |
 | `0x43` | Set audio output | `[2]` | 1–2 | `0x01`=speakers, `0x02`=stream; also the incoming event byte (§3.19) ✅ |
 | `0x47` | Set output stream volumes | `[2]`=main, `[4]`=aux, `[5]`=mic | 0–100 each | Multi-byte write: `[0x06, 0x47, main, 0x00, aux, mic, 0x00×58]`; mirrors incoming event layout (§3.18) ✅ |
+| `0x2E` | Select EQ preset / custom | `[2]` | 0–18 | `0x04`=custom EQ; `0x00–0x03` and `0x05–0x18` = named presets (19 total). Same encoding as event (§3.21) ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
 
 ### 6.4 Candidate Write Commands 🔬
@@ -845,8 +856,12 @@ Both are now listed in §6.3.
 | Command | Description | Notes |
 |---|---|---|
 | `0x32` | Query EQ params | Response: profile ID + 10 band values |
-| `0x33` | Set EQ params | Profile + 10 bands × 6 bytes each |
+| `0x33` | Set EQ band levels (custom) | Profile + 10 band values; **`0x31` write does NOT do this** — it switches to flat preset |
 | `0xA6` | Query EQ preset name | Profile ID + ASCII name |
 | `0xA7` | Set EQ preset name | Profile ID + mode + ASCII name |
 
 > **EQ profile byte:** `0x00` = 2.4 GHz wireless profile, `0x01` = Bluetooth profile.
+>
+> **`0x2E` write is confirmed (§6.3).** Use it to switch between custom EQ (`0x04`) and named presets (`0x00–0x03`, `0x05–0x18`). To edit custom EQ band levels, switch to custom first (`0x2E` param `0x04`), then write bands via `0x33` (not yet verified on Nova Pro).
+>
+> **`0x31` write side-effect documented:** writing any `0x31` packet causes the device to switch to the flat preset. Do not use `0x31` as a write command.

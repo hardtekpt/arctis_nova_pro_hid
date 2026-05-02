@@ -130,6 +130,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0xB3` | Set BT auto-mute | 0–2 | 0=off, 1=-12dB, 2=on |
 | `0x43` | Set audio output | 1–2 | 1=speakers, 2=stream |
 | `0x47` | Set output stream volumes | multi-byte | `[0x06, 0x47, main, 0x00, aux, mic, ...]`; main/aux/mic each 0–100 |
+| `0x2E` | Select EQ preset / custom | 0–18 | `0x04`=custom EQ; `0x00–0x03` and `0x05–0x18`=named presets (19 total; names TBD) |
 | `0x09` | Save / persist | — | send after every write |
 
 ### Incoming events (device → Col02, report ID `0x07`)
@@ -156,8 +157,8 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0xB3` | BT auto-mute | `[2]`=0 off, 1 -12dB, 2 on |
 | `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) |
 | `0x43` | Audio output selection | `[2]`=1 speaker, 2 stream |
-| `0x2E` | EQ preset selection | `[2]`=preset index (0–18 observed; name mapping TBD) |
-| `0x31` | EQ band level change | `[2]`=band (1–10), `[3]`=level (0–40, `0x14`=20=flat/0 dB) |
+| `0x2E` | EQ preset selection | `[2]`=preset index; `0x04`=custom EQ, `0x00–0x03`+`0x05–0x18`=named presets; also a write command |
+| `0x31` | EQ band level change | `[2]`=band (1–10), `[3]`=level (0–40, `0x14`=20=flat/0 dB); **event only — writing switches to flat preset** |
 
 ---
 
