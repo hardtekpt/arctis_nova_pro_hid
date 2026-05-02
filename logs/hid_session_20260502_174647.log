@@ -1,0 +1,8 @@
+[17:46:47.709] [INFO ] Control handle opened  (0xFFC0): \\?\HID#VID_1038&PID_12E0&MI_04&Col01#8&26fe868d&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+[17:46:47.711] [INFO ] Events  handle opened  (0xFF00): \\?\HID#VID_1038&PID_12E0&MI_04&Col02#8&26fe868d&0&0001#{4d1e55b2-f16f-11cf-88cb-001111000030}
+[17:46:47.712] 
+[17:46:47.712] [INFO ] Event loop active – interact with the headset. Ctrl+C to stop.
+[17:46:47.712] [INFO ] Try: volume wheel, mute button, ANC button, ChatMix dial, gain button.
+[17:46:47.712] 
+[17:47:44.161] 
+[INFO ] Stopped by user.

@@ -1,0 +1,12 @@
+[15:23:36.717] [INFO ] Control handle opened  (0xFFC0): \\?\HID#VID_1038&PID_12E0&MI_04&Col01#8&26fe868d&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+[15:23:36.720] [INFO ] Events  handle opened  (0xFF00): \\?\HID#VID_1038&PID_12E0&MI_04&Col02#8&26fe868d&0&0001#{4d1e55b2-f16f-11cf-88cb-001111000030}
+[15:23:36.720] 
+[15:23:36.720] [INFO ] Event loop active – interact with the headset. Ctrl+C to stop.
+[15:23:36.720] [INFO ] Try: volume wheel, mute button, ANC button, ChatMix dial, gain button.
+[15:23:36.720] 
+[15:23:52.631] [EVT  ] RAW: 07 27 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[15:23:52.631] [EVT  ] 0x27  Gain Level      → low (raw=1)  [range: 1=low, 2=high only]
+[15:23:54.935] [EVT  ] RAW: 07 27 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[15:23:54.935] [EVT  ] 0x27  Gain Level      → high (raw=2)  [range: 1=low, 2=high only]
+[15:29:54.479] 
+[INFO ] Stopped by user.
