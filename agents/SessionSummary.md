@@ -36,7 +36,7 @@ src/
   listen.py        # start-up queries + event loop; logs everything to logs/
 docs/
   HidCommands.md   # the full protocol reference (keep this authoritative)
-logs/              # 24 session logs from 2026-05-01 (163435 → 220038)
+logs/              # 38 session logs from 2026-05-01/02 (163435 → 045953)
 requirements.txt   # hidapi
 agents/
   MainIdea.md      # project brief
@@ -216,13 +216,18 @@ Interact with the headset. All packets are decoded and logged to `logs/hid_sessi
 ## Git state at end of session
 
 Branch: `development`  
-Last merge: `feature/phase1-write-confirm-0xb9`
+Last merges:
+- `feature/phase1-write-confirm-0xb9` — main discoveries batch
+- `feature/phase1-bt-state-decode` — 0xB0[5] decoded as on/off in output
+- `feature/phase1-0xb9-rename` — 0xB9 clarified as transparency-only
 
-New in this merge:
-- `0xB9` transparency/ANC level event added (1–10)
-- `0xB0[11]` confirmed as OLED brightness
-- `0x89` label order confirmed: 0=detailed, 1=simple
-- Gain full range confirmed: 2 discrete levels only (1=low, 2=high)
-- Write commands 0x37/0x39/0x85/0x09 confirmed working
+Cumulative changes since `feature/phase1-query-field-mapping-r4`:
+- `0xB9` — Transparency Level (1–10), transparency mode only ✅
+- `0xB0[11]` — confirmed OLED brightness (1–10) ✅
+- `0xB0[5]` — BT state decoded as `on`/`off` in listener output ✅
+- `0x89` label order confirmed: 0=detailed, 1=simple ✅
+- Gain full range confirmed: exactly 2 discrete levels (1=low, 2=high) ✅
+- Write commands 0x37/0x39/0x85/0x09 all confirmed working ✅
 - `0xB2` added to unresponsive list
 - `docs/TestChecklist.md` created
+- `docs/ArctisNovaPro-InterfaceSummary.md` added (by user)
