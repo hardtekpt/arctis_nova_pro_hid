@@ -1,4 +1,6 @@
-# Session Summary — Phase 1 HID Discovery (2026-05-01 / 2026-05-02)
+# Session Summary — HID Discovery (Phase 1 + Phase 2 discovery sessions)
+
+Sessions: `2026-05-01` / `2026-05-02`
 
 ## What this project is
 
@@ -32,20 +34,21 @@ See `agents/MainIdea.md` for the original brief.
 
 ```
 scripts/
-  discover.py       # enumerate all HID devices, identify Nova Pro interface paths
-  listen.py         # start-up queries + event loop; logs everything to logs/
-  probe_write.py    # single write probe: sends one packet, diffs 0xB0 before/after
-  write_packet.py   # scratch pad used during Phase 1 write testing
+  discover.py        # enumerate all HID devices, identify Nova Pro interface paths
+  listen.py          # start-up queries + event loop; logs everything to logs/
+  probe_write.py     # single write probe: sends one packet, diffs ALL 64 0xB0 bytes before/after
+  probe_b0_diff.py   # interactive before/after 0xB0 full-dump diff (toggle GG setting → see which byte changes)
+  write_packet.py    # scratch pad used during Phase 1 write testing
 api/
-  __init__.py       # Phase 2 API implementation (in progress)
+  __init__.py        # Phase 2 API implementation (in progress)
 docs/
-  HidCommands.md    # the full protocol reference (keep this authoritative)
-  TestChecklist.md  # per-command test rows with pass/fail status
-logs/               # session logs from 2026-05-01/02
-requirements.txt    # hidapi
+  HidCommands.md     # the full protocol reference (keep this authoritative)
+  TestChecklist.md   # per-command test rows with pass/fail status
+logs/                # session logs (gitignored)
+requirements.txt     # hidapi
 agents/
-  MainIdea.md       # project brief
-  SessionSummary.md # this file
+  MainIdea.md        # project brief
+  SessionSummary.md  # this file
 ```
 
 Git branches: `master` → `development` → feature branches.
@@ -54,42 +57,60 @@ user explicitly says so.
 
 ---
 
-## Phase 1 status: COMPLETE (EQ and idle timeout still pending)
+## Discovery status: Phase 1 COMPLETE + Phase 2 additional commands confirmed
 
-All practical headset controls are now mapped and verified on PID `0x12E0`.
-The two remaining items (`0xA3` idle timeout, EQ write commands) are not
-blocking Phase 2 — the API can be built now.
+Phase 1 mapped the full core command set (2026-05-01).
+Phase 2 discovery sessions (2026-05-02) added 6 more commands and expanded `0xB0` field knowledge.
+The API can be built now. EQ write and idle timeout are the only remaining unverified items.
 
-### Key lessons from Phase 1
+---
+
+## Key lessons
 
 1. **Event opcode = write opcode.** For every confirmed write command, the
    command byte is the same as the incoming event byte. Sending `[0x06, CMD,
    param, 0x00×61]` to Col01 works whenever Col02 fires that same CMD. This
-   pattern held without exception.
+   pattern held without exception across all sessions.
 
-2. **`0x27` gain is the one encoding asymmetry.** The write uses `0x00`=high,
-   `0x01`=low, while the incoming event and `0x20` query response use `0x01`=low,
-   `0x02`=high. Every other command uses the same encoding for both read and write.
+2. **`0x27` gain is the only encoding asymmetry found so far.** The write uses
+   `0x00`=high / `0x01`=low, while the event and `0x20` query use `0x01`=low /
+   `0x02`=high. All other commands use identical encoding for both event and write.
 
-3. **`0x3A` volume limiter does not exist on this device.** Nova 7X protocol
-   references include it; the Nova Pro Wireless does not have a volume limiter feature.
+3. **Some writes are silent — no Col02 event fires.** `0xC3` (2.4 GHz mode) is
+   confirmed writable but produces no event on Col02 when changed from GG. Its
+   current value is readable from `0xB0[13]`. Other settings changed silently
+   from GG may follow the same pattern. The `probe_b0_diff.py` tool was built
+   specifically to detect these.
 
-4. **`0xAE` was a wrong candidate.** Mic LED brightness is `0xBF`, not `0xAE`.
+4. **`probe_write.py` must watch ALL 64 bytes of `0xB0`, not just [10].** The
+   original probe only diffed `0xB0[10]` (ANC mode), which caused `0xB2`
+   (BT default) to be incorrectly logged as "no visible effect" — the effect was
+   on Col02, not in `0xB0`. The tool now prints the full 64-byte diff and all
+   Col02 events fired during the probe window.
+
+5. **Event value order must be verified by probing writes, not assumed from log
+   sequence.** `0xB3` (BT auto-mute) was initially decoded from a log as
+   `0x01`=on, `0x02`=-12dB. Write testing confirmed the correct order is
+   `0x01`=-12dB, `0x02`=on. Trust confirmed write values over inferred event mapping.
+
+6. **`0xB0` contains more queryable state than initially mapped.** Byte `[13]`
+   encodes 2.4 GHz mode. Running `probe_b0_diff.py` while changing settings in
+   GG is the fastest way to find which byte a new setting occupies.
+
+7. **`0x09` save is confirmed required on Nova Pro.** Settings written without
+   `0x09` do not survive a power cycle. Always send save after writes.
+
+8. **`0x3A` volume limiter does not exist on this device.** Nova 7X protocol
+   references include it; the Nova Pro Wireless does not.
+
+9. **`0xAE` was a wrong candidate.** Mic LED brightness is `0xBF`, not `0xAE`.
    The Nova 7X reference was incorrect for this device.
-
-5. **`0x09` save is confirmed on Nova Pro.** Settings written without `0x09` do
-   not survive a power cycle. Always send save after writes.
-
-6. **`probe_write.py` workflow.** For any unconfirmed write candidate: run
-   `python src/probe_write.py --cmd 0xXX --param 0xYY`, observe `[BEFORE]` /
-   `[AFTER]` for `0xB0[10]` change (for ANC-type state) or visual/event
-   confirmation. This was used to discover `0xBD` in one probe.
 
 ---
 
-### What is fully confirmed
+## What is confirmed
 
-#### Incoming events (device → host, unsolicited)
+### Incoming events (device → host, unsolicited)
 
 All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 
@@ -100,29 +121,29 @@ All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 | `0xB7` | Battery levels | `[2]`=headset raw, `[3]`=dock raw (÷8×100=%) | `[4]`=0x08 docked, 0x01 removed |
 | `0x85` | OLED brightness | `[2]`=level (1–10) | |
 | `0x39` | Sidetone | `[2]`=0 off, 1 low, 2 medium, 3 high | |
-| `0xBD` | ANC mode | `[2]`=0 off, 1 transparency, 2 anc | |
-| `0xBB` | Mic mute | `[2]`=0 unmuted, 1 muted | |
-| `0x45` | ChatMix dial | `[2]`=game (0–100), `[3]`=chat (0–100) | center = both 100 |
+| `0xBD` | ANC mode | `[2]`=0 off, 1 transparency, 2 ANC | |
+| `0xBB` | Mic mute | `[2]`=0 unmuted, 1 muted | Hardware button only |
+| `0x45` | ChatMix dial | `[2]`=game (0–100), `[3]`=chat (0–100) | Only fires when ChatMix enabled (`0x49`) |
 | `0x27` | Gain level | `[2]`=1 low, 2 high | Only 2 discrete values |
-| `0x37` | Mic volume | `[2]`=level (1–10) | bidirectional: also a write command |
+| `0x37` | Mic volume | `[2]`=level (1–10) | Also a write command |
 | `0x83` | Dim screen timeout | `[2]`=0 off, 1–6 (1/5/10/15/30/60 min) | |
 | `0x89` | Home screen mode | `[2]`=0 detailed, 1 simple | |
 | `0xBF` | Mic LED brightness | `[2]`=level (1–10) | |
 | `0xC1` | Auto off timeout | `[2]`=0 off, 1–6 (1/5/10/15/30/60 min) | |
 | `0xB9` | Transparency level | `[2]`=level (1–10) | Transparency mode only |
-| `0xC3` | 2.4 GHz mode | `[2]`=0 performance/speed, 1 extended range | Also `0xB0[13]` |
+| `0xC3` | 2.4 GHz mode | `[2]`=0 performance/speed, 1 extended range | Also `0xB0[13]`; silent from GG (no Col02 event) |
 | `0xB2` | BT default | `[2]`=0 off, 1 on | Also a write command |
 | `0xB3` | BT auto-mute | `[2]`=0 off, 1 -12dB, 2 on | Also a write command |
-| `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) | `[3]`=0x00 constant |
-| `0x43` | Audio output selection | `[2]`=1 speaker, 2 stream | Also a write command |
+| `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) | `[3]`=0x00 constant; event-only |
+| `0x43` | Audio output selection | `[2]`=1 speakers, 2 stream | Also a write command |
 
-#### Query commands (host → device, Col01 `0xFFC0`)
+### Query commands (host → device, Col01 `0xFFC0`)
 
 Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 
 | Command | Response content |
 |---------|-----------------|
-| `0xB0` | Status (battery, connectivity, ANC, mic mute, OLED brightness) |
+| `0xB0` | Status (battery, connectivity, ANC, mic mute, OLED brightness, 2.4 GHz mode) |
 | `0x20` | Mic/EQ params (gain, mic vol, sidetone, EQ bands, ChatMix, headset vol) |
 | `0x10` | Firmware version (ASCII string) |
 | `0x12` | Serial number (ASCII string) |
@@ -131,11 +152,11 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 
 `0x10` (firmware) is also pushed **unsolicited** on Col01 when the headset reconnects wirelessly.
 
-#### `0xB0` response field map (64 bytes)
+### `0xB0` response field map (64 bytes)
 
 ```
-[0x06, 0xB0, 0x00, 0x00, conn, bt, hbat, dbat, 0x08, mute, anc, oled, ?, ...]
-  [0]   [1]   [2]   [3]   [4]  [5]  [6]   [7]   [8]   [9]  [10]  [11] [12]
+[0x06, 0xB0, 0x00, 0x00, conn, bt, hbat, dbat, 0x08, mute, anc, oled, 0x00, mode2g, 0x08, 0x08, ...]
+  [0]   [1]   [2]   [3]   [4]  [5]  [6]   [7]   [8]   [9]  [10]  [11]  [12]  [13]   [14]  [15]
 ```
 
 | Byte | Meaning | Values |
@@ -145,11 +166,11 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 | [6] | Headset battery raw | ÷ 8 × 100 = % |
 | [7] | Dock battery raw | ÷ 8 × 100 = % |
 | [9] | Mic mute | `0x00`=unmuted, `0x01`=muted |
-| [10] | ANC mode | `0x00`=off, `0x01`=transparency, `0x02`=anc |
+| [10] | ANC mode | `0x00`=off, `0x01`=transparency, `0x02`=ANC |
 | [11] | OLED brightness | 1–10; `0x0A`=10=max |
 | [13] | 2.4 GHz mode | `0x00`=performance/speed, `0x01`=extended range |
 
-#### `0x20` response field map (64 bytes)
+### `0x20` response field map (64 bytes)
 
 ```
 [0x06, 0x20, ?, vol, gain, 0, 0, eq×10, mic_vol, sidetone, ?, game, chat, ...]
@@ -167,13 +188,13 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 | [20] | ChatMix game | 0–100 |
 | [21] | ChatMix chat | 0–100 |
 
-#### Write commands (host → device, Col01 `0xFFC0`)
+### Write commands (host → device, Col01 `0xFFC0`)
 
 Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 
 | Command | Description | Param | Notes |
 |---------|-------------|-------|-------|
-| `0x25` | Set headset volume | 0–56 raw | Same inverted encoding as event: `raw = round((1−pct/100)×56)`; `0x38`=0%, `0x00`=100% |
+| `0x25` | Set headset volume | 0–56 raw | Inverted: `raw = round((1−pct/100)×56)`; `0x38`=0%, `0x00`=100% |
 | `0x37` | Set mic volume | 1–10 | |
 | `0x39` | Set sidetone | 0–3 | 0=off, 1=low, 2=medium, 3=high |
 | `0x85` | Set OLED brightness | 1–10 | `0xB0[11]` reflects current value |
@@ -185,7 +206,7 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 | `0xC1` | Set auto off timeout | 0–6 | 0=off, 1–6 = 1/5/10/15/30/60 min |
 | `0x27` | Set gain level | 0–1 | **0=high, 1=low** (inverted vs event: 1=low, 2=high) |
 | `0x49` | ChatMix enable | 0–1 | 0=disable, 1=enable; `0x45` events only fire when enabled |
-| `0xC3` | Set 2.4 GHz mode | 0–1 | 0=performance/speed, 1=extended range; `0xB0[13]` reflects value |
+| `0xC3` | Set 2.4 GHz mode | 0–1 | 0=performance/speed, 1=extended range; `0xB0[13]` reflects value; silent (no Col02 event) |
 | `0xB2` | Set BT default | 0–1 | 0=off, 1=on |
 | `0xB3` | Set BT auto-mute | 0–2 | 0=off, 1=-12dB, 2=on |
 | `0x43` | Set audio output | 1–2 | 1=speakers, 2=stream |
@@ -193,7 +214,7 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 
 ---
 
-### What is still unknown / needs more work
+## What is still unknown / needs more work
 
 1. **`0x20` data[2]** — constant `0x01` in all sessions. Likely a protocol version byte; safe to ignore.
 2. **`0xB0` data[12]** — changed from `0x05` to `0x06` across sessions; weak correlation with battery level. No actionable hypothesis.
@@ -201,22 +222,17 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 4. **`0x20` data[5–6]**, **data[19]**, **data[22–25]** — appear to be padding; no change observed.
 5. **Unverified write commands:**
    - `0xA3` — idle timeout (0–90 min) — not blocking Phase 2
-   - EQ: `0x33` set bands, `0x32` query bands, `0xA6`/`0xA7` preset names
-6. **USB Input selection** — no command or event observed yet.
-7. **Headset volume write** — `0x25` fires as an event but no write command for volume has been found. Volume may be hardware-only.
+   - `0x33` — set EQ bands (profile + 10 values); `0x32` — query EQ bands
+6. **`0x47` stream volumes** — event-only so far; write command unconfirmed.
+7. **Other `0xB0` bytes** — `probe_b0_diff.py` has only been run for 2.4 GHz mode so far. Other settings changed silently from GG may be stored in unmapped bytes.
 
 ---
 
-## Phase 2 next steps
-
-Phase 1 is complete enough to build the API. EQ and idle timeout can be added
-post-launch once verified.
-
-### API surface (all capabilities now confirmed writable)
+## Phase 2 API surface
 
 | Method | Command | Notes |
 |--------|---------|-------|
-| `get_status()` | `0xB0` + `0x20` | battery %, ANC, mute, connectivity, vol, gain, mic vol, sidetone, ChatMix, OLED brightness |
+| `get_status()` | `0xB0` + `0x20` | battery %, ANC, mute, connectivity, vol, gain, mic vol, sidetone, ChatMix, OLED brightness, 2.4 GHz mode |
 | `set_volume(pct)` | `0x25` | inverted raw encoding: `raw = round((1−pct/100)×56)` |
 | `set_mic_volume(1–10)` | `0x37` | |
 | `set_sidetone(0–3)` | `0x39` | 0=off, 1=low, 2=medium, 3=high |
@@ -229,6 +245,10 @@ post-launch once verified.
 | `set_home_screen_mode(0–1)` | `0x89` | |
 | `set_mic_led_brightness(1–10)` | `0xBF` | |
 | `set_auto_off_timeout(0–6)` | `0xC1` | |
+| `set_24ghz_mode(0–1)` | `0xC3` | 0=performance, 1=extended range |
+| `set_bt_default(bool)` | `0xB2` | |
+| `set_bt_auto_mute(0–2)` | `0xB3` | 0=off, 1=-12dB, 2=on |
+| `set_audio_output(1–2)` | `0x43` | 1=speakers, 2=stream |
 | `set_eq_bands(10 values)` | `0x33` | pending EQ verification |
 | `save()` | `0x09` | always call after writes |
 
@@ -245,9 +265,9 @@ Per `agents/MainIdea.md`: Python 3, lightweight backend API framework, simple CL
 - **`0x09` save**: confirmed on Nova Pro — always send after writes, otherwise settings revert on power cycle.
 - **Gain encoding asymmetry**: write `0x27` with `0x00`=high, `0x01`=low. The `0x20` query response and incoming `0x27` event use `0x01`=low, `0x02`=high. The API should abstract this internally.
 - **ChatMix**: `0x45` dial events only fire when ChatMix is enabled (`0x49` param `0x01`). Enable at startup if you want live dial tracking.
-- **EQ bands**: 10 bytes at `0x20` response `[7–16]`. Each value: 0–40, `0x14`=20=0 dB. Write via `0x33` with profile byte `0x00` (2.4 GHz) or `0x01` (Bluetooth).
-- **Volume encoding**: inverted scale. `0x38`=0%, `0x00`=100%. Formula: `raw = round((1 - pct/100) * 56)`. Max raw = `0x38` = 56.
-- **Volume write**: `0x25` confirmed writable. Same inverted encoding as the event: `raw = round((1 − pct/100) × 56)`; `0x38`=0%, `0x00`=100%.
+- **Volume encoding**: inverted scale. `0x38`=0%, `0x00`=100%. Formula: `raw = round((1 - pct/100) * 56)`.
+- **Silent writes**: some settings (confirmed: `0xC3`) produce no Col02 event and no Col01 response when written. The only way to verify a silent write worked is to re-query `0xB0` and check the relevant byte. Use `probe_b0_diff.py` to identify which byte a new silent setting occupies.
+- **Probe pitfall**: early probes only checked `0xB0[10]` (ANC byte) for changes. Always diff all 64 bytes and also drain Col02 events during the probe window — a write may produce an event on Col02 without touching `0xB0` at all.
 
 ---
 
@@ -262,30 +282,29 @@ python scripts/listen.py
 # listen only (no writes)
 python scripts/listen.py --no-query
 
-# single write probe (for testing candidates)
+# single write probe — diffs ALL 64 bytes of 0xB0 before/after
 python scripts/probe_write.py --cmd 0xBD --param 0x01
+
+# interactive before/after 0xB0 diff (for finding silent-write state bytes)
+python scripts/probe_b0_diff.py
 ```
 
 Interact with the headset. All packets are decoded and logged to `logs/hid_session_<timestamp>.log`.
 
 ---
 
-## Git state at end of session
+## Git state
 
-Branch: `development`  
-Last merges:
-- `feature/phase1-write-corrections` — remove 0x3A/0xAE, confirm 0x49 ChatMix
-- `feature/phase1-write-verify-batch2` — confirm 0x83/0x89/0xBF/0xC1/0x27; fix gain encoding
-- `feature/phase1-write-verify-batch` — confirm mic vol, OLED, transparency persistence
-- `feature/phase1-anc-write-confirm` — 0xBD and 0xB9 write confirmed
-- `feature/phase1-anc-write-probe` — probe_write.py added
+Branch: `development`
 
-Cumulative confirmed since start of Phase 1:
-- All 15 incoming events decoded ✅
+Cumulative confirmed across all sessions:
+- All 20 incoming events decoded ✅
 - All 4 query commands confirmed (`0xB0`, `0x20`, `0x10`, `0x12`) ✅
-- 12 write commands confirmed (`0x37`, `0x39`, `0x85`, `0xBD`, `0xB9`, `0x83`, `0x89`, `0xBF`, `0xC1`, `0x27`, `0x49`, `0x09`) ✅
-- `0x27` gain write encoding asymmetry discovered and documented ✅
+- 17 write commands confirmed (`0x25`, `0x37`, `0x39`, `0x85`, `0xBD`, `0xB9`, `0x83`, `0x89`, `0xBF`, `0xC1`, `0x27`, `0x49`, `0xC3`, `0xB2`, `0xB3`, `0x43`, `0x09`) ✅
+- `0xB0[13]` confirmed as 2.4 GHz mode state field ✅
+- `probe_b0_diff.py` added — full 64-byte interactive diff tool ✅
+- `probe_write.py` upgraded — now diffs all 64 bytes, not just `[10]` ✅
+- `0x27` gain write encoding asymmetry confirmed and abstracted ✅
+- `0xC3` silent-write discovery methodology established ✅
 - `0x3A` volume limiter confirmed absent on Nova Pro ✅
 - `0xAE` corrected to `0xBF` for mic LED brightness ✅
-- `0x09` save confirmed working on Nova Pro ✅
-- `src/probe_write.py` added — single write probe + before/after 0xB0 diff tool ✅
