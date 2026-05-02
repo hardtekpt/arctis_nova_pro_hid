@@ -609,6 +609,8 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0x37` | Set mic volume | `[2]` | 1–10 | Also an incoming event (§3.10) ✅ |
 | `0x39` | Set sidetone | `[2]` | 0–3 | 0=off, 1=low, 2=medium, 3=high ✅ |
 | `0x85` | Set OLED brightness | `[2]` | 1–10 | Also an incoming event (§3.4) ✅ |
+| `0xBD` | Set ANC mode | `[2]` | 0–2 | `0x00`=off, `0x01`=transparency, `0x02`=ANC; also the incoming event byte (§3.6) ✅ |
+| `0xB9` | Set transparency level | `[2]` | 1–10 | Effective only when ANC mode=transparency; also the incoming event byte (§3.15); verify via visual/event, `0xB0` has no transparency-level field ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
 
 ### 6.4 Candidate Write Commands 🔬
@@ -621,23 +623,11 @@ Not yet verified on Nova Pro. Origin: Arctis Nova 7X protocol + HeadsetControl.
 | `0xA3` | Set idle timeout | `[2]` | 0–90 | Minutes; 0=never sleep |
 | `0xAE` | LED brightness | `[2]` | 0–3 | Mute indicator LED |
 
-#### ANC / Transparency Write — pending discovery
+#### ANC / Transparency Write — ✅ Resolved (2026-05-02)
 
-No write command for ANC mode has been identified yet. `0xBD` is confirmed only as an incoming event (§3.6). Probe the following candidates in order using `src/probe_write.py`; verify via `0xB0[10]` before/after:
-
-| Candidate | Rationale | Param encoding (assumed) |
-|---|---|---|
-| `0xBD` | Same opcode as the incoming ANC event — SteelSeries often mirrors read/write | `0x00`=off, `0x01`=transparency, `0x02`=ANC |
-| `0xBE` | Adjacent to `0xBD`; listed as unknown in TestChecklist §6 | same |
-| `0xBC` | Adjacent below `0xBD` | same |
-| `0xB9` | Transparency level event byte (§3.15) — `0x37` mic vol is confirmed bidirectional | `0x01`–`0x0A` (level 1–10; transparency mode only) |
-| `0xB8`, `0xBA` | Adjacent to `0xB9` | same as `0xB9` |
-
-**Probe command:**
-```
-python src/probe_write.py --cmd 0xBD --param 0x01
-```
-A successful probe prints `✅ CHANGED` and shows `0xB0[10]` transitioning to the expected value.
+`0xBD` is confirmed as both the incoming event and the write command for ANC mode.
+`0xB9` is confirmed as both the incoming event and the write command for transparency level.
+Both are now listed in §6.3.
 
 ### 6.5 Candidate EQ Commands 🔬
 

@@ -150,19 +150,21 @@ Phase 2 is writing the actual API. Before that, the remaining Phase 1 work is:
 ### Confirmed write commands (verified on Nova Pro)
 
 ```
-0x37  mic volume  [0x06, 0x37, level, 0x00×61]   level=1-10  ✅
-0x39  sidetone    [0x06, 0x39, level, 0x00×61]   level=0,1,2,3  ✅
-0x85  OLED bright [0x06, 0x85, level, 0x00×61]   level=1-10  ✅
-0x09  save        [0x06, 0x09, 0x00×62]           call after any write  ✅
+0x37  mic volume        [0x06, 0x37, level, 0x00×61]   level=1-10  ✅
+0x39  sidetone          [0x06, 0x39, level, 0x00×61]   level=0,1,2,3  ✅
+0x85  OLED brightness   [0x06, 0x85, level, 0x00×61]   level=1-10  ✅
+0xBD  ANC mode          [0x06, 0xBD, mode,  0x00×61]   mode=0(off),1(transparency),2(ANC)  ✅
+0xB9  transparency lvl  [0x06, 0xB9, level, 0x00×61]   level=1-10 (transparency mode only)  ✅
+0x09  save              [0x06, 0x09, 0x00×62]           call after any write  ✅
 ```
 
 ### Remaining write commands to verify
 
 ```
-0x3A  vol limiter [0x06, 0x3A, 0x00|0x01, 0x00×61]
+0x3A  vol limiter  [0x06, 0x3A, 0x00|0x01, 0x00×61]
 0xA3  idle timeout [0x06, 0xA3, minutes, 0x00×61]   minutes=0-90
-0xAE  LED bright  [0x06, 0xAE, level, 0x00×61]   level=0-3
-0x49  ChatMix en  [0x06, 0x49, 0x01, 0x00×61]    0=disable, 1=enable
+0xAE  LED bright   [0x06, 0xAE, level, 0x00×61]     level=0-3
+0x49  ChatMix en   [0x06, 0x49, 0x01, 0x00×61]      0=disable, 1=enable
 EQ:   0x33 set bands, 0x32 query bands
 ```
 
@@ -217,11 +219,16 @@ Interact with the headset. All packets are decoded and logged to `logs/hid_sessi
 
 Branch: `development`  
 Last merges:
+- `feature/phase1-anc-write-confirm` — ANC/transparency write confirmed ✅
+- `feature/phase1-anc-write-probe` — probe_write.py + HidCommands §6.4 candidates
 - `feature/phase1-write-confirm-0xb9` — main discoveries batch
 - `feature/phase1-bt-state-decode` — 0xB0[5] decoded as on/off in output
 - `feature/phase1-0xb9-rename` — 0xB9 clarified as transparency-only
 
 Cumulative changes since `feature/phase1-query-field-mapping-r4`:
+- `0xBD` write confirmed: ANC mode (0=off, 1=transparency, 2=ANC) ✅
+- `0xB9` write confirmed: Transparency level (1–10), transparency mode only ✅
+- `src/probe_write.py` added — single write probe + before/after 0xB0 diff tool ✅
 - `0xB9` — Transparency Level (1–10), transparency mode only ✅
 - `0xB0[11]` — confirmed OLED brightness (1–10) ✅
 - `0xB0[5]` — BT state decoded as `on`/`off` in listener output ✅
