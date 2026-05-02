@@ -14,7 +14,7 @@ Goal: full programmatic control over every headset setting via USB HID.
 
 Phase 1 (complete) — discover the HID command map.
 Phase 2 (complete) — build the standalone `arctis-hid` package on top of confirmed knowledge.
-Phase 3 (upcoming) — OLED screen customization via `0x93` feature reports (pending protocol capture).
+Phase 3 (complete) — OLED screen customization via `0x93` feature reports; protocol confirmed from ggoled source.
 
 Technology: Python 3, `hidapi`, pip-installable package (`package/`), simple CLI examples.
 
@@ -52,13 +52,14 @@ package/             # ← PRIMARY: standalone pip-installable package (Phase 2)
         codec.py     # all byte-level encode/decode isolated from the API
         models.py    # StatusData, MicEqData, 22 typed event dataclasses
         headset.py   # ArctisNovaProWireless(AbstractHeadset) — all set_*/get_* methods
-        oled.py      # Phase 3 placeholder
+        oled.py      # ArctisNovaProOled — draw_image/draw_text/play_gif/play_animation (Phase 3)
   examples/
     listen_events.py # event/callback mode demo
     query_and_write.py # command mode demo
+    oled_demo.py     # OLED brightness/text/image/animation/gif CLI demo
   pyproject.toml
   README.md          # user guide
-  DEVELOPER.md       # protocol reference + extension guide + OLED Phase 3 roadmap
+  DEVELOPER.md       # protocol reference + extension guide
 docs/
   HidCommands.md     # full protocol reference — authoritative source of truth
   TestChecklist.md   # per-command test rows with pass/fail status
@@ -205,6 +206,8 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 - **Volume encoding**: `raw = round((1 − pct/100) × 56)`; `0x38`=0%, `0x00`=100%.
 - **2.4 GHz mode** (`0xC3`): no Col02 event fires when changed from GG — it is a silent write. Query via `0xB0[13]`.
 - **Discovery pattern**: to find an unknown command, run `probe_b0_diff.py` while toggling the setting in GG — it diffs all 64 bytes of `0xB0` before/after. Then probe candidate command bytes with `probe_write.py` watching for the identified byte to change.
+- **OLED draw (`0x93`)**: confirmed 128×64 display, column-major 1-bit bitmap, two 1024-byte `send_feature_report()` calls per frame (left half x=0, right half x=64). Use `headset.oled` (returns `ArctisNovaProOled`). Requires `pip install 'arctis-hid[oled]'` (Pillow). `0x95` interrupt write returns control to GG.
+- **OLED vs interrupt transport**: `0x93` draw uses `send_feature_report()` (1024 bytes), not `write()` (64 bytes). Never mix them. `0x85` brightness and `0x95` release still use `write()`.
 
 ---
 
@@ -212,12 +215,20 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 ```bash
 pip install -e package/
+pip install -e 'package/[oled]'   # adds Pillow for OLED drawing
 
 # Command mode — query status, send writes
 python package/examples/query_and_write.py
 
 # Event/listen mode — register callbacks, block on events
 python package/examples/listen_events.py
+
+# OLED demo
+python package/examples/oled_demo.py brightness 5
+python package/examples/oled_demo.py text "Hello"
+python package/examples/oled_demo.py img banner.png
+python package/examples/oled_demo.py anim --fps 10 --loops 3 f1.png f2.png
+python package/examples/oled_demo.py gif anim.gif
 
 # In code
 from arctis_hid import discover, AncMode, GainLevel
@@ -227,6 +238,15 @@ with discover() as h:
     h.set_anc_mode(AncMode.ANC)
     h.on("VolumeEvent", lambda e: print(e.percent))
     h.listen()
+
+# OLED in code (requires Pillow)
+from arctis_hid import discover
+with discover() as h:
+    h.set_oled_brightness(7)
+    h.oled.draw_text("Hello, World!")
+    h.oled.draw_image("banner.png")
+    h.oled.play_gif("spinner.gif", loops=3)
+    # h.oled.release() called automatically on context exit
 ```
 
 ## How to run the discovery scripts

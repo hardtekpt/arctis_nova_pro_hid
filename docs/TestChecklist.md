@@ -236,13 +236,94 @@ Send each command byte and observe whether the device responds. Log the raw resp
 | # | Command | Origin | Send | Observation needed | Status |
 |---|---------|--------|------|--------------------|--------|
 | 6.1 | `0xA0` | Nova 7X | `[0x06, 0xA0, 0x00×62]` | No response expected (already confirmed on Nova Pro) | ✅ No response |
-| 6.2 | `0x95` | HeadsetControl | `[0x06, 0x95, 0x00×62]` | Response? Note all bytes | ⬜ |
-| 6.3 | `0x93` | HeadsetControl | `[0x06, 0x93, 0x00×62]` | Response? Note all bytes | ⬜ |
+| 6.2 | `0x95` | HeadsetControl | `[0x06, 0x95, 0x00×62]` | Returns OLED control to GG — now confirmed, see §10 | ✅ |
+| 6.3 | `0x93` | HeadsetControl | feature report, 1024 bytes | Draws bitmap frame — now confirmed, see §10 | ✅ |
 | 6.4 | `0xB2` | Adjacent to `0xB0` | `[0x06, 0xB2, 0x00×62]` | Response? | ⬜ |
 | 6.5 | `0x22` | Adjacent to `0x20` | `[0x06, 0x22, 0x00×62]` | Response? | ⬜ |
 | 6.6 | `0x30` | Adjacent to `0x32` | `[0x06, 0x30, 0x00×62]` | Response? | ⬜ |
 | 6.7 | `0xBE` | Adjacent to `0xBD`/`0xBF` | `[0x06, 0xBE, 0x00×62]` | Response? | ⬜ |
 | 6.8 | `0xC0` | Adjacent to `0xC1` | `[0x06, 0xC0, 0x00×62]` | Response? | ⬜ |
+
+---
+
+## 10. OLED Draw Commands (`0x93` / `0x95`) — Phase 3
+
+Protocol confirmed via [ggoled](https://github.com/JerwuQu/ggoled) source.  
+Tests require `pip install 'arctis-hid[oled]'` (adds Pillow).  
+Run with `python package/examples/oled_demo.py <subcommand>` or via Python code.
+
+### 10.1 Brightness (interrupt write, no Pillow needed)
+
+| # | Test | Command | Expected | Status |
+|---|------|---------|----------|--------|
+| 10.1.1 | Set brightness 1 | `h.set_oled_brightness(1)` | OLED visibly dim | ⬜ |
+| 10.1.2 | Set brightness 10 | `h.set_oled_brightness(10)` | OLED visibly bright | ⬜ |
+| 10.1.3 | Out-of-range (0) | `h.set_oled_brightness(0)` | Device ignores or clamps | ⬜ |
+
+### 10.2 Release control (`0x95`)
+
+| # | Test | Command | Expected | Status |
+|---|------|---------|----------|--------|
+| 10.2.1 | Release after custom draw | `h.oled.release()` | GG home screen returns | ⬜ |
+| 10.2.2 | Context-manager auto-release | `with h.oled: ...` | Screen returns on `__exit__` | ⬜ |
+
+### 10.3 Static image draw (`0x93`)
+
+| # | Test | Command | Expected | Status |
+|---|------|---------|----------|--------|
+| 10.3.1 | Clear (all-black frame) | `h.oled.clear()` | Screen goes blank | ⬜ |
+| 10.3.2 | All-white frame | `h.oled.draw_raw(b'\xff' * 1024)` | Screen fully lit | ⬜ |
+| 10.3.3 | Draw PNG | `h.oled.draw_image("test.png")` | Image visible on screen | ⬜ |
+| 10.3.4 | Draw JPEG | `h.oled.draw_image("test.jpg")` | Image visible on screen | ⬜ |
+| 10.3.5 | Custom threshold | `h.oled.draw_image("grey.png", threshold=64)` | More pixels lit vs default 128 | ⬜ |
+| 10.3.6 | Oversized image | Image larger than 128×64 | Resized to fit, no crash | ⬜ |
+| 10.3.7 | Undersized image | Image smaller than 128×64 | Scaled up to fit, no distortion | ⬜ |
+
+### 10.4 Text rendering
+
+| # | Test | Command | Expected | Status |
+|---|------|---------|----------|--------|
+| 10.4.1 | Default font | `h.oled.draw_text("Hello")` | Readable text on screen | ⬜ |
+| 10.4.2 | Custom position | `h.oled.draw_text("Hi", x=10, y=20)` | Text offset correctly | ⬜ |
+| 10.4.3 | Inverted | `h.oled.draw_text("Hi", invert=True)` | White background, black text | ⬜ |
+| 10.4.4 | Custom TTF font | `font = ImageFont.truetype("myfont.ttf", 20); h.oled.draw_text("Hi", font=font)` | Custom font renders | ⬜ |
+| 10.4.5 | Text overflow | Very long string | No crash; text clipped at screen edge | ⬜ |
+
+### 10.5 Scroll text
+
+| # | Test | Command | Expected | Status |
+|---|------|---------|----------|--------|
+| 10.5.1 | Scroll short text | `h.oled.scroll_text("Hello")` | Text enters right, exits left | ⬜ |
+| 10.5.2 | Scroll long text | `h.oled.scroll_text("The quick brown fox")` | Full text scrolls across | ⬜ |
+| 10.5.3 | Custom FPS | `h.oled.scroll_text("Hi", fps=5)` | Visibly slower scroll | ⬜ |
+
+### 10.6 Animation (frame sequence)
+
+| # | Test | Command | Expected | Status |
+|---|------|---------|----------|--------|
+| 10.6.1 | Two-frame flip | `h.oled.play_animation([img1, img2], fps=2, loops=5)` | Alternates 5×, then stops | ⬜ |
+| 10.6.2 | File paths as frames | `h.oled.play_animation(["f1.png","f2.png"], fps=10)` | Same as above, loaded from disk | ⬜ |
+| 10.6.3 | Infinite loop | `h.oled.play_animation([img1, img2], fps=10, loops=0)` | Runs until Ctrl-C | ⬜ |
+
+### 10.7 GIF playback
+
+| # | Test | Command | Expected | Status |
+|---|------|---------|----------|--------|
+| 10.7.1 | Single-frame GIF | `h.oled.play_gif("single.gif")` | Static frame appears | ⬜ |
+| 10.7.2 | Animated GIF (embedded delays) | `h.oled.play_gif("anim.gif")` | Plays at GIF's own delays | ⬜ |
+| 10.7.3 | Override FPS | `h.oled.play_gif("anim.gif", fps=15)` | Plays faster than embedded delays | ⬜ |
+| 10.7.4 | Loop count | `h.oled.play_gif("anim.gif", loops=3)` | Plays exactly 3 times | ⬜ |
+| 10.7.5 | Infinite GIF loop | `h.oled.play_gif("anim.gif", loops=0)` | Loops until Ctrl-C | ⬜ |
+
+### 10.8 Bitmap encoding correctness
+
+| # | Test | Method | Expected | Status |
+|---|------|--------|----------|--------|
+| 10.8.1 | White pixel at (0,0) | `encode_frame(white_img)[0] & 0x01` | Bit 0 set = `True` | ⬜ |
+| 10.8.2 | White pixel at (0,7) | `encode_frame(white_img)[0] & 0x80` | Bit 7 set = `True` | ⬜ |
+| 10.8.3 | White pixel at (1,0) | `encode_frame(white_img)[8] & 0x01` | Bit 0 of byte 8 set | ⬜ |
+| 10.8.4 | Full white frame | `all(b == 0xFF for b in encode_frame(white_img))` | `True` | ✅ |
+| 10.8.5 | Full black frame | `all(b == 0x00 for b in encode_frame(black_img))` | `True` | ✅ |
 
 ---
 

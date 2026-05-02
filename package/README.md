@@ -18,7 +18,13 @@ Or from the project root:
 pip install -e package/
 ```
 
-**Requirements:** Python 3.10+, `hidapi`
+For OLED drawing (text, images, animations, GIFs):
+
+```bash
+pip install -e 'package/[oled]'
+```
+
+**Requirements:** Python 3.10+, `hidapi`. Pillow is optional — only needed for OLED drawing.
 
 On **Windows** the headset must not be exclusively held by another process (e.g. SteelSeries GG) when opening.
 
@@ -140,6 +146,87 @@ Register with `headset.on("EventClassName", callback)`. Use the class name as th
 
 ---
 
+## OLED display control
+
+Requires `pip install 'arctis-hid[oled]'` (Pillow).
+
+Access the OLED controller via `headset.oled`. It releases control back to GG automatically when used as a context manager.
+
+```python
+from arctis_hid import discover
+
+with discover() as h:
+    h.set_oled_brightness(7)   # 1–10; uses the standard 0x85 write command
+
+    with h.oled:               # restores GG screen on exit
+        # Static image (PNG, JPEG, BMP, …)
+        h.oled.draw_image("banner.png")
+
+        # Text — default bitmap font, or pass a PIL ImageFont
+        h.oled.draw_text("Hello, World!")
+        h.oled.draw_text("Inverted", x=0, y=24, invert=True)
+
+        # Scroll text left-to-right (one pass)
+        h.oled.scroll_text("Now playing: Track 1", fps=25)
+
+        # Frame-by-frame animation (PIL Images or file paths)
+        h.oled.play_animation(["f1.png", "f2.png", "f3.png"], fps=10, loops=3)
+
+        # GIF — uses embedded frame delays, or override with fps=
+        h.oled.play_gif("spinner.gif")
+        h.oled.play_gif("fast.gif", fps=20, loops=0)   # loops=0 → forever
+
+        # Blank screen
+        h.oled.clear()
+```
+
+### OLED methods
+
+| Method | Description |
+|--------|-------------|
+| `draw_image(image, threshold=128)` | Draw a static image. Accepts a PIL Image or a file path. Resizes to 128×64. |
+| `draw_text(text, font=None, x=0, y=0, invert=False)` | Render text onto the display. Pass a PIL ImageFont for custom fonts/sizes. |
+| `scroll_text(text, font=None, fps=20.0, invert=False)` | Scroll text across the display from right to left (one full pass). |
+| `play_animation(frames, fps=10.0, loops=1, threshold=128)` | Play a list of PIL Images or file paths as an animation. `loops=0` = forever. |
+| `play_gif(path, fps=None, loops=1, threshold=128)` | Play a GIF. Uses embedded frame delays unless `fps` is specified. `loops=0` = forever. |
+| `clear()` | Blank the display (all pixels off). |
+| `release()` | Return OLED control to GG / Sonar. Called automatically on context exit. |
+| `draw_raw(bitmap)` | Send a pre-encoded 1024-byte column-major 1-bit bitmap directly. No Pillow needed. |
+
+### `encode_frame` — advanced use
+
+For pre-processing pipelines:
+
+```python
+from arctis_hid import encode_frame
+from PIL import Image
+
+bitmaps = [encode_frame(Image.open(f)) for f in frame_files]
+
+with discover() as h:
+    for bm in bitmaps:
+        h.oled.draw_raw(bm)
+```
+
+`encode_frame(img, threshold=128) → bytes` converts any PIL Image to the 1024-byte column-major 1-bit bitmap the device expects. Pixel layout: column-major, LSB = top (y=0), `pixel(x,y)` → `byte x*8 + y//8`, `bit y%8`.
+
+---
+
+## CLI demo
+
+```bash
+python package/examples/oled_demo.py brightness 5
+python package/examples/oled_demo.py text "Hello, World!"
+python package/examples/oled_demo.py img cool_image.png
+python package/examples/oled_demo.py anim -r 10 -l 20 frame1.png frame2.png frame3.png
+python package/examples/oled_demo.py gif animation.gif
+python package/examples/oled_demo.py gif --fps 15 animation.gif
+python package/examples/oled_demo.py scroll "Now playing: Something Cool"
+python package/examples/oled_demo.py release
+```
+
+---
+
 ## Enum reference
 
 ```python
@@ -172,4 +259,4 @@ TimeoutStep.OFF / .ONE_MIN / .FIVE_MIN / .TEN_MIN / .FIFTEEN_MIN / .THIRTY_MIN /
 - **EQ workflow**: `set_eq_bands()` automatically selects the custom EQ preset first. If you want to switch to a named preset, call `set_eq_preset(index)` separately.
 - **ChatMix**: Call `set_chatmix_enabled(True)` before `ChatMixEvent` callbacks will fire.
 - **Wireless mode**: `set_wireless_mode()` is silent — no event fires. Confirm via `get_status().wireless_mode`.
-- **OLED screen drawing**: Planned for Phase 3 (see `DEVELOPER.md`).
+- **OLED draw not tested on hardware yet**: The `0x93` protocol was confirmed from [ggoled](https://github.com/JerwuQu/ggoled) source code. If you encounter display artifacts, the bitmap packing or report timing may need adjustment — please open an issue with a description of what you see.

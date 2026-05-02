@@ -1,6 +1,6 @@
 # Arctis Nova Pro Wireless — HID Command Reference
 
-_Last verified: `2026-05-01` — derived from `baseStationEvents.ts`, `oled/service.ts`, Arctis-on-Linux, Arctis Nova 7X protocol, and direct HID capture on PID `0x12E0`_
+_Last verified: `2026-05-03` — derived from `baseStationEvents.ts`, `oled/service.ts`, Arctis-on-Linux, Arctis Nova 7X protocol, direct HID capture on PID `0x12E0`, and [ggoled](https://github.com/JerwuQu/ggoled) source (OLED protocol)_
 
 This document catalogues every HID packet format discovered for the Arctis Nova Pro Wireless base station (USB receiver). It is written so another agent or developer can re-implement compatible HID communication without reading the source files.
 
@@ -616,6 +616,8 @@ db_offset     = data[3] - 20   // negative=cut, positive=boost
 
 Restores OLED control to the SteelSeries GG / Sonar application. Called after a custom OLED notification expires or when the OLED service stops.
 
+**Python:** `headset.oled.release()` — also called automatically when used as `with headset.oled:`.
+
 **Transport:** `device.write(payload)`
 
 **Payload (64 bytes):**
@@ -638,6 +640,8 @@ Total size: **64 bytes**.
 ### 4.2 OLED Screen Draw — `0x93` ✅
 
 Draws a bitmap frame on the 128×64 OLED display. The screen is split into two 64-pixel-wide vertical halves, each sent as a separate feature report.
+
+**Python:** `headset.oled.draw_image(path_or_pil_image)` / `draw_text(str)` / `play_gif(path)` / `play_animation(frames, fps, loops)` / `draw_raw(bitmap_bytes)`. Implemented in `package/arctis_hid/devices/nova_pro/oled.py`. Requires `pip install 'arctis-hid[oled]'`.
 
 **Transport:** `device.sendFeatureReport(report)` — called twice per frame (left half, right half).
 

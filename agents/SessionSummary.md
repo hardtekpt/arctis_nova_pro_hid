@@ -1,6 +1,6 @@
 # Session Summary — HID Discovery + API Build
 
-Sessions: `2026-05-01` / `2026-05-02` (Phase 1 discovery) / `2026-05-03` (Phase 2 API build)
+Sessions: `2026-05-01` / `2026-05-02` (Phase 1 discovery) / `2026-05-03` (Phase 2 API build + Phase 3 OLED)
 
 ## What this project is
 
@@ -61,10 +61,11 @@ package/                # ← Phase 2: standalone pip-installable package
         codec.py        # all byte-level encode/decode (isolated from API)
         models.py       # StatusData, MicEqData, 22 typed event dataclasses
         headset.py      # ArctisNovaProWireless(AbstractHeadset)
-        oled.py         # placeholder — Phase 3
+        oled.py         # ArctisNovaProOled — Phase 3 complete
   examples/
     listen_events.py    # event/callback mode demo
     query_and_write.py  # command mode demo
+    oled_demo.py        # OLED brightness/text/image/animation/gif demo (requires Pillow)
   pyproject.toml
   README.md
   DEVELOPER.md
@@ -89,7 +90,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 |-------|--------|-------|
 | Phase 1 | ✅ Complete | Full protocol map confirmed (2026-05-01 / 2026-05-02) |
 | Phase 2 — Core API | ✅ Complete | `package/arctis_hid` built and merged (2026-05-03) |
-| Phase 3 — OLED draw | ⏳ Pending | Awaiting protocol capture; stubs in place |
+| Phase 3 — OLED draw | ✅ Complete | Protocol confirmed via ggoled; `ArctisNovaProOled` built and merged (2026-05-03) |
 
 ---
 
@@ -156,11 +157,11 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 | `0x33` | Custom EQ bands | 10 bytes at [2–11], 0–40, 20=flat |
 | `0x09` | Save / persist | — always send after writes |
 
-### OLED commands (confirmed, implementation pending)
+### OLED commands (confirmed, implemented in `oled.py`)
 
 | Command | Type | Description |
 |---------|------|-------------|
-| `0x93` | HID feature report (1024 bytes × 2) | Draw custom frame — left half then right half |
+| `0x93` | HID feature report (1024 bytes × 2) | Draw custom frame — left half (x=0) then right half (x=64) |
 | `0x95` | Interrupt write | Return OLED control to GG / Sonar |
 
 ---
@@ -175,6 +176,26 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 6. **`0x09` save is confirmed required** on Nova Pro — settings revert on power cycle without it.
 7. **`0x31` write side-effect**: writing `0x31` switches to flat preset, not setting band levels. Use `0x33`.
 8. **`hidapi` only sees Interrupt IN** — GG's Interrupt OUT writes are invisible at the Python layer. Physical button/dial changes fire Col02 events; GG software changes do not.
+
+---
+
+## Phase 3 key lessons (2026-05-03)
+
+1. **Confirmed the full OLED protocol from ggoled source code.** The [ggoled](https://github.com/JerwuQu/ggoled) project (Rust) directly implements the same HID commands for PID `0x12E0`. This eliminated the need for a Wireshark capture: screen dimensions are 128×64 (not the placeholder 40), the bitmap encoding is column-major 1-bit LSB-first, and the `0x93` feature report is split into two 64-column chunks.
+
+2. **Column-major 1-bit bitmap encoding.** Each column of 64 pixels maps to 8 contiguous bytes. Pixel `(x, y)` sits at byte `x*8 + y//8`, bit `y%8` (LSB = y=0 = top). This is the only layout the device accepts — row-major encodings will produce garbage on screen.
+
+3. **Feature reports vs. interrupt writes for OLED.** `0x93` draw must use `send_feature_report()` (1024 bytes), not `write()` (64 bytes). `0x95` release and `0x85` brightness use `write()`. Mixing them crashes the packet or produces no response.
+
+4. **Exponential-backoff retry on feature reports.** ggoled retries failed `send_feature_report` calls up to 10 times with delay `attempt² ms`. The OLED path is the only place in the package that needs retry; interrupt writes do not.
+
+5. **Pillow (PIL) as an optional dependency.** The OLED drawing API (image loading, text rendering, GIF parsing) requires Pillow. It is declared as an optional extra (`pip install 'arctis-hid[oled]'`). All methods that need it call `_require_pil()` which raises a clear `ImportError` with the install hint. `draw_raw()` and `release()` work without Pillow.
+
+6. **Lazy instantiation of `ArctisNovaProOled`.** The `headset.oled` property creates the controller on first access and caches it. This avoids importing Pillow at import time and keeps the controller lifecycle tied to the headset instance.
+
+7. **`encode_frame` as a standalone exportable function.** Separating the encoding logic from the controller lets users pre-encode frames offline (e.g. in a pipeline) and call `draw_raw()` with the result, bypassing Pillow entirely.
+
+8. **`loops=0` convention for infinite playback.** Both `play_animation()` and `play_gif()` use `loops=0` to mean "loop forever" (via `itertools.count()`), matching ggoled's `-l 0` flag semantics. `range(loops)` would give an empty iterator for 0, so the check `if loops > 0 else itertools.count()` is required.
 
 ---
 
@@ -202,7 +223,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 
 ## What is still unknown / needs more work
 
-1. **OLED pixel format** — display dimensions, bit layout, report header structure for `0x93`. Resolve via Wireshark capture of GG OLED traffic with `scripts/parse_gg_capture.py`.
+1. **OLED draw not yet tested on physical hardware.** The `0x93` protocol was confirmed from ggoled source (not a live capture on our bench device). Functional test against PID `0x12E0` still needed; bitmap encoding and report timing should be verified visually.
 2. **No query command for 7 settings** — BT default (`0xB2`), BT auto-mute (`0xB3`), audio output (`0x43`), dim screen (`0x83`), home screen (`0x89`), mic LED brightness (`0xBF`), auto off (`0xC1`). GG reads them somehow.
 3. **EQ preset name → index mapping** — `0x04`=custom confirmed; `0x00–0x03` and `0x05–0x18` = named presets (19 total), names unknown.
 4. **`0xA3` idle timeout** — candidate command from Nova 7X; not yet tested on Nova Pro.
@@ -226,6 +247,13 @@ write:        0x00=high  0x01=low
 event/query:  0x01=low   0x02=high
 
 # EQ bands: 0–40, 20 (0x14) = flat/0 dB
+
+# OLED bitmap — column-major 1-bit, LSB = top (y=0)
+# pixel (x, y) → byte: x*8 + y//8, bit: y%8
+# Full frame: 128 cols × 8 bytes/col = 1024 bytes
+# Sent as two 0x93 feature reports (1024 bytes each):
+#   report 1: x=0..63  (dst_x=0)
+#   report 2: x=64..127 (dst_x=64)
 ```
 
 ---
@@ -234,12 +262,20 @@ event/query:  0x01=low   0x02=high
 
 ```bash
 pip install -e package/
+pip install -e 'package/[oled]'   # also installs Pillow for OLED drawing
 
 # Command mode
 python package/examples/query_and_write.py
 
 # Event/listen mode
 python package/examples/listen_events.py
+
+# OLED demo (brightness / text / image / animation / gif)
+python package/examples/oled_demo.py brightness 5
+python package/examples/oled_demo.py text "Hello"
+python package/examples/oled_demo.py img photo.png
+python package/examples/oled_demo.py anim --fps 10 --loops 3 f1.png f2.png
+python package/examples/oled_demo.py gif anim.gif
 
 # In code
 from arctis_hid import discover, AncMode
@@ -248,6 +284,15 @@ with discover() as h:
     h.set_anc_mode(AncMode.TRANSPARENCY)
     h.on("VolumeEvent", lambda e: print(e.percent))
     h.listen()
+
+# OLED in code (requires Pillow)
+from arctis_hid import discover
+with discover() as h:
+    h.set_oled_brightness(7)
+    h.oled.draw_text("Hello, World!")
+    h.oled.draw_image("banner.png")
+    h.oled.play_gif("spinner.gif", loops=3)
+    # returns screen to GG/Sonar on context exit
 ```
 
 ## How to run the discovery scripts
