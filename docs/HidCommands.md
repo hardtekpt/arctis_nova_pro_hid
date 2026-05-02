@@ -521,6 +521,32 @@ Fires when the user switches the audio output routing between speaker and stream
 
 ---
 
+### 3.20 Bluetooth Default — `0xB2` ✅
+
+Fires when the user toggles the Bluetooth default (auto-connect) setting.
+
+```
+[reportId, 0xB2, state, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID (`0x07`) |
+| 1 | Command `0xB2` |
+| 2 | State: `0x00` = off, `0x01` = on |
+
+**Decoding:**
+```
+0x00 → bt_default = "off"
+0x01 → bt_default = "on"
+```
+
+**State field:** `bt_default` (`"off"` | `"on"`)
+
+> Confirmed `2026-05-02`. Previously recorded as unresponsive (session `2026-05-02` write probe with no visible effect); that probe tested a write on Col01 and checked `0xB0[10]` only — the event fires on Col02. Write command uses same opcode and encoding.
+
+---
+
 ## 4. Outgoing Commands (Host → Device)
 
 ### 4.1 Return to SteelSeries UI — `0x95` ✅
@@ -641,6 +667,7 @@ Enables or disables the ChatMix feature on the base station.
 | `auto_off_timeout` | `0xC1` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
 | `wireless_2ghz_mode` | `0xC3`, `0xB0`[13] | `"performance" \| "range" \| null` |
 | `bt_auto_mute` | `0xB3` | `"off" \| "on" \| "-12dB" \| null` |
+| `bt_default` | `0xB2` | `"off" \| "on" \| null` |
 | `stream_main` | `0x47` | `number \| null` (0–100) |
 | `stream_aux` | `0x47` | `number \| null` (0–100) |
 | `stream_mic` | `0x47` | `number \| null` (0–100) |
@@ -712,7 +739,6 @@ Response bytes `[2+]`: null-terminated ASCII string, e.g. `'6152048313222500747'
 | Command | Origin | Observation |
 |---|---|---|
 | `0xA0` | Nova 7X | Query sent, **no response received** on Nova Pro (session `2026-05-01`) |
-| `0xB2` | Adjacent candidate | Write sent (`send(0xB2, 0x00)`), **no visible effect or response** (session `2026-05-02`) |
 
 ---
 
@@ -736,6 +762,7 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0x27` | Set gain level | `[2]` | 0–1 | **Write encoding differs from event encoding:** `0x00`=high, `0x01`=low. Incoming event (§3.9) uses `0x01`=low, `0x02`=high ✅ |
 | `0x49` | ChatMix enable/disable | `[2]` | 0–1 | `0x00`=disable, `0x01`=enable; `0x45` dial events only fire when enabled (§4.3) ✅ |
 | `0xC3` | Set 2.4 GHz mode | `[2]` | 0–1 | `0x00`=performance/speed, `0x01`=extended range; `0xB0[13]` reflects current value; also the incoming event byte (§3.16) ✅ |
+| `0xB2` | Set Bluetooth default | `[2]` | 0–1 | `0x00`=off, `0x01`=on; also the incoming event byte (§3.20) ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
 
 ### 6.4 Candidate Write Commands 🔬
