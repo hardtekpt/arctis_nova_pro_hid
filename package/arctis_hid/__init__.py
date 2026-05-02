@@ -48,6 +48,9 @@ from .devices.nova_pro.models import (
 from .devices.base import AbstractHeadset, AbstractOled
 from .devices.nova_pro.headset import ArctisNovaProWireless
 
+# OLED — requires Pillow (pip install 'arctis-hid[oled]')
+from .devices.nova_pro.oled import ArctisNovaProOled, encode_frame
+
 __all__ = [
     "discover",
     # exceptions
@@ -93,4 +96,7 @@ __all__ = [
     "AbstractHeadset",
     "AbstractOled",
     "ArctisNovaProWireless",
+    # OLED
+    "ArctisNovaProOled",
+    "encode_frame",
 ]
