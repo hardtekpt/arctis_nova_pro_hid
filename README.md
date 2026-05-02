@@ -68,7 +68,8 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | `0x45` | ChatMix dial | ✅ | `0x20`[20,21] | — | — | `[2]`=game (0–100) · `[3]`=chat (0–100) · only fires when ChatMix enabled |
 | `0x49` | ChatMix enable | — | — | ✅ | 0–1 | `0x00`=disable · `0x01`=enable · must enable to receive `0x45` events |
 | `0x47` | Stream volumes | ✅ | — | — | — | `[2]`=main (0–100) · `[4]`=aux (0–100) · `[5]`=mic (0–100) |
-| `0x43` | Audio output | ✅ | — | — | — | `[2]`=`0x01` speaker · `[2]`=`0x02` stream |
+| `0x43` | Audio output (event) | ✅ | — | — | — | `[2]`=`0x01` speaker · `[2]`=`0x02` stream |
+| `0x42` | Audio output (write) | — | — | ✅ | 0–1 | `0x00`=stream · `0x01`=speakers ⚠ encoding differs from event `0x43` |
 
 ### Noise control
 
@@ -93,7 +94,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | `0xC1` | Auto-off timeout | ✅ | — | ✅ | 0–6 | `0`=off · `1`=1 min · `2`=5 min · `3`=10 min · `4`=15 min · `5`=30 min · `6`=60 min |
 | `0xC3` | 2.4 GHz mode | ✅ | `0xB0`[13] | ✅ | 0–1 | `0`=performance/speed · `1`=extended range · silent write (no Col02 event from GG) |
 | `0xB2` | BT default | ✅ | — | ✅ | 0–1 | `0x00`=off · `0x01`=on |
-| `0xB3` | BT auto-mute | ✅ | — | — | — | `[2]`=`0x00` off · `0x01` on · `0x02` -12 dB |
+| `0xB3` | BT auto-mute | ✅ | — | ✅ | 0–2 | `0x00`=off · `0x01`=-12dB · `0x02`=on |
 | `0xB5` | Connectivity event | ✅ | `0xB0`[4,5] | — | — | `[2]`=mode · `[3]`=BT state · `[4]`=wireless flag |
 | `0xB7` | Battery levels | ✅ | `0xB0`[6,7] | — | — | `[2]`=headset raw · `[3]`=dock raw · `÷8×100`=% |
 | `0xBB` | Mic mute | ✅ | `0xB0`[9] | — | — | `[2]`=`0x00` unmuted · `0x01` muted · hardware button only |

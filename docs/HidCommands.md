@@ -450,18 +450,18 @@ Fires when the user changes the Bluetooth auto-mute setting in SteelSeries GG.
 |---|---|
 | 0 | Report ID (`0x07`) |
 | 1 | Command `0xB3` |
-| 2 | Mode: `0x00` = off, `0x01` = on, `0x02` = -12 dB |
+| 2 | Mode: `0x00` = off, `0x01` = -12 dB, `0x02` = on |
 
 **Decoding:**
 ```
 0x00 → bt_auto_mute = "off"
-0x01 → bt_auto_mute = "on"
-0x02 → bt_auto_mute = "-12dB"
+0x01 → bt_auto_mute = "-12dB"
+0x02 → bt_auto_mute = "on"
 ```
 
 **State field:** `bt_auto_mute` (`"off"` | `"on"` | `"-12dB"`)
 
-> Confirmed in session `2026-05-02` (14:10). Three distinct values observed matching GG's three options.
+> Confirmed in session `2026-05-02` (14:10). Three distinct values confirmed: `0x00`=off, `0x01`=-12dB, `0x02`=on. Write command uses same opcode and encoding (§6.3).
 
 ---
 
@@ -517,7 +517,7 @@ Fires when the user switches the audio output routing between speaker and stream
 
 **State field:** `audio_output` (`"speaker"` | `"stream"`)
 
-> Confirmed in session `2026-05-02` (14:11–14:12). Toggled six times alternating 01/02.
+> Confirmed in session `2026-05-02` (14:11–14:12). Toggled six times alternating 01/02. **Write command is `0x42`** with different encoding: `0x01`=speakers, `0x00`=stream (see §6.3).
 
 ---
 
@@ -666,7 +666,7 @@ Enables or disables the ChatMix feature on the base station.
 | `mic_led_brightness` | `0xBF` | `number \| null` (1–10) |
 | `auto_off_timeout` | `0xC1` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
 | `wireless_2ghz_mode` | `0xC3`, `0xB0`[13] | `"performance" \| "range" \| null` |
-| `bt_auto_mute` | `0xB3` | `"off" \| "on" \| "-12dB" \| null` |
+| `bt_auto_mute` | `0xB3` | `"off" \| "-12dB" \| "on" \| null` |
 | `bt_default` | `0xB2` | `"off" \| "on" \| null` |
 | `stream_main` | `0x47` | `number \| null` (0–100) |
 | `stream_aux` | `0x47` | `number \| null` (0–100) |
@@ -763,6 +763,8 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0x49` | ChatMix enable/disable | `[2]` | 0–1 | `0x00`=disable, `0x01`=enable; `0x45` dial events only fire when enabled (§4.3) ✅ |
 | `0xC3` | Set 2.4 GHz mode | `[2]` | 0–1 | `0x00`=performance/speed, `0x01`=extended range; `0xB0[13]` reflects current value; also the incoming event byte (§3.16) ✅ |
 | `0xB2` | Set Bluetooth default | `[2]` | 0–1 | `0x00`=off, `0x01`=on; also the incoming event byte (§3.20) ✅ |
+| `0xB3` | Set BT auto-mute | `[2]` | 0–2 | `0x00`=off, `0x01`=-12dB, `0x02`=on; also the incoming event byte (§3.17) ✅ |
+| `0x42` | Set audio output | `[2]` | 0–1 | `0x00`=stream, `0x01`=speakers ⚠ encoding differs from event `0x43` (`0x01`=speaker, `0x02`=stream) ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
 
 ### 6.4 Candidate Write Commands 🔬

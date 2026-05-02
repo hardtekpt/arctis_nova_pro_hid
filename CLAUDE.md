@@ -121,6 +121,8 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0x49` | ChatMix enable | 0–1 | 0=disable, 1=enable |
 | `0xC3` | Set 2.4 GHz mode | 0–1 | 0=performance/speed, 1=extended range |
 | `0xB2` | Set BT default | 0–1 | 0=off, 1=on |
+| `0xB3` | Set BT auto-mute | 0–2 | 0=off, 1=-12dB, 2=on |
+| `0x42` | Set audio output | 0–1 | 0=stream, 1=speakers ⚠ inverted from event `0x43` |
 | `0x09` | Save / persist | — | send after every write |
 
 ### Incoming events (device → Col02, report ID `0x07`)
@@ -144,9 +146,9 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0xB9` | Transparency level | `[2]`=1–10, transparency mode only |
 | `0xC3` | 2.4 GHz mode | `[2]`=0 performance/speed, 1 extended range |
 | `0xB2` | BT default | `[2]`=0 off, 1 on |
-| `0xB3` | BT auto-mute | `[2]`=0 off, 1 on, 2 -12dB |
+| `0xB3` | BT auto-mute | `[2]`=0 off, 1 -12dB, 2 on |
 | `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) |
-| `0x43` | Audio output selection | `[2]`=1 speaker, 2 stream |
+| `0x43` | Audio output selection (event) | `[2]`=1 speaker, 2 stream |
 
 ---
 
