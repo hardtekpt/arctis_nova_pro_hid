@@ -180,7 +180,7 @@ def decode_packet(data: list[int], source: str) -> str | None:
     # Offsets: data[0]=reportId  data[1]=cmd  data[2+]=payload
 
     # Battery confirmed at [6]/[7] (0-8 raw = 0-100%).
-    # Fields [2-5] and [8+] partially mapped – see HidCommands.md §6.1.
+    # Transparency level at [8], all fields mapped – see HidCommands.md §6.1.
     if cmd == 0xB0 and len(data) > 13:
         _CONN    = {0x01: "2.4GHz", 0x04: "2.4GHz+BT"}
         _ANC     = {0x00: "off", 0x01: "transparency", 0x02: "anc"}
@@ -188,6 +188,7 @@ def decode_packet(data: list[int], source: str) -> str | None:
         h_bat  = round(min(100, data[6] / 8 * 100))
         d_bat  = round(min(100, data[7] / 8 * 100))
         conn   = _CONN.get(data[4], f"0x{data[4]:02X}")
+        trans  = data[8] if 1 <= data[8] <= 10 else f"?({data[8]})"
         muted  = "muted" if data[9] == 1 else "unmuted"
         anc    = _ANC.get(data[10], f"0x{data[10]:02X}")
         bt     = "on" if data[5] == 1 else "off"
@@ -197,7 +198,7 @@ def decode_packet(data: list[int], source: str) -> str | None:
         return (
             f"{tag}  Status          → "
             f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
-            f"conn={conn}  mic_mute={muted}  anc={anc}  "
+            f"conn={conn}  mic_mute={muted}  anc={anc}  trans_level={trans}  "
             f"bt={bt}  oled_brightness={data[11]}  2.4ghz_mode={wmode}"
             f"{undecoded_note}"
         )

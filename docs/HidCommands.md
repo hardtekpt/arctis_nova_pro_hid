@@ -658,7 +658,7 @@ Enables or disables the ChatMix feature on the base station.
 | `oled_brightness` | `0x85`, `0xB0`[11] | `number \| null` (1–10) |
 | `chatmix_game` | `0x45`, `0x20`[20] | `number \| null` (0–100) |
 | `chatmix_chat` | `0x45`, `0x20`[21] | `number \| null` (0–100) |
-| `transparency_level` | `0xB9` | `number \| null` (1–10) |
+| `transparency_level` | `0xB9`, `0xB0`[8] | `number \| null` (1–10) |
 | `gain_level` | `0x27`, `0x20`[4] | `number \| null` (1=low, 2=high) |
 | `mic_volume` | `0x37`, `0x20`[17] | `number \| null` (1–10) |
 | `dim_screen_timeout` | `0x83` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
@@ -694,7 +694,7 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 | 5 | `0x00` / `0x01` | **BT state** — `0x00`=off, `0x01`=BT active (mirrors `0xB5` data[3]) ✅ |
 | 6 | `0x00`–`0x08` | **Headset battery** raw (÷ 8 × 100 = %) ✅ |
 | 7 | `0x00`–`0x08` | **Dock battery** raw (÷ 8 × 100 = %) ✅ |
-| 8 | `0x08` | Constant |
+| 8 | `0x01`–`0x0A` | **Transparency level** (1–10; only valid when ANC mode = transparency) ✅ |
 | 9 | `0x00` / `0x01` | **Mic mute** — `0x00`=unmuted, `0x01`=muted ✅ |
 | 10 | `0x00`–`0x02` | **ANC mode** — `0x00`=off, `0x01`=transparency, `0x02`=anc ✅ |
 | 11 | `0x01`–`0x0A` | **OLED brightness** (1–10; `0x0A`=10=max) ✅ |

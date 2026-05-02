@@ -86,6 +86,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | [5] | BT state | `0x00`=off, `0x01`=active |
 | [6] | Headset battery raw | ÷ 8 × 100 = % |
 | [7] | Dock battery raw | ÷ 8 × 100 = % |
+| [8] | Transparency level | 1–10 |
 | [9] | Mic mute | `0x00`=unmuted, `0x01`=muted |
 | [10] | ANC mode | `0x00`=off, `0x01`=transparency, `0x02`=ANC |
 | [11] | OLED brightness | 1–10 |

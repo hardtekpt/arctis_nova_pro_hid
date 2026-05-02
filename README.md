@@ -123,7 +123,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 ## `0xB0` status response — field map
 
 ```
-[0x06, 0xB0, 0x00, 0x00, conn, bt, hbat, dbat, 0x08, mute, anc, oled, 0x00, mode2g, 0x08, 0x08, ...]
+[0x06, 0xB0, 0x00, 0x00, conn, bt, hbat, dbat, trans, mute, anc, oled, 0x00, mode2g, 0x08, 0x08, ...]
   [0]   [1]   [2]   [3]   [4]  [5]  [6]   [7]   [8]   [9]  [10]  [11]  [12]  [13]   [14]  [15]
 ```
 
@@ -133,6 +133,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | [5] | BT state | `0x00`=off · `0x01`=BT active |
 | [6] | Headset battery raw | `÷ 8 × 100` = % |
 | [7] | Dock battery raw | `÷ 8 × 100` = % |
+| [8] | Transparency level | 1–10 (only valid when ANC = transparency) |
 | [9] | Mic mute | `0x00`=unmuted · `0x01`=muted |
 | [10] | ANC mode | `0x00`=off · `0x01`=transparency · `0x02`=ANC |
 | [11] | OLED brightness | 1–10 |
