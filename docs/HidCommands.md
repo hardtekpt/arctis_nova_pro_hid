@@ -606,6 +606,7 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 
 | Command | Description | Param byte | Range | Notes |
 |---|---|---|---|---|
+| `0x25` | Set headset volume | `[2]` | 0–56 | Same inverted encoding as the event: `raw = round((1 − pct/100) × 56)`; `0x38`=0%, `0x00`=100% ✅ |
 | `0x37` | Set mic volume | `[2]` | 1–10 | Also an incoming event (§3.10) ✅ |
 | `0x39` | Set sidetone | `[2]` | 0–3 | 0=off, 1=low, 2=medium, 3=high ✅ |
 | `0x85` | Set OLED brightness | `[2]` | 1–10 | Also an incoming event (§3.4) ✅ |

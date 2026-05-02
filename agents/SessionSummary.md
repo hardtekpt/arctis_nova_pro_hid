@@ -167,6 +167,7 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 
 | Command | Description | Param | Notes |
 |---------|-------------|-------|-------|
+| `0x25` | Set headset volume | 0–56 raw | Same inverted encoding as event: `raw = round((1−pct/100)×56)`; `0x38`=0%, `0x00`=100% |
 | `0x37` | Set mic volume | 1–10 | |
 | `0x39` | Set sidetone | 0–3 | 0=off, 1=low, 2=medium, 3=high |
 | `0x85` | Set OLED brightness | 1–10 | `0xB0[11]` reflects current value |
@@ -206,6 +207,7 @@ post-launch once verified.
 | Method | Command | Notes |
 |--------|---------|-------|
 | `get_status()` | `0xB0` + `0x20` | battery %, ANC, mute, connectivity, vol, gain, mic vol, sidetone, ChatMix, OLED brightness |
+| `set_volume(pct)` | `0x25` | inverted raw encoding: `raw = round((1−pct/100)×56)` |
 | `set_mic_volume(1–10)` | `0x37` | |
 | `set_sidetone(0–3)` | `0x39` | 0=off, 1=low, 2=medium, 3=high |
 | `set_oled_brightness(1–10)` | `0x85` | |
@@ -235,7 +237,7 @@ Per `agents/MainIdea.md`: Python 3, lightweight backend API framework, simple CL
 - **ChatMix**: `0x45` dial events only fire when ChatMix is enabled (`0x49` param `0x01`). Enable at startup if you want live dial tracking.
 - **EQ bands**: 10 bytes at `0x20` response `[7–16]`. Each value: 0–40, `0x14`=20=0 dB. Write via `0x33` with profile byte `0x00` (2.4 GHz) or `0x01` (Bluetooth).
 - **Volume encoding**: inverted scale. `0x38`=0%, `0x00`=100%. Formula: `raw = round((1 - pct/100) * 56)`. Max raw = `0x38` = 56.
-- **Volume write**: no write command for headset volume has been found. Volume appears to be hardware-controlled only.
+- **Volume write**: `0x25` confirmed writable. Same inverted encoding as the event: `raw = round((1 − pct/100) × 56)`; `0x38`=0%, `0x00`=100%.
 
 ---
 
