@@ -92,6 +92,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 |-----|------|---|---|---|-------|-------|
 | `0xC1` | Auto-off timeout | ✅ | — | ✅ | 0–6 | `0`=off · `1`=1 min · `2`=5 min · `3`=10 min · `4`=15 min · `5`=30 min · `6`=60 min |
 | `0xC3` | 2.4 GHz mode | ✅ | `0xB0`[13] | ✅ | 0–1 | `0`=performance/speed · `1`=extended range · silent write (no Col02 event from GG) |
+| `0xB2` | BT default | ✅ | — | ✅ | 0–1 | `0x00`=off · `0x01`=on |
 | `0xB3` | BT auto-mute | ✅ | — | — | — | `[2]`=`0x00` off · `0x01` on · `0x02` -12 dB |
 | `0xB5` | Connectivity event | ✅ | `0xB0`[4,5] | — | — | `[2]`=mode · `[3]`=BT state · `[4]`=wireless flag |
 | `0xB7` | Battery levels | ✅ | `0xB0`[6,7] | — | — | `[2]`=headset raw · `[3]`=dock raw · `÷8×100`=% |

@@ -158,6 +158,10 @@ def decode_packet(data: list[int], source: str) -> str | None:
         label = {0: "performance/speed", 1: "extended range"}.get(data[2], f"?({data[2]})")
         return f"{tag}  2.4 GHz Mode    → {label} (raw={data[2]})"
 
+    if cmd == 0xB2 and len(data) > 2:
+        label = {0: "off", 1: "on"}.get(data[2], f"?({data[2]})")
+        return f"{tag}  BT Default      → {label} (raw={data[2]})"
+
     if cmd == 0xB3 and len(data) > 2:
         label = {0: "off", 1: "on", 2: "-12dB"}.get(data[2], f"?({data[2]})")
         return f"{tag}  BT Auto-Mute    → {label} (raw={data[2]})"

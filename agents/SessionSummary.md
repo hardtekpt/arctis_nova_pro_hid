@@ -111,6 +111,7 @@ All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 | `0xC1` | Auto off timeout | `[2]`=0 off, 1–6 (1/5/10/15/30/60 min) | |
 | `0xB9` | Transparency level | `[2]`=level (1–10) | Transparency mode only |
 | `0xC3` | 2.4 GHz mode | `[2]`=0 performance/speed, 1 extended range | Also `0xB0[13]` |
+| `0xB2` | BT default | `[2]`=0 off, 1 on | Also a write command |
 | `0xB3` | BT auto-mute | `[2]`=0 off, 1 on, 2 -12dB | |
 | `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) | `[3]`=0x00 constant |
 | `0x43` | Audio output selection | `[2]`=1 speaker, 2 stream | |
@@ -185,6 +186,7 @@ Packet: `[0x06, CMD, PARAM, 0x00×61]` (64 bytes). Always follow with `0x09`.
 | `0x27` | Set gain level | 0–1 | **0=high, 1=low** (inverted vs event: 1=low, 2=high) |
 | `0x49` | ChatMix enable | 0–1 | 0=disable, 1=enable; `0x45` events only fire when enabled |
 | `0xC3` | Set 2.4 GHz mode | 0–1 | 0=performance/speed, 1=extended range; `0xB0[13]` reflects value |
+| `0xB2` | Set BT default | 0–1 | 0=off, 1=on |
 | `0x09` | Save / persist | — | Send after every write to commit to flash |
 
 ---
