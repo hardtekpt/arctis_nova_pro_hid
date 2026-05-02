@@ -154,25 +154,31 @@ def decode_packet(data: list[int], source: str) -> str | None:
         label = _TIMEOUT.get(data[2], f"?({data[2]})")
         return f"{tag}  Auto Off        → {label} (raw={data[2]})"
 
+    if cmd == 0xC3 and len(data) > 2:
+        label = {0: "performance/speed", 1: "extended range"}.get(data[2], f"?({data[2]})")
+        return f"{tag}  2.4 GHz Mode    → {label} (raw={data[2]})"
+
     # ── Confirmed query responses ─────────────────────────────────────────────
     # Offsets: data[0]=reportId  data[1]=cmd  data[2+]=payload
 
     # Battery confirmed at [6]/[7] (0-8 raw = 0-100%).
     # Fields [2-5] and [8+] partially mapped – see HidCommands.md §6.1.
     if cmd == 0xB0 and len(data) > 11:
-        _CONN = {0x01: "2.4GHz", 0x04: "2.4GHz+BT"}
-        _ANC  = {0x00: "off", 0x01: "transparency", 0x02: "anc"}
-        h_bat = round(min(100, data[6] / 8 * 100))
-        d_bat = round(min(100, data[7] / 8 * 100))
-        conn  = _CONN.get(data[4], f"0x{data[4]:02X}")
-        muted = "muted" if data[9] == 1 else "unmuted"
-        anc   = _ANC.get(data[10], f"0x{data[10]:02X}")
-        bt    = "on" if data[5] == 1 else "off"
+        _CONN    = {0x01: "2.4GHz", 0x04: "2.4GHz+BT"}
+        _ANC     = {0x00: "off", 0x01: "transparency", 0x02: "anc"}
+        _WMODE   = {0x00: "performance", 0x01: "range"}
+        h_bat  = round(min(100, data[6] / 8 * 100))
+        d_bat  = round(min(100, data[7] / 8 * 100))
+        conn   = _CONN.get(data[4], f"0x{data[4]:02X}")
+        muted  = "muted" if data[9] == 1 else "unmuted"
+        anc    = _ANC.get(data[10], f"0x{data[10]:02X}")
+        bt     = "on" if data[5] == 1 else "off"
+        wmode  = _WMODE.get(data[13], f"0x{data[13]:02X}") if len(data) > 13 else "?"
         return (
             f"{tag}  Status          → "
             f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
             f"conn={conn}  mic_mute={muted}  anc={anc}  "
-            f"bt={bt}  oled_brightness={data[11]}"
+            f"bt={bt}  oled_brightness={data[11]}  2.4ghz_mode={wmode}"
         )
 
     # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).

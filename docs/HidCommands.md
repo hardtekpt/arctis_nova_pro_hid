@@ -412,6 +412,32 @@ transparency_level = data[2]   // 1 (min) – 10 (max)
 
 ---
 
+### 3.16 2.4 GHz Mode — `0xC3` ✅
+
+Fires when the user changes the 2.4 GHz wireless mode between performance and extended range in SteelSeries GG.
+
+```
+[reportId, 0xC3, mode, ...]
+```
+
+| Byte | Meaning |
+|---|---|
+| 0 | Report ID (`0x07`) |
+| 1 | Command `0xC3` |
+| 2 | Mode: `0x00` = performance/speed, `0x01` = extended range |
+
+**Decoding:**
+```
+0x00 → wireless_mode = "performance"
+0x01 → wireless_mode = "range"
+```
+
+**State field:** `wireless_2ghz_mode` (`"performance"` | `"range"`)
+
+> Confirmed in session `2026-05-02` (14:02). Also reflected as `0xB0[13]`: `0x00`=performance, `0x01`=range. Write command uses same opcode and encoding (§6.3).
+
+---
+
 ## 4. Outgoing Commands (Host → Device)
 
 ### 4.1 Return to SteelSeries UI — `0x95` ✅
@@ -530,6 +556,7 @@ Enables or disables the ChatMix feature on the base station.
 | `home_screen_mode` | `0x89` | `number \| null` (0 or 1) |
 | `mic_led_brightness` | `0xBF` | `number \| null` (1–10) |
 | `auto_off_timeout` | `0xC1` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
+| `wireless_2ghz_mode` | `0xC3`, `0xB0`[13] | `"performance" \| "range" \| null` |
 
 ---
 
@@ -556,7 +583,9 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 | 9 | `0x00` / `0x01` | **Mic mute** — `0x00`=unmuted, `0x01`=muted ✅ |
 | 10 | `0x00`–`0x02` | **ANC mode** — `0x00`=off, `0x01`=transparency, `0x02`=anc ✅ |
 | 11 | `0x01`–`0x0A` | **OLED brightness** (1–10; `0x0A`=10=max) ✅ |
-| 12–15 | `06 00 08 08` | TBD |
+| 12 | `0x00` | Constant |
+| 13 | `0x00` / `0x01` | **2.4 GHz mode** — `0x00`=performance/speed, `0x01`=extended range ✅ |
+| 14–15 | `0x08 0x08` | Constant |
 
 #### `0x20` — Mic / EQ Params ✅
 
@@ -618,6 +647,7 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0xC1` | Set auto off timeout | `[2]` | 0–6 | `0`=off, `1`=1 min, `2`=5 min, `3`=10 min, `4`=15 min, `5`=30 min, `6`=60 min; also the incoming event byte (§3.14) ✅ |
 | `0x27` | Set gain level | `[2]` | 0–1 | **Write encoding differs from event encoding:** `0x00`=high, `0x01`=low. Incoming event (§3.9) uses `0x01`=low, `0x02`=high ✅ |
 | `0x49` | ChatMix enable/disable | `[2]` | 0–1 | `0x00`=disable, `0x01`=enable; `0x45` dial events only fire when enabled (§4.3) ✅ |
+| `0xC3` | Set 2.4 GHz mode | `[2]` | 0–1 | `0x00`=performance/speed, `0x01`=extended range; `0xB0[13]` reflects current value; also the incoming event byte (§3.16) ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
 
 ### 6.4 Candidate Write Commands 🔬
