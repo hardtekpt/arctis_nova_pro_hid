@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "arctis-hid"
+version = "0.1.0"
+description = "Python HID API for SteelSeries Arctis Nova Pro Wireless"
+requires-python = ">=3.10"
+dependencies = ["hidapi"]
+
+[project.optional-dependencies]
+oled = ["pillow"]
+dev  = ["pytest"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["arctis_hid"]
