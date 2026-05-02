@@ -133,6 +133,7 @@ def main() -> None:
             anc_before = before[10]
             print(f"[BEFORE] 0xB0[10] = 0x{anc_before:02X} ({anc_label(anc_before)})"
                   f"  oled_brightness={before[11]}")
+            print(f"[BEFORE] full: {_raw(before)}")
         else:
             print(f"[BEFORE] 0xB0 query failed or short: {before}")
             anc_before = None
@@ -173,6 +174,15 @@ def main() -> None:
             else:
                 marker = ""
             print(f"[AFTER ] 0xB0[10] = 0x{anc_after:02X} ({anc_label(anc_after)}){marker}")
+            print(f"[AFTER ] full: {_raw(after)}")
+            # Diff all bytes so unknown fields that change are visible
+            if before:
+                diffs = [(i, before[i], after[i]) for i in range(min(len(before), len(after))) if before[i] != after[i]]
+                if diffs:
+                    for i, b, a in diffs:
+                        print(f"[DIFF  ] byte[{i:02d}]: 0x{b:02X} → 0x{a:02X}  *** CHANGED ***")
+                else:
+                    print("[DIFF  ] no bytes changed")
         else:
             print(f"[AFTER ] 0xB0 query failed: {after}")
 
