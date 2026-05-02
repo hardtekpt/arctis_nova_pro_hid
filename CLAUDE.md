@@ -23,20 +23,21 @@ Technology: Python 3, lightweight backend API framework, simple CLI for testing.
 
 ```
 scripts/
-  discover.py       # enumerate all HID devices, identify Nova Pro interface paths
-  listen.py         # start-up queries + event loop; logs everything to logs/
-  probe_write.py    # single write probe: sends one packet, diffs 0xB0 before/after
-  write_packet.py   # scratch pad used during Phase 1 write testing
+  discover.py        # enumerate all HID devices, identify Nova Pro interface paths
+  listen.py          # start-up queries + event loop; logs everything to logs/
+  probe_write.py     # single write probe: sends one packet, diffs ALL 0xB0 bytes before/after
+  probe_b0_diff.py   # interactive before/after 0xB0 full-dump diff (toggle a GG setting, see which byte changes)
+  write_packet.py    # scratch pad used during Phase 1 write testing
 api/
-  __init__.py       # Phase 2 API implementation (in progress)
+  __init__.py        # Phase 2 API implementation (in progress)
 docs/
-  HidCommands.md    # full protocol reference — authoritative source of truth
-  TestChecklist.md  # per-command test rows with pass/fail status
-logs/               # HID session logs (gitignored)
+  HidCommands.md     # full protocol reference — authoritative source of truth
+  TestChecklist.md   # per-command test rows with pass/fail status
+logs/                # HID session logs (gitignored)
 agents/
-  MainIdea.md       # original project brief
-  SessionSummary.md # Phase 1 findings, confirmed commands, key lessons
-requirements.txt    # hidapi
+  MainIdea.md        # original project brief
+  SessionSummary.md  # Phase 1 findings, confirmed commands, key lessons
+requirements.txt     # hidapi
 ```
 
 ---
@@ -70,7 +71,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Command | Returns |
 |---------|---------|
-| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, OLED brightness |
+| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, OLED brightness, 2.4 GHz mode |
 | `0x20` | Mic/EQ: gain, mic vol, sidetone, 10 EQ bands, ChatMix, headset vol |
 | `0x10` | Firmware version (ASCII, null-terminated) |
 | `0x12` | Serial number (ASCII, null-terminated) |
@@ -88,6 +89,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | [9] | Mic mute | `0x00`=unmuted, `0x01`=muted |
 | [10] | ANC mode | `0x00`=off, `0x01`=transparency, `0x02`=ANC |
 | [11] | OLED brightness | 1–10 |
+| [13] | 2.4 GHz mode | `0x00`=performance/speed, `0x01`=extended range |
 
 ### `0x20` response field map
 
@@ -105,7 +107,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Command | Description | Param | Encoding |
 |---------|-------------|-------|----------|
-| `0x25` | Set headset volume | 0–56 raw | Same inverted encoding as event: `raw = round((1−pct/100)×56)`; `0x38`=0%, `0x00`=100% |
+| `0x25` | Set headset volume | 0–56 raw | Inverted: `raw = round((1−pct/100)×56)`; `0x38`=0%, `0x00`=100% |
 | `0x37` | Set mic volume | 1–10 | |
 | `0x39` | Set sidetone | 0–3 | 0=off, 1=low, 2=medium, 3=high |
 | `0x85` | Set OLED brightness | 1–10 | |
@@ -117,6 +119,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0xC1` | Set auto off timeout | 0–6 | 0=off; 1–6 = 1/5/10/15/30/60 min |
 | `0x27` | Set gain | 0–1 | **0=high, 1=low** ⚠ inverted vs event/query |
 | `0x49` | ChatMix enable | 0–1 | 0=disable, 1=enable |
+| `0xC3` | Set 2.4 GHz mode | 0–1 | 0=performance/speed, 1=extended range |
 | `0x09` | Save / persist | — | send after every write |
 
 ### Incoming events (device → Col02, report ID `0x07`)
@@ -138,6 +141,10 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0xBF` | Mic LED brightness | `[2]`=1–10 |
 | `0xC1` | Auto off timeout | `[2]`=0–6 |
 | `0xB9` | Transparency level | `[2]`=1–10, transparency mode only |
+| `0xC3` | 2.4 GHz mode | `[2]`=0 performance/speed, 1 extended range |
+| `0xB3` | BT auto-mute | `[2]`=0 off, 1 on, 2 -12dB |
+| `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) |
+| `0x43` | Audio output selection | `[2]`=1 speaker, 2 stream |
 
 ---
 
@@ -151,6 +158,8 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 - **Volume write**: `0x25` confirmed writable with the same inverted encoding as the event.
 - **EQ bands**: 10 bytes at `0x20[7–16]`, range 0–40, `0x14`=flat. Write via `0x33` with profile `0x00` (2.4 GHz) or `0x01` (BT) — not yet verified on Nova Pro.
 - **Volume encoding**: `raw = round((1 − pct/100) × 56)`; `0x38`=0%, `0x00`=100%.
+- **2.4 GHz mode** (`0xC3`): no Col02 event fires when changed from GG — it is a silent write. Query via `0xB0[13]`.
+- **Discovery pattern**: to find an unknown command, run `probe_b0_diff.py` while toggling the setting in GG — it diffs all 64 bytes of `0xB0` before/after. Then probe candidate command bytes with `probe_write.py` watching for the identified byte to change.
 
 ---
 
@@ -159,9 +168,10 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 ```bash
 pip install -r requirements.txt
 
-python scripts/listen.py            # queries at startup + event loop
-python scripts/listen.py --no-query # listen only
+python scripts/listen.py              # queries at startup + event loop
+python scripts/listen.py --no-query  # listen only
 
-python scripts/probe_write.py --cmd 0xBD --param 0x01   # write probe
-python scripts/discover.py          # enumerate HID interfaces
+python scripts/probe_write.py --cmd 0xBD --param 0x01   # write probe (diffs all 0xB0 bytes)
+python scripts/probe_b0_diff.py                          # interactive before/after 0xB0 diff
+python scripts/discover.py                               # enumerate HID interfaces
 ```
