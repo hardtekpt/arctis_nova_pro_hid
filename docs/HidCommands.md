@@ -671,7 +671,7 @@ Enables or disables the ChatMix feature on the base station.
 | `stream_main` | `0x47` | `number \| null` (0–100) |
 | `stream_aux` | `0x47` | `number \| null` (0–100) |
 | `stream_mic` | `0x47` | `number \| null` (0–100) |
-| `audio_output` | `0x43`, `0xB0`[3] | `"speaker" \| "stream" \| null` |
+| `audio_output` | `0x43`, `0x20`[19] | `"speaker" \| "stream" \| null` |
 
 ---
 
@@ -683,14 +683,13 @@ All queries use: `[0x06, cmdByte, 0x00, ..., 0x00]` (64 bytes). Confirmed in ses
 
 #### `0xB0` — Status ✅
 
-Response: `[0x06, 0xB0, ?, audio_out, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, anc, oled, ...]`
+Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, anc, oled, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0xB0` | Command echo |
-| 2 | `0x00` | Unknown |
-| 3 | `0x01` / `0x02` | **Audio output** — `0x01`=speakers, `0x02`=stream (mirrors `0x43` event data[2]) ✅ |
+| 2–3 | `0x00` | Unknown |
 | 4 | `0x01` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active (mirrors `0xB5` data[2]) ✅ |
 | 5 | `0x00` / `0x01` | **BT state** — `0x00`=off, `0x01`=BT active (mirrors `0xB5` data[3]) ✅ |
 | 6 | `0x00`–`0x08` | **Headset battery** raw (÷ 8 × 100 = %) ✅ |
@@ -705,7 +704,7 @@ Response: `[0x06, 0xB0, ?, audio_out, conn, bt, headset_bat, dock_bat, 0x08, mic
 
 #### `0x20` — Mic / EQ Params ✅
 
-Response: `[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, ?, game, chat, stream_main, 0, stream_aux, stream_mic, ...]`
+Response: `[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, audio_out, game, chat, stream_main, 0, stream_aux, stream_mic, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
@@ -718,7 +717,7 @@ Response: `[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, ?, ga
 | 7–16 | 10 bytes | **EQ band values** (0–40, `0x14`=20=flat/0 dB) ✅ |
 | 17 | `0x01`–`0x0A` | **Mic volume** (1–10) ✅ |
 | 18 | `0x00`–`0x03` | **Sidetone level** (0=off, 1=low, 2=medium, 3=high) ✅ |
-| 19 | `0x02` | Unknown |
+| 19 | `0x01` / `0x02` | **Audio output** — `0x01`=speakers, `0x02`=stream (mirrors `0x43` event data[2]) ✅ |
 | 20 | `0x00`–`0x64` | **ChatMix game** (0–100) ✅ — mirrors `0x45` event data[2] |
 | 21 | `0x00`–`0x64` | **ChatMix chat** (0–100) ✅ — mirrors `0x45` event data[3] |
 | 22 | `0x00`–`0x64` | **Stream main volume** (0–100) ✅ — mirrors `0x47` event/write data[2] |

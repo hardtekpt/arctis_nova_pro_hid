@@ -71,8 +71,8 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Command | Returns |
 |---------|---------|
-| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, OLED brightness, 2.4 GHz mode, audio output |
-| `0x20` | Mic/EQ: gain, mic vol, sidetone, 10 EQ bands, ChatMix, headset vol |
+| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, OLED brightness, 2.4 GHz mode |
+| `0x20` | Mic/EQ: gain, mic vol, sidetone, audio output, ChatMix, stream volumes, 10 EQ bands, headset vol |
 | `0x10` | Firmware version (ASCII, null-terminated) |
 | `0x12` | Serial number (ASCII, null-terminated) |
 
@@ -82,7 +82,6 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Byte | Meaning | Values |
 |------|---------|--------|
-| [3] | Audio output | `0x01`=speakers, `0x02`=stream |
 | [4] | Connectivity mode | `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active |
 | [5] | BT state | `0x00`=off, `0x01`=active |
 | [6] | Headset battery raw | ÷ 8 × 100 = % |
@@ -101,6 +100,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | [7–16] | EQ bands × 10 | 0–40, `0x14`=20=flat/0 dB |
 | [17] | Mic volume | 1–10 |
 | [18] | Sidetone | 0=off, 1=low, 2=medium, 3=high |
+| [19] | Audio output | `0x01`=speakers, `0x02`=stream |
 | [20] | ChatMix game | 0–100 |
 | [21] | ChatMix chat | 0–100 |
 | [22] | Stream main volume | 0–100 |

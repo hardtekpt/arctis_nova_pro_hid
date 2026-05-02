@@ -129,7 +129,6 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 
 | Byte | Field | Values |
 |------|-------|--------|
-| [3] | Audio output | `0x01`=speakers · `0x02`=stream |
 | [4] | Connectivity mode | `0x01`=2.4 GHz only · `0x04`=2.4 GHz + BT active |
 | [5] | BT state | `0x00`=off · `0x01`=BT active |
 | [6] | Headset battery raw | `÷ 8 × 100` = % |
@@ -148,6 +147,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | [7–16] | EQ bands × 10 | 0–40 each · `0x14`=20=flat/0 dB |
 | [17] | Mic volume | 1–10 |
 | [18] | Sidetone | `0`=off · `1`=low · `2`=medium · `3`=high |
+| [19] | Audio output | `1`=speakers · `2`=stream |
 | [20] | ChatMix game | 0–100 |
 | [21] | ChatMix chat | 0–100 |
 | [22] | Stream main volume | 0–100 |
