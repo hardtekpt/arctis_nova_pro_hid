@@ -220,13 +220,15 @@ def decode_packet(data: list[int], source: str) -> str | None:
     # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).
     # [19] = audio output, [22-25] = stream output volumes – see HidCommands.md §6.1.
     if cmd == 0x20 and len(data) > 25:
-        _GAIN = {1: "low", 2: "high"}
-        _SIDE = {0: "off", 1: "low", 2: "medium", 3: "high"}
+        _GAIN  = {1: "low", 2: "high"}
+        _SIDE  = {0: "off", 1: "low", 2: "medium", 3: "high"}
         _AUDIO = {1: "speaker", 2: "stream"}
         gain         = _GAIN.get(data[4], f"?({data[4]})")
         sidetone     = _SIDE.get(data[18], f"?({data[18]})")
         audio        = _AUDIO.get(data[19], f"?({data[19]})")
         vol_pct      = round(max(0, min(100, (0x38 - data[3]) / 56 * 100)))
+        eq_preset    = data[6]
+        eq_preset_str = "custom" if eq_preset == 0x04 else f"preset_{eq_preset}"
         eq_bands     = _raw(data[7:17])
         stream_main  = data[22]
         stream_aux   = data[24]
@@ -238,7 +240,7 @@ def decode_packet(data: list[int], source: str) -> str | None:
             f"gain={gain}  mic_vol={data[17]}  sidetone={sidetone}  vol={vol_pct}%  "
             f"audio_output={audio}  chatmix_game={data[20]}  chatmix_chat={data[21]}  "
             f"stream_main={stream_main}  stream_aux={stream_aux}  stream_mic={stream_mic}  "
-            f"eq_bands=[{eq_bands}]{undecoded_note}"
+            f"eq_preset={eq_preset_str}(0x{eq_preset:02X})  eq_bands=[{eq_bands}]{undecoded_note}"
         )
 
     if cmd in (0x10, 0x12) and len(data) > 2:

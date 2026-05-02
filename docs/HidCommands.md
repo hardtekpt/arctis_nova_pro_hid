@@ -735,7 +735,7 @@ Enables or disables the ChatMix feature on the base station.
 | `stream_aux` | `0x47` | `number \| null` (0–100) |
 | `stream_mic` | `0x47` | `number \| null` (0–100) |
 | `audio_output` | `0x43`, `0x20`[19] | `"speaker" \| "stream" \| null` |
-| `eq_preset_index` | `0x2E` | `number \| null` (0–18 observed; name mapping TBD) |
+| `eq_preset_index` | `0x2E`, `0x20`[6] | `number \| null` (0–18; `0x04`=custom; name mapping TBD) |
 | `eq_bands[1..10]` | `0x31`, `0x20`[7–16] | `number[] \| null` (each 0–40; 20=flat/0 dB) |
 
 ---
@@ -769,7 +769,7 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 
 #### `0x20` — Mic / EQ Params ✅
 
-Response: `[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, audio_out, game, chat, stream_main, 0, stream_aux, stream_mic, ...]`
+Response: `[0x06, 0x20, ?, vol_raw, gain, 0, eq_preset, eq×10, mic_vol, sidetone, audio_out, game, chat, stream_main, 0, stream_aux, stream_mic, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
@@ -778,7 +778,8 @@ Response: `[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, audio
 | 2 | `0x01` | Unknown (constant across all sessions) |
 | 3 | `0x00`–`0x38` | **Headset volume raw** — same encoding as `0x25` event: `0x38`=0%, `0x00`=100% ✅ |
 | 4 | `0x01` / `0x02` | **Gain level** — `0x01`=low, `0x02`=high ✅ |
-| 5–6 | `0x00` | Padding/unknown |
+| 5 | `0x00` | Padding/unknown |
+| 6 | `0x00`–`0x12` | **EQ preset index** — same encoding as `0x2E` event/write: `0x04`=custom EQ, `0x00–0x03` and `0x05–0x18`=named presets ✅ |
 | 7–16 | 10 bytes | **EQ band values** (0–40, `0x14`=20=flat/0 dB) ✅ |
 | 17 | `0x01`–`0x0A` | **Mic volume** (1–10) ✅ |
 | 18 | `0x00`–`0x03` | **Sidetone level** (0=off, 1=low, 2=medium, 3=high) ✅ |

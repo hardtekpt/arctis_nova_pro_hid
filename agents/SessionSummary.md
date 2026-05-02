@@ -154,7 +154,7 @@ All arrive on Col02 (`0xFF00`) with report ID `0x07`.
 | `0xB3` | BT auto-mute | `[2]`=0 off, 1 -12dB, 2 on | Also a write command |
 | `0x47` | Output stream volumes | `[2]`=main (0–100), `[4]`=aux (0–100), `[5]`=mic (0–100) | `[3]`=0x00 constant; event-only |
 | `0x43` | Audio output selection | `[2]`=1 speakers, 2 stream | Also a write command |
-| `0x2E` | EQ preset selection | `[2]`=preset index (`0x04`=custom, `0x00–0x03`+`0x05–0x18`=named presets) | Also a write command ✅ |
+| `0x2E` | EQ preset selection | `[2]`=preset index (`0x04`=custom, `0x00–0x03`+`0x05–0x18`=named presets) | Also a write command ✅; current value readable from `0x20`[6] |
 | `0x31` | EQ band level change | `[2]`=band (1–10), `[3]`=level (0–40, `0x14`=flat/0 dB) | **Event only — do not write** (write switches to flat preset) |
 
 ### Query commands (host → device, Col01 `0xFFC0`)
@@ -193,8 +193,8 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 ### `0x20` response field map (64 bytes)
 
 ```
-[0x06, 0x20, ?, vol, gain, 0, 0, eq×10, mic_vol, sidetone, ?, game, chat, ...]
-  [0]   [1]  [2] [3]  [4] [5][6] [7-16]  [17]      [18]   [19] [20]  [21]
+[0x06, 0x20, ?, vol, gain, 0, eq_preset, eq×10, mic_vol, sidetone, audio, game, chat, ...]
+  [0]   [1]  [2] [3]  [4] [5]    [6]   [7-16]   [17]      [18]    [19]  [20]  [21]
 ```
 
 | Byte | Meaning | Values / decode |
@@ -202,6 +202,7 @@ Send `[0x06, cmdByte, 0x00×62]`. Response arrives on same handle.
 | [2] | Unknown | constant `0x01` — likely protocol version |
 | [3] | Headset volume raw | same encoding as `0x25` event: `pct=(0x38-data[3])/56×100` |
 | [4] | Gain level | `0x01`=low, `0x02`=high |
+| [6] | EQ preset index | same encoding as `0x2E`: `0x04`=custom EQ, `0x00–0x03`+`0x05–0x18`=named presets |
 | [7–16] | EQ band values × 10 | 0–40, `0x14`=20=flat/0 dB |
 | [17] | Mic volume | 1–10 |
 | [18] | Sidetone level | 0=off, 1=low, 2=medium, 3=high |

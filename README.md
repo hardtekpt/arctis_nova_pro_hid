@@ -74,7 +74,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 
 | Cmd | Name | E | Q | W | Param | Notes |
 |-----|------|---|---|---|-------|-------|
-| `0x2E` | EQ preset select | ✅ | — | ✅ | 0–18 | `0x04`=custom EQ · `0x00–0x03` and `0x05–0x18`=named presets (19 total; names TBD) |
+| `0x2E` | EQ preset select | ✅ | `0x20`[6] | ✅ | 0–18 | `0x04`=custom EQ · `0x00–0x03` and `0x05–0x18`=named presets (19 total; names TBD) |
 | `0x33` | Set custom EQ bands | — | — | ✅ | 10 values | `[0x06, 0x33, b1..b10, 0x00×52]` · bytes [2–11] · each 0–40 · 20=flat/0 dB · switch to custom first (`0x2E` `0x04`) |
 | `0x31` | EQ band level | ✅ | `0x20`[7–16] | ⚠ | — | **Event only** — fires per-band while dragging a slider · `[2]`=band (1–10) · `[3]`=level (0–40) · writing this command switches to flat preset |
 
@@ -149,14 +149,15 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 ## `0x20` mic/EQ response — field map
 
 ```
-[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, audio, game, chat, stream_main, 0, stream_aux, stream_mic, ...]
-  [0]   [1]  [2]  [3]    [4]   [5][6] [7-16]   [17]      [18]    [19]  [20]  [21]    [22]      [23] [24]        [25]
+[0x06, 0x20, ?, vol_raw, gain, 0, eq_preset, eq×10, mic_vol, sidetone, audio, game, chat, stream_main, 0, stream_aux, stream_mic, ...]
+  [0]   [1]  [2]  [3]    [4]  [5]    [6]    [7-16]   [17]      [18]    [19]  [20]  [21]    [22]      [23] [24]        [25]
 ```
 
 | Byte | Field | Values |
 |------|-------|--------|
 | [3] | Headset volume raw | inverted: `pct = (0x38 − data[3]) / 56 × 100` |
 | [4] | Gain | `0x01`=low · `0x02`=high |
+| [6] | EQ preset index | same encoding as `0x2E`: `0x04`=custom EQ · `0x00–0x03`+`0x05–0x18`=named presets |
 | [7–16] | EQ bands × 10 | 0–40 each · `0x14`=20=flat/0 dB |
 | [17] | Mic volume | 1–10 |
 | [18] | Sidetone | `0`=off · `1`=low · `2`=medium · `3`=high |

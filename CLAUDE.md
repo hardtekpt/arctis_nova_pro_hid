@@ -98,6 +98,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 |------|---------|--------|
 | [3] | Headset volume raw | inverted: `pct = (0x38 − data[3]) / 56 × 100` |
 | [4] | Gain | `0x01`=low, `0x02`=high |
+| [6] | EQ preset index | same encoding as `0x2E`: `0x04`=custom EQ, `0x00–0x03`+`0x05–0x18`=named presets |
 | [7–16] | EQ bands × 10 | 0–40, `0x14`=20=flat/0 dB |
 | [17] | Mic volume | 1–10 |
 | [18] | Sidetone | 0=off, 1=low, 2=medium, 3=high |
