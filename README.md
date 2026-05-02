@@ -140,6 +140,11 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 
 ## `0x20` mic/EQ response — field map
 
+```
+[0x06, 0x20, ?, vol_raw, gain, 0, 0, eq×10, mic_vol, sidetone, audio, game, chat, stream_main, 0, stream_aux, stream_mic, ...]
+  [0]   [1]  [2]  [3]    [4]   [5][6] [7-16]   [17]      [18]    [19]  [20]  [21]    [22]      [23] [24]        [25]
+```
+
 | Byte | Field | Values |
 |------|-------|--------|
 | [3] | Headset volume raw | inverted: `pct = (0x38 − data[3]) / 56 × 100` |
