@@ -68,7 +68,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 | `0x45` | ChatMix dial | ✅ | `0x20`[20,21] | — | — | `[2]`=game (0–100) · `[3]`=chat (0–100) · only fires when ChatMix enabled |
 | `0x49` | ChatMix enable | — | — | ✅ | 0–1 | `0x00`=disable · `0x01`=enable · must enable to receive `0x45` events |
 | `0x47` | Stream volumes | ✅ | `0x20`[22,24,25] | ✅ | multi-byte | `[2]`=main (0–100) · `[3]`=0x00 · `[4]`=aux (0–100) · `[5]`=mic (0–100) |
-| `0x43` | Audio output | ✅ | — | ✅ | 1–2 | `0x01`=speakers · `0x02`=stream |
+| `0x43` | Audio output | ✅ | ✅ | ✅ | 1–2 | `0x01`=speakers · `0x02`=stream |
 
 ### Noise control
 
