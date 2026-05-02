@@ -1,23 +1,3 @@
-"""
-ANC/Transparency write-command probe.
-
-Sends a single write packet to the device, queries 0xB0 before and after to
-detect whether ANC mode changed, and drains any events that fire in response.
-
-Usage:
-  python src/probe_write.py --cmd 0xBD --param 0x01   # try 0xBD → transparency
-  python src/probe_write.py --cmd 0xBD --param 0x00   # try 0xBD → off
-  python src/probe_write.py --cmd 0xBD --param 0x02   # try 0xBD → ANC
-  python src/probe_write.py --cmd 0xB9 --param 0x05   # try transparency level 5
-  python src/probe_write.py --cmd 0xBE --param 0x01 --no-save
-
-Candidates to try (in order):
-  0xBD  same byte as the incoming event (SteelSeries often mirrors read/write)
-  0xBE  adjacent, listed as unknown probe candidate in TestChecklist
-  0xBC  adjacent below
-  0xB9  transparency level event — may be writable (0x37 mic vol is bidirectional)
-"""
-
 import argparse
 import sys
 import time
@@ -25,50 +5,45 @@ from pathlib import Path
 
 import hid
 
-# Allow `from listen import ...` when running as `python src/probe_write.py`
 sys.path.insert(0, str(Path(__file__).parent))
 
-from listen import (  # noqa: E402
-    ARCTIS_NOVA_PRO_PIDS,
-    COMMAND_INTERFACE,
+from listen import (
     PACKET_SIZE,
     REPORT_ID,
-    STEELSERIES_VID,
-    USAGE_CONTROL,
-    USAGE_EVENTS,
-    _raw,
     build_query,
     decode_packet,
     find_handles,
+    _raw,
 )
 
-ANC_LABELS = {0x00: "off", 0x01: "transparency", 0x02: "anc"}
-
-CMD_SAVE   = 0x09
+CMD_SAVE = 0x09
 CMD_STATUS = 0xB0
 
-WRITE_DELAY = 0.20   # seconds: between write and save, and save and re-query
-EVENT_WINDOW = 0.35  # seconds: drain events after write
+WRITE_DELAY = 0.20
+EVENT_WINDOW = 0.35
 
 
-def build_write(cmd: int, param: int) -> bytes:
+def build_write(cmd: int, data: list[int]) -> bytes:
     pkt = bytearray(PACKET_SIZE)
     pkt[0] = REPORT_ID
     pkt[1] = cmd
-    pkt[2] = param
+
+    for i, val in enumerate(data):
+        if 2 + i < PACKET_SIZE:
+            pkt[2 + i] = val
+
     return bytes(pkt)
 
 
-def query_b0(ctrl) -> list[int] | None:
+def query_b0(ctrl):
     ctrl.write(list(build_query(CMD_STATUS)))
     time.sleep(0.10)
     data = ctrl.read(PACKET_SIZE, 200)
     return list(data) if data else None
 
 
-def drain(dev, window_s: float, label: str) -> list[list[int]]:
-    """Collect all readable packets from dev within window_s seconds."""
-    packets: list[list[int]] = []
+def drain(dev, window_s: float):
+    packets = []
     deadline = time.monotonic() + window_s
     while time.monotonic() < deadline:
         data = dev.read(PACKET_SIZE, 40)
@@ -77,43 +52,59 @@ def drain(dev, window_s: float, label: str) -> list[list[int]]:
     return packets
 
 
-def anc_label(raw: int) -> str:
-    return ANC_LABELS.get(raw, f"unknown(0x{raw:02X})")
+def parse_data_arg(data_str: str) -> list[int]:
+    return [int(x, 0) for x in data_str.split(",")]
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(
-        description="Arctis Nova Pro — single write-command probe"
+        description="Arctis Nova Pro — multi-byte write probe"
     )
+
     parser.add_argument(
         "--cmd",
         required=True,
         type=lambda x: int(x, 0),
-        metavar="BYTE",
-        help="Command byte to test (e.g. 0xBD)",
+        help="Command byte (e.g. 0x47)",
     )
+
     parser.add_argument(
         "--param",
-        required=True,
         type=lambda x: int(x, 0),
-        metavar="BYTE",
-        help="Parameter byte at position [2] (e.g. 0x01 = transparency)",
+        help="Single parameter (fallback)",
     )
+
+    parser.add_argument(
+        "--data",
+        type=str,
+        help="Comma-separated byte list (e.g. 80,0,40,60)",
+    )
+
     parser.add_argument(
         "--no-save",
         action="store_true",
-        help="Skip the 0x09 save command after writing",
+        help="Skip save command",
     )
+
     args = parser.parse_args()
 
+    # Resolve payload
+    if args.data:
+        payload = parse_data_arg(args.data)
+    elif args.param is not None:
+        payload = [args.param]
+    else:
+        print("ERROR: provide --param or --data")
+        sys.exit(1)
+
     ctrl_path, evt_path, device_name = find_handles()
+
     if not ctrl_path:
-        print("ERROR: Control handle (0xFFC0) not found — is the base station plugged in?")
+        print("ERROR: Control handle not found")
         sys.exit(1)
 
     print(f"Device : {device_name}")
-    print(f"[PROBE ] cmd=0x{args.cmd:02X}  param=0x{args.param:02X}"
-          f"{'  (no-save)' if args.no_save else ''}")
+    print(f"[PROBE ] cmd=0x{args.cmd:02X}  data={payload}")
     print()
 
     ctrl = hid.device()
@@ -127,64 +118,53 @@ def main() -> None:
         evt.set_nonblocking(1)
 
     try:
-        # ── Baseline ─────────────────────────────────────────────────────────
+        # BEFORE
         before = query_b0(ctrl)
-        if before and len(before) > 11:
-            anc_before = before[10]
-            print(f"[BEFORE] 0xB0[10] = 0x{anc_before:02X} ({anc_label(anc_before)})"
-                  f"  oled_brightness={before[11]}")
-            print(f"[BEFORE] full: {_raw(before)}")
-        else:
-            print(f"[BEFORE] 0xB0 query failed or short: {before}")
-            anc_before = None
+        if before:
+            print(f"[BEFORE] {_raw(before)}")
 
-        # ── Write ─────────────────────────────────────────────────────────────
-        write_pkt = build_write(args.cmd, args.param)
-        print(f"[WRITE ] sent [{_raw(write_pkt[:8])} ...]")
-        ctrl.write(list(write_pkt))
+        # WRITE
+        pkt = build_write(args.cmd, payload)
+        print(f"[WRITE ] {_raw(pkt[:16])} ...")
+        ctrl.write(list(pkt))
 
-        # ── Drain events during wait window ───────────────────────────────────
+        # EVENTS
         time.sleep(WRITE_DELAY)
+
         if evt:
-            for e in drain(evt, EVENT_WINDOW, "EVT  "):
+            for e in drain(evt, EVENT_WINDOW):
                 decoded = decode_packet(e, "EVT  ")
-                tag = decoded.strip() if decoded else f"RAW: {_raw(e)}"
-                print(f"[EVENT ] {tag}")
-        # Also drain any unsolicited ctrl packets
+                print(f"[EVENT ] {decoded or _raw(e)}")
+
+        # CTRL drain
         for _ in range(6):
             d = ctrl.read(PACKET_SIZE, 30)
             if d:
                 decoded = decode_packet(list(d), "CTRL ")
-                tag = decoded.strip() if decoded else f"RAW: {_raw(list(d))}"
-                print(f"[CTRL  ] {tag}")
+                print(f"[CTRL  ] {decoded or _raw(list(d))}")
 
-        # ── Save ──────────────────────────────────────────────────────────────
+        # SAVE
         if not args.no_save:
-            print(f"[SAVE  ] sent 0x{CMD_SAVE:02X}")
+            print("[SAVE  ]")
             ctrl.write(list(build_query(CMD_SAVE)))
             time.sleep(WRITE_DELAY)
 
-        # ── Re-query ──────────────────────────────────────────────────────────
+        # AFTER
         after = query_b0(ctrl)
-        if after and len(after) > 11:
-            anc_after = after[10]
-            if anc_before is not None:
-                changed = anc_after != anc_before
-                marker = "  ✅ CHANGED" if changed else "  (unchanged)"
-            else:
-                marker = ""
-            print(f"[AFTER ] 0xB0[10] = 0x{anc_after:02X} ({anc_label(anc_after)}){marker}")
-            print(f"[AFTER ] full: {_raw(after)}")
-            # Diff all bytes so unknown fields that change are visible
+        if after:
+            print(f"[AFTER ] {_raw(after)}")
+
             if before:
-                diffs = [(i, before[i], after[i]) for i in range(min(len(before), len(after))) if before[i] != after[i]]
+                diffs = [
+                    (i, before[i], after[i])
+                    for i in range(min(len(before), len(after)))
+                    if before[i] != after[i]
+                ]
                 if diffs:
                     for i, b, a in diffs:
-                        print(f"[DIFF  ] byte[{i:02d}]: 0x{b:02X} → 0x{a:02X}  *** CHANGED ***")
+                        print(f"[DIFF  ] byte[{i}]: {b:02X} -> {a:02X}")
                 else:
-                    print("[DIFF  ] no bytes changed")
-        else:
-            print(f"[AFTER ] 0xB0 query failed: {after}")
+                    print("[DIFF  ] no change")
 
     finally:
         ctrl.close()
