@@ -71,7 +71,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Command | Returns |
 |---------|---------|
-| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, OLED brightness, 2.4 GHz mode |
+| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, OLED brightness, 2.4 GHz mode, audio output |
 | `0x20` | Mic/EQ: gain, mic vol, sidetone, 10 EQ bands, ChatMix, headset vol |
 | `0x10` | Firmware version (ASCII, null-terminated) |
 | `0x12` | Serial number (ASCII, null-terminated) |
@@ -82,6 +82,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Byte | Meaning | Values |
 |------|---------|--------|
+| [3] | Audio output | `0x01`=speakers, `0x02`=stream |
 | [4] | Connectivity mode | `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active |
 | [5] | BT state | `0x00`=off, `0x01`=active |
 | [6] | Headset battery raw | ÷ 8 × 100 = % |

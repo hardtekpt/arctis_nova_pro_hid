@@ -671,7 +671,7 @@ Enables or disables the ChatMix feature on the base station.
 | `stream_main` | `0x47` | `number \| null` (0–100) |
 | `stream_aux` | `0x47` | `number \| null` (0–100) |
 | `stream_mic` | `0x47` | `number \| null` (0–100) |
-| `audio_output` | `0x43` | `"speaker" \| "stream" \| null` |
+| `audio_output` | `0x43`, `0xB0`[3] | `"speaker" \| "stream" \| null` |
 
 ---
 
@@ -683,13 +683,14 @@ All queries use: `[0x06, cmdByte, 0x00, ..., 0x00]` (64 bytes). Confirmed in ses
 
 #### `0xB0` — Status ✅
 
-Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, anc, ?, ...]`
+Response: `[0x06, 0xB0, ?, audio_out, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, anc, oled, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0xB0` | Command echo |
-| 2–3 | `0x00` | Unknown |
+| 2 | `0x00` | Unknown |
+| 3 | `0x01` / `0x02` | **Audio output** — `0x01`=speakers, `0x02`=stream (mirrors `0x43` event data[2]) ✅ |
 | 4 | `0x01` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active (mirrors `0xB5` data[2]) ✅ |
 | 5 | `0x00` / `0x01` | **BT state** — `0x00`=off, `0x01`=BT active (mirrors `0xB5` data[3]) ✅ |
 | 6 | `0x00`–`0x08` | **Headset battery** raw (÷ 8 × 100 = %) ✅ |

@@ -129,6 +129,7 @@ Legend: **E** = incoming event (Col02) · **Q** = queryable (which response fiel
 
 | Byte | Field | Values |
 |------|-------|--------|
+| [3] | Audio output | `0x01`=speakers · `0x02`=stream |
 | [4] | Connectivity mode | `0x01`=2.4 GHz only · `0x04`=2.4 GHz + BT active |
 | [5] | BT state | `0x00`=off · `0x01`=BT active |
 | [6] | Headset battery raw | `÷ 8 × 100` = % |
