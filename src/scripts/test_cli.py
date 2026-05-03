@@ -56,8 +56,8 @@ Usage examples:
     python scripts/test_cli.py edge-mic-vol-oob 0x00
 """
 
-import signal
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "package"))
@@ -206,12 +206,12 @@ def cmd_listen(args) -> None:
         h.on("MicLedEvent",         lambda e: print(f"[MicLed]          {e.level}/10"))
         h.on("AutoOffEvent",        lambda e: print(f"[AutoOff]         {e.step.name}"))
 
-        def _shutdown(sig, frame):
+        h.start()
+        try:
+            while True:
+                time.sleep(0.2)
+        except KeyboardInterrupt:
             print("\nStopping…")
-            sys.exit(0)
-
-        signal.signal(signal.SIGINT, _shutdown)
-        h.listen()
 
 
 # ── Write handlers — TestChecklist §3/4/5 ─────────────────────────────────
