@@ -5,8 +5,8 @@ Requirements:
     pip install 'arctis-hid[oled]'           # adds Pillow for oled-* commands
 
 NOTE: --verify must come BEFORE the subcommand name:
-    python scripts/test_cli.py --verify sidetone high   ✓
-    python scripts/test_cli.py sidetone high --verify   ✗
+    python scripts/test_cli.py --verify sidetone high   [OK]
+    python scripts/test_cli.py sidetone high --verify   [WRONG - flag must come first]
 
 Usage examples:
     # Section 2 — query commands
@@ -732,8 +732,8 @@ def build_parser():
     sp.add_argument("--threshold",   type=int,   default=128)
 
     # ── Edge cases (§9) ────────────────────────────────────────────────────
-    sub.add_parser("edge-volume-min", help="Set volume to 0%; verify raw=0x38 (§9.7)")
-    sub.add_parser("edge-volume-max", help="Set volume to 100%; verify raw=0x00 (§9.8)")
+    sub.add_parser("edge-volume-min", help="Set volume to 0%%; verify raw=0x38 (§9.7)")
+    sub.add_parser("edge-volume-max", help="Set volume to 100%%; verify raw=0x00 (§9.8)")
 
     sp = sub.add_parser("edge-sidetone-oob",
                         help="Send raw sidetone byte, bypassing enum validation (§9.4)")
