@@ -165,18 +165,30 @@ Used as a setup step before capturing HID traffic with Wireshark (see `docs/Wire
 
 ## parse_gg_capture.py
 
-**Purpose:** Decode a Wireshark capture of SteelSeries GG ↔ headset USB traffic. Accepts both `.json` (Wireshark JSON export) and `.pcapng` formats.
+**Purpose:** Decode a Wireshark capture of SteelSeries GG ↔ headset USB traffic. Accepts both `.json` (Wireshark JSON export) and `.pcapng`/`.pcap` formats.
 
 **Usage:**
 ```bash
-python src/scripts/parse_gg_capture.py capture.json
-python src/scripts/parse_gg_capture.py capture.pcapng
+python src/scripts/parse_gg_capture.py --file capture.json
+python src/scripts/parse_gg_capture.py --file capture.pcapng
+python src/scripts/parse_gg_capture.py --file capture.json --device 3.17
+python src/scripts/parse_gg_capture.py --file capture.json --out-only
+python src/scripts/parse_gg_capture.py --file capture.json --in-only
 ```
+
+**Flags:**
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--file` / `-f` | Yes | Capture file (`.json`, `.pcapng`, or `.pcap`) |
+| `--device` / `-d` | No | USB `bus.address` (e.g. `3.17`); auto-detected from descriptor packets if omitted |
+| `--out-only` | No | Show only GG→device (host-to-device) packets |
+| `--in-only` | No | Show only device→GG (device-to-host) packets |
 
 **Output:**
 - Decoded lines for every known opcode using the same decoder as `listen.py`
-- Direction indicator (host→device or device→host)
-- Raw hex for unknown packets
+- Direction indicator (`GG→DEV` or `DEV→GG`)
+- Raw hex for unknown packets, flagged with `*** UNKNOWN ***` if host-initiated
+- Summary showing any command bytes not in the known map (candidates for further probing)
 
 **Use case:** Compare what GG sends/receives against what the Python package sends to verify protocol compatibility or discover new commands.
 
@@ -184,16 +196,93 @@ python src/scripts/parse_gg_capture.py capture.pcapng
 
 ## test_cli.py
 
-**Purpose:** Unified CLI test harness covering all commands in `docs/TestChecklist.md`. Allows exercising every headset write and read command in sequence from the command line.
+**Purpose:** Unified test harness covering every item in `docs/TestChecklist.md`. Wraps the `arctis-hid` package to exercise every query, write, event, OLED, and edge-case command from a single script.
 
-**Usage:**
+**Prerequisites:**
 ```bash
-python src/scripts/test_cli.py --help
-python src/scripts/test_cli.py status
-python src/scripts/test_cli.py set-volume 75
-python src/scripts/test_cli.py set-anc transparency
+pip install -e src/package/           # core package
+pip install -e 'src/package/[oled]'   # add Pillow for oled-* commands
 ```
 
-**Key flags:** Run `--help` for the full list. Each subcommand maps directly to a checklist item.
+All arguments use `--` notation. `--command` selects the operation; value arguments are separate flags.
 
-**Note:** Uses the `arctis-hid` package (`src/package/`). Requires `pip install -e src/package/` first.
+**Modes:**
+
+### Interactive menu (`--interactive`)
+
+```bash
+python src/scripts/test_cli.py --interactive
+python src/scripts/test_cli.py -i
+```
+
+Launches a navigable terminal menu. Use numbered entries to select a category, then a command within it. Values are prompted inline with validation and sensible defaults. A verify toggle is available from the main menu.
+
+### Command-line (`--command`)
+
+```bash
+python src/scripts/test_cli.py --command <CMD> [flags...]
+python src/scripts/test_cli.py --verify --command <CMD> [flags...]
+```
+
+**Global flags:**
+| Flag | Description |
+|------|-------------|
+| `--command` / `-c` | Command to run (required unless `--interactive`) |
+| `--verify` | Re-query after each write and print before/after field values |
+| `--interactive` / `-i` | Launch interactive terminal menu |
+
+**Query commands (§2):**
+```bash
+python src/scripts/test_cli.py --command query    # all four queries at once
+python src/scripts/test_cli.py --command status   # 0xB0 status packet
+python src/scripts/test_cli.py --command miceq    # 0x20 mic/EQ packet
+```
+
+**Event listener (§1):**
+```bash
+python src/scripts/test_cli.py --command listen   # block until Ctrl-C
+```
+
+**Write commands (§3–5):**
+```bash
+python src/scripts/test_cli.py --verify --command volume           --pct 75
+python src/scripts/test_cli.py --verify --command mic-vol          --level 6
+python src/scripts/test_cli.py --verify --command sidetone         --level high
+python src/scripts/test_cli.py --verify --command anc              --mode transparency
+python src/scripts/test_cli.py         --command transparency      --level 7
+python src/scripts/test_cli.py --verify --command gain             --level low
+python src/scripts/test_cli.py --verify --command oled-brightness  --level 5
+python src/scripts/test_cli.py         --command mic-led           --level 5
+python src/scripts/test_cli.py --verify --command audio-output     --output speakers
+python src/scripts/test_cli.py --verify --command stream-volumes   --main 80 --aux 80 --mic 60
+python src/scripts/test_cli.py         --command chatmix           --state on
+python src/scripts/test_cli.py         --command dim-timeout       --step 15
+python src/scripts/test_cli.py         --command home-screen       --mode simple
+python src/scripts/test_cli.py         --command auto-off          --step 30
+python src/scripts/test_cli.py --verify --command wireless-mode    --mode performance
+python src/scripts/test_cli.py         --command bt-default        --state on
+python src/scripts/test_cli.py         --command bt-auto-mute      --mode off
+python src/scripts/test_cli.py --verify --command eq-preset        --index 0x04
+python src/scripts/test_cli.py --verify --command eq-bands         --bands 20 20 20 20 20 20 20 20 20 20
+```
+
+**OLED commands (§10, requires Pillow):**
+```bash
+python src/scripts/test_cli.py --command oled-clear
+python src/scripts/test_cli.py --command oled-release
+python src/scripts/test_cli.py --command oled-text    --text "Hello" [--x N] [--y N] [--invert] [--font path.ttf]
+python src/scripts/test_cli.py --command oled-scroll  --text "The quick brown fox" [--fps 15]
+python src/scripts/test_cli.py --command oled-img     --path banner.png [--threshold 100]
+python src/scripts/test_cli.py --command oled-anim    --frames f1.png f2.png [--fps 10] [--loops 3]
+python src/scripts/test_cli.py --command oled-gif     --path anim.gif [--loops 3]
+```
+
+**Edge cases (§9):**
+```bash
+python src/scripts/test_cli.py --command edge-volume-min
+python src/scripts/test_cli.py --command edge-volume-max
+python src/scripts/test_cli.py --command edge-sidetone-oob --value 0x04
+python src/scripts/test_cli.py --command edge-mic-vol-oob  --value 0x00
+```
+
+**`--verify` behaviour:** When passed, the script queries the relevant field before and after the write and prints `before → after [OK/UNEXPECTED]`. Commands with no query-reflected field print a note to verify visually or via `--command listen`.
