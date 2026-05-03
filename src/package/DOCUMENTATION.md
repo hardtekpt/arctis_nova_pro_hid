@@ -424,7 +424,7 @@ class StatusData:
     bt_active:           bool           # True if Bluetooth stream is active
     mic_muted:           bool
     anc_mode:            AncMode
-    oled_brightness:     int            # 1–10
+    mic_led_brightness:  int            # 1–10  (0xB0[11]; OLED brightness is write-only via 0x85, no readback)
     wireless_mode:       WirelessMode
 ```
 

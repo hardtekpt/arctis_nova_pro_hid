@@ -132,7 +132,7 @@ Write a Python snippet for each (template at bottom of this section). Send the c
 | 4.1.3 | `0x39` Sidetone | `0x02` (medium) | Send, listen for `0x39` echo event | `0x20`[18] = `0x02` | ⬜ |
 | 4.1.4 | `0x39` Sidetone | `0x03` (high) | Send, listen for `0x39` echo event | `0x20`[18] = `0x03` | ⬜ |
 | 4.1.5 | `0x37` Mic volume | `0x01`–`0x0A` | Send each level, listen for `0x37` echo | `0x20`[17] = sent value ✅ |
-| 4.1.6 | `0x85` OLED brightness | `0x01`–`0x0A` | Send, check base station display changes | `0xB0`[11] reflects new value ✅ |
+| 4.1.6 | `0x85` OLED brightness | `0x01`–`0x0A` | Send, check base station display changes | write-only; no `0xB0` readback | ⬜ |
 | 4.1.7 | `0x09` Save/persist | — | Send after any successful write; power-cycle headset; re-query to verify setting survived | All changed fields match after reboot | ⬜ |
 
 ### 4.2 Display and audio setting writes
@@ -331,7 +331,7 @@ Run with `python package/examples/oled_demo.py <subcommand>` or via Python code.
 
 | # | Unknown | Experiment | Hypothesis | Status |
 |---|---------|-----------|------------|--------|
-| 7.1 | `0xB0`[11] = constant `0x0A` | Change OLED brightness, re-query `0xB0` | Confirmed: `0xB0`[11] is OLED brightness (1–10) ✅ |
+| 7.1 | `0xB0`[11] = Mic LED brightness | Change Mic LED brightness, re-query `0xB0` | Confirmed: `0xB0`[11] is Mic LED brightness (1–10) ✅ |
 | 7.2 | `0xB0`[12] = `0x05`/`0x06` seen | Note exact headset battery %, re-query across multiple charge levels | Possible: state tied to charge tier, not setting | ⬜ |
 | 7.3 | `0x20`[2] = constant `0x01` | Try every write command, re-query `0x20` | Does [2] ever change? If not, likely a fixed protocol version byte | ⬜ |
 | 7.4 | Transparent level | `0xB9` write confirmed — same byte as the incoming event | `0xBD` sets mode, `0xB9` sets level (1–10, transparency mode only) | ✅ |

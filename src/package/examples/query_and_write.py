@@ -20,7 +20,7 @@ def main() -> None:
         print(f"  Dock battery    : {status.dock_battery_pct:.0f}%")
         print(f"  ANC mode        : {status.anc_mode.name}")
         print(f"  Mic muted       : {status.mic_muted}")
-        print(f"  OLED brightness : {status.oled_brightness}")
+        print(f"  Mic LED brightness : {status.mic_led_brightness}")
         print(f"  Wireless mode   : {status.wireless_mode.name}")
         print(f"  BT active       : {status.bt_active}")
 
