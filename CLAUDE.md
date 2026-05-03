@@ -4,6 +4,7 @@
 - When a feature is completed merge to the development branch automatically.
 - Only merge to the main/master branch when I say.
 - When merging to master, automatically create a new tag with an incremented version according to the implemented feature (micro, minor, major).
+- After any change to package source files under `src/package/arctis_hid/`, update `src/package/DOCUMENTATION.md` to reflect the change (new/removed/renamed methods, changed signatures, new enums or events, etc.).
 
 ---
 
@@ -16,58 +17,62 @@ Phase 1 (complete) — discover the HID command map.
 Phase 2 (complete) — build the standalone `arctis-hid` package on top of confirmed knowledge.
 Phase 3 (complete) — OLED screen customization via `0x93` feature reports; protocol confirmed from ggoled source.
 
-Technology: Python 3, `hidapi`, pip-installable package (`package/`), simple CLI examples.
+Technology: Python 3, `hidapi`, pip-installable package (`src/package/`), simple CLI examples.
 
 ---
 
 ## Repository layout
 
 ```
-scripts/
-  discover.py        # enumerate all HID devices, identify Nova Pro interface paths
-  listen.py          # start-up queries + event loop; logs everything to logs/
-  probe_write.py     # single write probe: sends one packet, diffs ALL 0xB0 bytes before/after
-  probe_b0_diff.py   # interactive before/after 0xB0 full-dump diff (toggle a GG setting, see which byte changes)
-  probe_full_diff.py # dual 0xB0 + 0x20 before/after diff
-  probe_query_scan.py# scan all 256 opcodes for undiscovered query commands
-  monitor_all.py     # open every device interface simultaneously — find what GG uses
-  find_usb_bus.py    # identify the correct Wireshark USBPcap interface for the headset
-  parse_gg_capture.py# decode a Wireshark .json/.pcapng capture of GG traffic
-  write_packet.py    # scratch pad used during Phase 1 write testing
-api/
-  __init__.py        # original stub — superseded by package/arctis_hid
-package/             # ← PRIMARY: standalone pip-installable package (Phase 2)
-  arctis_hid/
-    __init__.py      # public surface: discover(), enums, models, events
-    discovery.py     # discover() → AbstractHeadset
-    exceptions.py    # DeviceError hierarchy
-    core/
-      transport.py   # HidTransport: 64-byte interrupt I/O + feature reports (OLED)
-      dispatcher.py  # EventDispatcher: on/off/emit keyed by event class name
-      types.py       # shared enums: AncMode, GainLevel, SidetoneLevel, …
-    devices/
-      base.py        # AbstractHeadset + AbstractOled ABCs (extensible for new devices)
-      nova_pro/
-        constants.py # all CMD_* bytes, field indices, OLED constants
-        codec.py     # all byte-level encode/decode isolated from the API
-        models.py    # StatusData, MicEqData, 22 typed event dataclasses
-        headset.py   # ArctisNovaProWireless(AbstractHeadset) — all set_*/get_* methods
-        oled.py      # ArctisNovaProOled — draw_image/draw_text/play_gif/play_animation (Phase 3)
-  examples/
-    listen_events.py # event/callback mode demo
-    query_and_write.py # command mode demo
-    oled_demo.py     # OLED brightness/text/image/animation/gif CLI demo
-  pyproject.toml
-  README.md          # user guide
-  DEVELOPER.md       # protocol reference + extension guide
+src/
+  scripts/             # Phase 1 discovery tools (not part of the package)
+    discover.py        # enumerate all HID devices, identify Nova Pro interface paths
+    listen.py          # start-up queries + event loop; logs everything to logs/
+    probe_write.py     # single write probe: sends one packet, diffs ALL 0xB0 bytes before/after
+    probe_b0_diff.py   # interactive before/after 0xB0 full-dump diff (toggle a GG setting, see which byte changes)
+    probe_full_diff.py # dual 0xB0 + 0x20 before/after diff
+    probe_query_scan.py# scan all 256 opcodes for undiscovered query commands
+    monitor_all.py     # open every device interface simultaneously — find what GG uses
+    find_usb_bus.py    # identify the correct Wireshark USBPcap interface for the headset
+    parse_gg_capture.py# decode a Wireshark .json/.pcapng capture of GG traffic
+    test_cli.py        # unified test CLI covering TestChecklist.md
+  api/
+    __init__.py        # original stub — superseded by src/package/arctis_hid
+  package/             # ← PRIMARY: standalone pip-installable package (Phase 2)
+    arctis_hid/
+      __init__.py      # public surface: discover(), enums, models, events
+      discovery.py     # discover() → AbstractHeadset
+      exceptions.py    # DeviceError hierarchy
+      core/
+        transport.py   # HidTransport: 64-byte interrupt I/O + feature reports (OLED)
+        dispatcher.py  # EventDispatcher: on/off/emit keyed by event class name
+        types.py       # shared enums: AncMode, GainLevel, SidetoneLevel, …
+      devices/
+        base.py        # AbstractHeadset + AbstractOled ABCs (extensible for new devices)
+        nova_pro/
+          constants.py # all CMD_* bytes, field indices, OLED constants
+          codec.py     # all byte-level encode/decode isolated from the API
+          models.py    # StatusData, MicEqData, 22 typed event dataclasses
+          headset.py   # ArctisNovaProWireless(AbstractHeadset) — all set_*/get_* methods
+          oled.py      # ArctisNovaProOled — draw_image/draw_text/play_gif/play_animation (Phase 3)
+    examples/
+      listen_events.py # event/callback mode demo
+      query_and_write.py # command mode demo
+      oled_demo.py     # OLED brightness/text/image/animation/gif CLI demo
+    pyproject.toml
+    README.md          # user guide
+    DEVELOPER.md       # protocol reference + extension guide
+    DOCUMENTATION.md   # ← full API reference (auto-update after any src/package/arctis_hid/ change)
 docs/
-  HidCommands.md     # full protocol reference — authoritative source of truth
-  TestChecklist.md   # per-command test rows with pass/fail status
-logs/                # HID session logs (gitignored)
+  HidCommands.md       # full HID protocol reference — authoritative source of truth
+  TestChecklist.md     # per-command test rows with pass/fail status
+  Scripts.md           # purpose and usage of every discovery script
+  GgoledReference.md   # OLED protocol takeaways from the ggoled Rust reference implementation
+logs/                  # HID session logs (gitignored)
 agents/
-  MainIdea.md        # original project brief
-  SessionSummary.md  # all session findings, confirmed commands, key lessons
-requirements.txt     # hidapi (for scripts only; package has its own pyproject.toml)
+  MainIdea.md          # original project brief
+  SessionSummary.md    # all session findings, confirmed commands, key lessons
+requirements.txt       # hidapi (for scripts only; package has its own pyproject.toml)
 ```
 
 ---
@@ -214,21 +219,21 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 ## How to use the package (Phase 2+)
 
 ```bash
-pip install -e package/
-pip install -e 'package/[oled]'   # adds Pillow for OLED drawing
+pip install -e src/package/
+pip install -e 'src/package/[oled]'   # adds Pillow for OLED drawing
 
 # Command mode — query status, send writes
-python package/examples/query_and_write.py
+python src/package/examples/query_and_write.py
 
 # Event/listen mode — register callbacks, block on events
-python package/examples/listen_events.py
+python src/package/examples/listen_events.py
 
 # OLED demo
-python package/examples/oled_demo.py brightness 5
-python package/examples/oled_demo.py text "Hello"
-python package/examples/oled_demo.py img banner.png
-python package/examples/oled_demo.py anim --fps 10 --loops 3 f1.png f2.png
-python package/examples/oled_demo.py gif anim.gif
+python src/package/examples/oled_demo.py brightness 5
+python src/package/examples/oled_demo.py text "Hello"
+python src/package/examples/oled_demo.py img banner.png
+python src/package/examples/oled_demo.py anim --fps 10 --loops 3 f1.png f2.png
+python src/package/examples/oled_demo.py gif anim.gif
 
 # In code
 from arctis_hid import discover, AncMode, GainLevel
@@ -254,14 +259,14 @@ with discover() as h:
 ```bash
 pip install -r requirements.txt
 
-python scripts/listen.py              # queries at startup + event loop
-python scripts/listen.py --no-query  # listen only
+python src/scripts/listen.py              # queries at startup + event loop
+python src/scripts/listen.py --no-query  # listen only
 
-python scripts/probe_write.py --cmd 0xBD --param 0x01   # write probe (diffs all 0xB0 bytes)
-python scripts/probe_b0_diff.py                          # interactive before/after 0xB0 diff
-python scripts/probe_full_diff.py                        # dual 0xB0 + 0x20 diff
-python scripts/probe_query_scan.py                       # scan all 256 opcodes
-python scripts/discover.py                               # enumerate HID interfaces
-python scripts/find_usb_bus.py                           # find Wireshark interface
-python scripts/parse_gg_capture.py capture.json          # decode GG traffic capture
+python src/scripts/probe_write.py --cmd 0xBD --param 0x01   # write probe (diffs all 0xB0 bytes)
+python src/scripts/probe_b0_diff.py                          # interactive before/after 0xB0 diff
+python src/scripts/probe_full_diff.py                        # dual 0xB0 + 0x20 diff
+python src/scripts/probe_query_scan.py                       # scan all 256 opcodes
+python src/scripts/discover.py                               # enumerate HID interfaces
+python src/scripts/find_usb_bus.py                           # find Wireshark interface
+python src/scripts/parse_gg_capture.py capture.json          # decode GG traffic capture
 ```
