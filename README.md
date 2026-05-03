@@ -9,7 +9,7 @@ Full programmatic control of the **SteelSeries Arctis Nova Pro Wireless** (and X
 - Talks directly to the USB receiver over HID — zero dependency on GG or any SteelSeries software at runtime.
 - Two HID collections on interface 4: **Col01** (`0xFFC0`) for issuing commands and reading query responses; **Col02** (`0xFF00`) for unsolicited device events (button presses, dial movements, state changes).
 - All packets are 64 bytes, report ID `0x06`. Every write must be followed by a `0x09` save command or settings revert on power cycle.
-- Discovery methodology: run `listen.py` while interacting with the headset to capture events, then confirm write commands with `probe_write.py`.
+- Discovery methodology: run `src/scripts/listen.py` while interacting with the headset to capture events, use `src/scripts/probe_full_diff.py` to map unknown settings to HID bytes, then confirm write commands with `src/scripts/probe_write.py`.
 
 ## Features
 
@@ -26,13 +26,13 @@ Full programmatic control of the **SteelSeries Arctis Nova Pro Wireless** (and X
 pip install -r requirements.txt
 
 # Listen to all device events + run startup queries
-python scripts/listen.py
+python src/scripts/listen.py
 
 # Probe a write command (diffs all 64 bytes of 0xB0 before/after)
-python scripts/probe_write.py --cmd 0xBD --param 0x02   # set ANC mode
+python src/scripts/probe_write.py --cmd 0xBD --param 0x02   # set ANC mode
 
-# Discover which 0xB0 byte a GG setting change affects
-python scripts/probe_b0_diff.py
+# Discover which 0xB0/0x20 byte a GG setting change affects
+python src/scripts/probe_full_diff.py
 ```
 
 ---
