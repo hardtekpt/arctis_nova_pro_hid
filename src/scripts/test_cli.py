@@ -5,8 +5,8 @@ Requirements:
     pip install 'arctis-hid[oled]'           # adds Pillow for oled-* commands
 
 NOTE: --verify must come BEFORE the subcommand name:
-    python scripts/test_cli.py --verify sidetone high   [OK]
-    python scripts/test_cli.py sidetone high --verify   [WRONG - flag must come first]
+    python scripts/test_cli.py --verify sidetone --level high   [OK]
+    python scripts/test_cli.py sidetone --level high --verify   [WRONG - flag must come first]
 
 Usage examples:
     # Section 2 — query commands
@@ -18,42 +18,42 @@ Usage examples:
     python scripts/test_cli.py listen
 
     # Section 3/4 — write commands (add --verify to confirm round-trip)
-    python scripts/test_cli.py --verify sidetone high
-    python scripts/test_cli.py --verify anc transparency
-    python scripts/test_cli.py --verify volume 60
-    python scripts/test_cli.py --verify oled-brightness 7
-    python scripts/test_cli.py --verify gain low
-    python scripts/test_cli.py --verify mic-vol 8
-    python scripts/test_cli.py --verify audio-output speakers
-    python scripts/test_cli.py --verify stream-volumes 80 80 60
-    python scripts/test_cli.py --verify wireless-mode performance
-    python scripts/test_cli.py --verify eq-preset 0x04
-    python scripts/test_cli.py --verify eq-bands 20 20 20 20 20 20 20 20 20 20
+    python scripts/test_cli.py --verify sidetone --level high
+    python scripts/test_cli.py --verify anc --mode transparency
+    python scripts/test_cli.py --verify volume --pct 60
+    python scripts/test_cli.py --verify oled-brightness --level 7
+    python scripts/test_cli.py --verify gain --level low
+    python scripts/test_cli.py --verify mic-vol --level 8
+    python scripts/test_cli.py --verify audio-output --output speakers
+    python scripts/test_cli.py --verify stream-volumes --main 80 --aux 80 --mic 60
+    python scripts/test_cli.py --verify wireless-mode --mode performance
+    python scripts/test_cli.py --verify eq-preset --index 0x04
+    python scripts/test_cli.py --verify eq-bands --bands 20 20 20 20 20 20 20 20 20 20
 
-    python scripts/test_cli.py transparency 5
-    python scripts/test_cli.py mic-led 5
-    python scripts/test_cli.py dim-timeout 5
-    python scripts/test_cli.py auto-off 30
-    python scripts/test_cli.py home-screen simple
-    python scripts/test_cli.py chatmix on
-    python scripts/test_cli.py bt-default on
-    python scripts/test_cli.py bt-auto-mute off
+    python scripts/test_cli.py transparency --level 5
+    python scripts/test_cli.py mic-led --level 5
+    python scripts/test_cli.py dim-timeout --step 5
+    python scripts/test_cli.py auto-off --step 30
+    python scripts/test_cli.py home-screen --mode simple
+    python scripts/test_cli.py chatmix --state on
+    python scripts/test_cli.py bt-default --state on
+    python scripts/test_cli.py bt-auto-mute --mode off
 
     # Section 10 — OLED (requires Pillow)
-    python scripts/test_cli.py oled-text "Hello"
-    python scripts/test_cli.py oled-text "Hi" --x 10 --y 20 --invert
-    python scripts/test_cli.py oled-scroll "The quick brown fox" --fps 15
-    python scripts/test_cli.py oled-img banner.png --threshold 100
-    python scripts/test_cli.py oled-anim frame1.png frame2.png --fps 10 --loops 5
-    python scripts/test_cli.py oled-gif anim.gif --loops 3
+    python scripts/test_cli.py oled-text --text "Hello"
+    python scripts/test_cli.py oled-text --text "Hi" --x 10 --y 20 --invert
+    python scripts/test_cli.py oled-scroll --text "The quick brown fox" --fps 15
+    python scripts/test_cli.py oled-img --path banner.png --threshold 100
+    python scripts/test_cli.py oled-anim --frames frame1.png frame2.png --fps 10 --loops 5
+    python scripts/test_cli.py oled-gif --path anim.gif --loops 3
     python scripts/test_cli.py oled-clear
     python scripts/test_cli.py oled-release
 
     # Section 9 — edge cases
     python scripts/test_cli.py edge-volume-min
     python scripts/test_cli.py edge-volume-max
-    python scripts/test_cli.py edge-sidetone-oob 0x04
-    python scripts/test_cli.py edge-mic-vol-oob 0x00
+    python scripts/test_cli.py edge-sidetone-oob --value 0x04
+    python scripts/test_cli.py edge-mic-vol-oob --value 0x00
 """
 
 import sys
@@ -634,66 +634,69 @@ def build_parser():
 
     # ── Write — headset/audio ──────────────────────────────────────────────
     sp = sub.add_parser("volume", help="Set headset volume 0–100 (§4)")
-    sp.add_argument("pct", type=float, help="Volume percent (0–100)")
+    sp.add_argument("--pct", type=float, required=True, help="Volume percent (0–100)")
 
     sp = sub.add_parser("mic-vol", help="Set mic volume 1–10 (§4.1.5)")
-    sp.add_argument("level", type=int)
+    sp.add_argument("--level", type=int, required=True, metavar="LEVEL", help="1–10")
 
     sp = sub.add_parser("sidetone", help="Set sidetone level (§4.1.1–4.1.4)")
-    sp.add_argument("level", choices=["off", "low", "medium", "high"])
+    sp.add_argument("--level", required=True, choices=["off", "low", "medium", "high"])
 
     sp = sub.add_parser("anc", help="Set ANC mode (§4.3.1–4.3.3)")
-    sp.add_argument("mode", choices=["off", "transparency", "anc"])
+    sp.add_argument("--mode", required=True, choices=["off", "transparency", "anc"])
 
     sp = sub.add_parser("transparency", help="Set transparency level 1–10; auto-sets ANC mode (§4.3.4–4.3.5)")
-    sp.add_argument("level", type=int)
+    sp.add_argument("--level", type=int, required=True, metavar="LEVEL", help="1–10")
 
     sp = sub.add_parser("gain", help="Set mic gain (§4.2.8–4.2.9)")
-    sp.add_argument("level", choices=["low", "high"])
+    sp.add_argument("--level", required=True, choices=["low", "high"])
 
     sp = sub.add_parser("oled-brightness", help="Set OLED display brightness 1–10 (§4.1.6)")
-    sp.add_argument("level", type=int)
+    sp.add_argument("--level", type=int, required=True, metavar="LEVEL", help="1–10")
 
     sp = sub.add_parser("mic-led", help="Set mic mute LED brightness 1–10 (§4.2.5)")
-    sp.add_argument("level", type=int)
+    sp.add_argument("--level", type=int, required=True, metavar="LEVEL", help="1–10")
 
     sp = sub.add_parser("audio-output", help="Set audio output destination (§4)")
-    sp.add_argument("output", choices=["speakers", "stream"])
+    sp.add_argument("--output", required=True, choices=["speakers", "stream"])
 
     sp = sub.add_parser("stream-volumes", help="Set stream output volumes 0–100 each (§4)")
-    sp.add_argument("main", type=int, help="Main stream volume 0–100")
-    sp.add_argument("aux",  type=int, help="Aux stream volume 0–100")
-    sp.add_argument("mic",  type=int, help="Mic stream volume 0–100")
+    sp.add_argument("--main", type=int, required=True, help="Main stream volume 0–100")
+    sp.add_argument("--aux",  type=int, required=True, help="Aux stream volume 0–100")
+    sp.add_argument("--mic",  type=int, required=True, help="Mic stream volume 0–100")
 
     sp = sub.add_parser("chatmix", help="Enable or disable ChatMix dial (§4 ChatMix)")
-    sp.add_argument("state", choices=["on", "off"])
+    sp.add_argument("--state", required=True, choices=["on", "off"])
 
     # ── Write — display/power ──────────────────────────────────────────────
     sp = sub.add_parser("dim-timeout", help="Set OLED dim timeout (§4.2.1–4.2.2)")
-    sp.add_argument("step", choices=list(_TIMEOUT_MAP.keys()), metavar="{off|1|5|10|15|30|60}")
+    sp.add_argument("--step", required=True, choices=list(_TIMEOUT_MAP.keys()),
+                    metavar="{off|1|5|10|15|30|60}")
 
     sp = sub.add_parser("home-screen", help="Set home screen display mode (§4.2.3–4.2.4)")
-    sp.add_argument("mode", choices=["detailed", "simple"])
+    sp.add_argument("--mode", required=True, choices=["detailed", "simple"])
 
     sp = sub.add_parser("auto-off", help="Set headset auto-off timeout (§4.2.6–4.2.7)")
-    sp.add_argument("step", choices=list(_TIMEOUT_MAP.keys()), metavar="{off|1|5|10|15|30|60}")
+    sp.add_argument("--step", required=True, choices=list(_TIMEOUT_MAP.keys()),
+                    metavar="{off|1|5|10|15|30|60}")
 
     # ── Write — connectivity ───────────────────────────────────────────────
     sp = sub.add_parser("wireless-mode", help="Set 2.4 GHz wireless mode (§4)")
-    sp.add_argument("mode", choices=["performance", "extended"])
+    sp.add_argument("--mode", required=True, choices=["performance", "extended"])
 
     sp = sub.add_parser("bt-default", help="Set Bluetooth default on/off (§4)")
-    sp.add_argument("state", choices=["on", "off"])
+    sp.add_argument("--state", required=True, choices=["on", "off"])
 
     sp = sub.add_parser("bt-auto-mute", help="Set Bluetooth auto-mute mode (§4)")
-    sp.add_argument("mode", choices=["off", "-12db", "full"])
+    sp.add_argument("--mode", required=True, choices=["off", "-12db", "full"])
 
     # ── Write — EQ (§5) ───────────────────────────────────────────────────
     sp = sub.add_parser("eq-preset", help="Select EQ preset index — 0x04=custom (§5)")
-    sp.add_argument("index", type=lambda x: int(x, 0), help="Preset index (hex or decimal)")
+    sp.add_argument("--index", type=lambda x: int(x, 0), required=True,
+                    help="Preset index (hex or decimal)")
 
     sp = sub.add_parser("eq-bands", help="Set 10 custom EQ band values, each 0–40 (20=flat) (§5.3)")
-    sp.add_argument("bands", nargs="+", type=int, metavar="BAND",
+    sp.add_argument("--bands", nargs="+", type=int, required=True, metavar="BAND",
                     help="Exactly 10 values, each 0–40 (20=flat/0 dB)")
 
     # ── OLED (§10) ─────────────────────────────────────────────────────────
@@ -701,7 +704,7 @@ def build_parser():
     sub.add_parser("oled-release", help="Return OLED control to GG/Sonar (§10.2.1)")
 
     sp = sub.add_parser("oled-text", help="Draw static text on OLED (§10.4)")
-    sp.add_argument("text")
+    sp.add_argument("--text",      required=True, help="Text to display")
     sp.add_argument("--x",         type=int,   default=0)
     sp.add_argument("--y",         type=int,   default=0)
     sp.add_argument("--invert",    action="store_true")
@@ -709,24 +712,24 @@ def build_parser():
     sp.add_argument("--font-size", type=int,   default=16)
 
     sp = sub.add_parser("oled-scroll", help="Scroll text across the OLED display (§10.5)")
-    sp.add_argument("text")
+    sp.add_argument("--text",      required=True, help="Text to scroll")
     sp.add_argument("--fps",       type=float, default=20.0)
     sp.add_argument("--invert",    action="store_true")
     sp.add_argument("--font",      default="",  help="Path to .ttf font file")
     sp.add_argument("--font-size", type=int,    default=16)
 
     sp = sub.add_parser("oled-img", help="Draw a static image on OLED (§10.3.3–10.3.7)")
-    sp.add_argument("path")
+    sp.add_argument("--path",      required=True, help="Path to image file")
     sp.add_argument("--threshold", type=int, default=128)
 
     sp = sub.add_parser("oled-anim", help="Play a frame-by-frame animation on OLED (§10.6)")
-    sp.add_argument("frames", nargs="+", help="Image files (one per frame)")
+    sp.add_argument("--frames", nargs="+", required=True, help="Image files (one per frame)")
     sp.add_argument("-r", "--fps",       type=float, default=10.0)
     sp.add_argument("-l", "--loops",     type=int,   default=1, help="-1 = infinite")
     sp.add_argument("--threshold",       type=int,   default=128)
 
     sp = sub.add_parser("oled-gif", help="Play a GIF animation on OLED (§10.7)")
-    sp.add_argument("path")
+    sp.add_argument("--path",        required=True, help="Path to GIF file")
     sp.add_argument("--fps",         type=float, default=0.0, help="0 = use embedded GIF delays")
     sp.add_argument("-l", "--loops", type=int,   default=1,   help="-1 = infinite")
     sp.add_argument("--threshold",   type=int,   default=128)
@@ -737,11 +740,13 @@ def build_parser():
 
     sp = sub.add_parser("edge-sidetone-oob",
                         help="Send raw sidetone byte, bypassing enum validation (§9.4)")
-    sp.add_argument("value", type=lambda x: int(x, 0), help="Raw byte value (hex or decimal)")
+    sp.add_argument("--value", type=lambda x: int(x, 0), required=True,
+                    help="Raw byte value (hex or decimal)")
 
     sp = sub.add_parser("edge-mic-vol-oob",
                         help="Send raw mic volume byte, bypassing range validation (§9.5–9.6)")
-    sp.add_argument("value", type=lambda x: int(x, 0), help="Raw byte value (hex or decimal)")
+    sp.add_argument("--value", type=lambda x: int(x, 0), required=True,
+                    help="Raw byte value (hex or decimal)")
 
     return p
 
