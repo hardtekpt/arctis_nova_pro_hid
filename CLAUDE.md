@@ -29,8 +29,7 @@ src/
     discover.py        # enumerate all HID devices, identify Nova Pro interface paths
     listen.py          # start-up queries + event loop; logs everything to logs/
     probe_write.py     # single write probe: sends one packet, diffs ALL 0xB0 bytes before/after
-    probe_b0_diff.py   # interactive before/after 0xB0 full-dump diff (toggle a GG setting, see which byte changes)
-    probe_full_diff.py # dual 0xB0 + 0x20 before/after diff
+    probe_full_diff.py # interactive before/after diff of BOTH 0xB0 + 0x20 (replaces probe_b0_diff)
     probe_query_scan.py# scan all 256 opcodes for undiscovered query commands
     monitor_all.py     # open every device interface simultaneously — find what GG uses
     find_usb_bus.py    # identify the correct Wireshark USBPcap interface for the headset
@@ -64,7 +63,7 @@ src/
     DEVELOPER.md       # protocol reference + extension guide
     DOCUMENTATION.md   # ← full API reference (auto-update after any src/package/arctis_hid/ change)
 docs/
-  HidCommands.md       # full HID protocol reference — authoritative source of truth
+  HidCommands.md       # full HID protocol reference incl. interface layout — authoritative source of truth
   TestChecklist.md     # per-command test rows with pass/fail status
   Scripts.md           # purpose and usage of every discovery script
   GgoledReference.md   # OLED protocol takeaways from the ggoled Rust reference implementation
@@ -263,8 +262,7 @@ python src/scripts/listen.py              # queries at startup + event loop
 python src/scripts/listen.py --no-query  # listen only
 
 python src/scripts/probe_write.py --cmd 0xBD --param 0x01   # write probe (diffs all 0xB0 bytes)
-python src/scripts/probe_b0_diff.py                          # interactive before/after 0xB0 diff
-python src/scripts/probe_full_diff.py                        # dual 0xB0 + 0x20 diff
+python src/scripts/probe_full_diff.py                        # interactive before/after diff (0xB0 + 0x20)
 python src/scripts/probe_query_scan.py                       # scan all 256 opcodes
 python src/scripts/discover.py                               # enumerate HID interfaces
 python src/scripts/find_usb_bus.py                           # find Wireshark interface

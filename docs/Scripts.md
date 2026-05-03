@@ -76,35 +76,22 @@ python src/scripts/probe_write.py --cmd 0x25 --param 0x1C --no-save
 
 ---
 
-## probe_b0_diff.py
-
-**Purpose:** Interactive before/after diff of the full `0xB0` status packet. Queries `0xB0` before and after user input, printing which bytes changed and by how much.
-
-Used to map unknown GG settings to specific byte positions in the `0xB0` response.
-
-**Usage:**
-```bash
-python src/scripts/probe_b0_diff.py
-```
-
-**Workflow:**
-1. Run the script — it queries `0xB0` and saves the snapshot as "before".
-2. Toggle a setting in SteelSeries GG (ANC, mic brightness, timeout, etc.).
-3. Press Enter in the terminal — the script queries `0xB0` again and shows the diff.
-4. Repeat for each setting you want to map.
-
----
-
 ## probe_full_diff.py
 
-**Purpose:** Same as `probe_b0_diff.py` but diffs both `0xB0` (status) and `0x20` (mic/EQ) before and after. Useful for discovering settings that are only reflected in the `0x20` response (EQ presets, sidetone, gain, etc.).
+**Purpose:** Interactive before/after diff of both `0xB0` (status) and `0x20` (mic/EQ) response packets. Queries both before and after user input, printing which bytes changed. Use this to map any unknown GG setting to a specific byte position in either response.
 
 **Usage:**
 ```bash
 python src/scripts/probe_full_diff.py
 ```
 
-**Output:** Shows byte-level diffs for both packets side by side.
+**Workflow:**
+1. Run the script — it queries `0xB0` and `0x20` and saves both as "before" snapshots.
+2. Toggle a **single** setting in SteelSeries GG (ANC, mic brightness, timeout, EQ preset, etc.).
+3. Press Enter — the script re-queries both and prints a byte-level diff for each.
+4. Repeat for each setting you want to map.
+
+**Output:** Shows byte-level diffs for both packets with index, before value, and after value clearly labelled.
 
 ---
 

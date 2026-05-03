@@ -24,19 +24,33 @@ All reads and writes target **interface 4**. Two HID collections exist on this i
 
 ## 2. Interface Layout
 
-Interface 4 exposes two HID collections. Both must be opened for full operation.
+The base station exposes multiple HID interfaces. Only **Interface 4** is used for control and events.
+
+### All interfaces (observed on PID `0x12E0`, Windows)
+
+| Interface | Usage Page | Usage | Role |
+|---|---|---|---|
+| 3 | `0x000C` | `0x0001` | Consumer control (media keys) — not used |
+| 4 | `0xFF00` | `0x0001` | **Col02** — read-only device events |
+| 4 | `0xFFC0` | `0x0001` | **Col01** — bidirectional: send commands, read responses |
+
+### Interface 4 collections
+
+Both must be opened for full operation.
 
 | Collection | Usage Page | Direction | Purpose |
 |---|---|---|---|
 | `Col01` | `0xFFC0` | Bidirectional | Send commands; read query responses |
 | `Col02` | `0xFF00` | Read | Incoming device events (buttons, dials, state) |
 
-**Example paths (PID `0x12E0`, Windows):**
+**Observed HID paths (PID `0x12E0`, Windows — actual device instance IDs):**
 
 ```
-Col01  0xFFC0  \\?\HID#VID_1038&PID_12E0&MI_04&Col01#...#{4d1e55b2-...}
-Col02  0xFF00  \\?\HID#VID_1038&PID_12E0&MI_04&Col02#...#{4d1e55b2-...}
+Col01  0xFFC0  \\?\HID#VID_1038&PID_12E0&MI_04&Col01#8&26fe868d&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+Col02  0xFF00  \\?\HID#VID_1038&PID_12E0&MI_04&Col02#8&26fe868d&0&0001#{4d1e55b2-f16f-11cf-88cb-001111000030}
 ```
+
+The instance ID (`8&26fe868d&0`) is hardware-specific and will differ between machines. Enumerate via `hid.enumerate()` filtering on VID `0x1038`, target PID, interface `4`, and usage page (`0xFFC0` or `0xFF00`).
 
 **Packet format (all commands):**
 
