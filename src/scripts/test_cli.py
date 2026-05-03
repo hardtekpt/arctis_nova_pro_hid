@@ -8,6 +8,10 @@ NOTE: --verify must come BEFORE the subcommand name:
     python scripts/test_cli.py --verify sidetone --level high   [OK]
     python scripts/test_cli.py sidetone --level high --verify   [WRONG - flag must come first]
 
+    # Launch interactive terminal menu
+    python scripts/test_cli.py --interactive
+    python scripts/test_cli.py -i
+
 Usage examples:
     # Section 2 — query commands
     python scripts/test_cli.py query
@@ -56,6 +60,7 @@ Usage examples:
     python scripts/test_cli.py edge-mic-vol-oob --value 0x00
 """
 
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -605,11 +610,379 @@ def cmd_edge_mic_vol_oob(args) -> None:
         )
 
 
+# ── Interactive mode ───────────────────────────────────────────────────────
+
+def _imenu(title: str, options: list[str], is_root: bool = False) -> int | None:
+    """Display a numbered menu; return 0-based index or None for back/exit."""
+    back_label = "Exit" if is_root else "Back"
+    print(f"\n{'─' * 54}")
+    print(f"  {title}")
+    print(f"{'─' * 54}")
+    for i, label in enumerate(options, 1):
+        print(f"  {i:>2}.  {label}")
+    print(f"   0.  {back_label}")
+    print()
+    while True:
+        try:
+            raw = input("  > ").strip()
+        except EOFError:
+            return None
+        if raw == "0":
+            return None
+        try:
+            n = int(raw)
+            if 1 <= n <= len(options):
+                return n - 1
+        except ValueError:
+            pass
+        print(f"  Enter a number between 0 and {len(options)}.")
+
+
+def _iask(prompt: str, default: str = "") -> str:
+    hint = f" [{default}]" if default else ""
+    try:
+        raw = input(f"  {prompt}{hint}: ").strip()
+    except EOFError:
+        return default
+    return raw if raw else default
+
+
+def _iask_float(prompt: str, lo: float, hi: float, default: float) -> float:
+    while True:
+        raw = _iask(prompt, str(default))
+        try:
+            v = float(raw)
+            if lo <= v <= hi:
+                return v
+        except ValueError:
+            pass
+        print(f"  Enter a number between {lo} and {hi}.")
+
+
+def _iask_int(prompt: str, lo: int, hi: int, default: int) -> int:
+    while True:
+        raw = _iask(prompt, str(default))
+        try:
+            v = int(raw)
+            if lo <= v <= hi:
+                return v
+        except ValueError:
+            pass
+        print(f"  Enter an integer between {lo} and {hi}.")
+
+
+def _iask_choice(label: str, choices: list[str], default: str | None = None) -> str:
+    print(f"  {label}:")
+    for i, c in enumerate(choices, 1):
+        mark = "  (default)" if c == default else ""
+        print(f"    {i:>2}.  {c}{mark}")
+    while True:
+        try:
+            raw = input(f"  > [1-{len(choices)}] ").strip()
+        except EOFError:
+            return default or choices[0]
+        if not raw and default:
+            return default
+        try:
+            n = int(raw)
+            if 1 <= n <= len(choices):
+                return choices[n - 1]
+        except ValueError:
+            pass
+        print(f"  Enter 1-{len(choices)}.")
+
+
+def _irun(handler, **kwargs) -> None:
+    """Call a cmd_* handler with a fake Namespace, then wait for Enter."""
+    try:
+        handler(argparse.Namespace(**kwargs))
+    except SystemExit as exc:
+        if exc.code:
+            print(f"  Error: {exc}")
+    except Exception as exc:
+        print(f"  Error: {exc}")
+    input("\n  Press Enter to continue...")
+
+
+def _isub_query(verify: bool) -> None:
+    while True:
+        sel = _imenu("Query commands", [
+            "All queries  (status + miceq + firmware + serial)",
+            "Status only  (0xB0)",
+            "Mic/EQ only  (0x20)",
+        ])
+        if sel is None:
+            return
+        _irun([cmd_query, cmd_status, cmd_miceq][sel], verify=verify)
+
+
+def _isub_listen(_verify: bool) -> None:
+    print("\n  Event listener — interact with the headset. Ctrl-C to stop.")
+    input("  Press Enter to start...\n")
+    try:
+        cmd_listen(argparse.Namespace(verify=False))
+    except Exception as exc:
+        print(f"  Error: {exc}")
+    input("\n  Press Enter to continue...")
+
+
+def _isub_audio(verify: bool) -> None:
+    while True:
+        sel = _imenu("Audio settings", [
+            "volume           Set headset volume 0-100%",
+            "mic-vol          Set mic volume 1-10",
+            "sidetone         Set sidetone level",
+            "anc              Set ANC mode",
+            "transparency     Set transparency level 1-10",
+            "gain             Set mic gain",
+            "oled-brightness  Set OLED display brightness 1-10",
+            "mic-led          Set mic LED brightness 1-10",
+            "audio-output     Set audio output destination",
+            "stream-volumes   Set stream volumes (main / aux / mic)",
+            "chatmix          Enable or disable ChatMix",
+        ])
+        if sel is None:
+            return
+        if sel == 0:
+            pct = _iask_float("Volume percent", 0.0, 100.0, 50.0)
+            _irun(cmd_volume, pct=pct, verify=verify)
+        elif sel == 1:
+            v = _iask_int("Mic volume (1-10)", 1, 10, 5)
+            _irun(cmd_mic_vol, level=v, verify=verify)
+        elif sel == 2:
+            c = _iask_choice("Sidetone level", ["off", "low", "medium", "high"])
+            _irun(cmd_sidetone, level=c, verify=verify)
+        elif sel == 3:
+            c = _iask_choice("ANC mode", ["off", "transparency", "anc"])
+            _irun(cmd_anc, mode=c, verify=verify)
+        elif sel == 4:
+            v = _iask_int("Transparency level (1-10)", 1, 10, 5)
+            _irun(cmd_transparency, level=v, verify=verify)
+        elif sel == 5:
+            c = _iask_choice("Gain", ["low", "high"])
+            _irun(cmd_gain, level=c, verify=verify)
+        elif sel == 6:
+            v = _iask_int("OLED brightness (1-10)", 1, 10, 5)
+            _irun(cmd_oled_brightness, level=v, verify=verify)
+        elif sel == 7:
+            v = _iask_int("Mic LED brightness (1-10)", 1, 10, 5)
+            _irun(cmd_mic_led, level=v, verify=verify)
+        elif sel == 8:
+            c = _iask_choice("Audio output", ["speakers", "stream"])
+            _irun(cmd_audio_output, output=c, verify=verify)
+        elif sel == 9:
+            m  = _iask_int("Main stream volume (0-100)", 0, 100, 80)
+            a  = _iask_int("Aux stream volume (0-100)",  0, 100, 80)
+            mc = _iask_int("Mic stream volume (0-100)",  0, 100, 60)
+            _irun(cmd_stream_volumes, main=m, aux=a, mic=mc, verify=verify)
+        elif sel == 10:
+            c = _iask_choice("ChatMix", ["on", "off"])
+            _irun(cmd_chatmix, state=c, verify=verify)
+
+
+def _isub_display_power(verify: bool) -> None:
+    _TCHOICES = ["off", "1", "5", "10", "15", "30", "60"]
+    while True:
+        sel = _imenu("Display & Power", [
+            "dim-timeout  Set OLED dim timeout",
+            "home-screen  Set home screen mode",
+            "auto-off     Set headset auto-off timeout",
+        ])
+        if sel is None:
+            return
+        if sel == 0:
+            c = _iask_choice("Dim timeout (minutes; 'off' to disable)", _TCHOICES)
+            _irun(cmd_dim_timeout, step=c, verify=verify)
+        elif sel == 1:
+            c = _iask_choice("Home screen mode", ["detailed", "simple"])
+            _irun(cmd_home_screen, mode=c, verify=verify)
+        elif sel == 2:
+            c = _iask_choice("Auto-off timeout (minutes; 'off' to disable)", _TCHOICES)
+            _irun(cmd_auto_off, step=c, verify=verify)
+
+
+def _isub_connectivity(verify: bool) -> None:
+    while True:
+        sel = _imenu("Connectivity", [
+            "wireless-mode  Set 2.4 GHz wireless mode",
+            "bt-default     Set Bluetooth default on/off",
+            "bt-auto-mute   Set Bluetooth auto-mute mode",
+        ])
+        if sel is None:
+            return
+        if sel == 0:
+            c = _iask_choice("Wireless mode", ["performance", "extended"])
+            _irun(cmd_wireless_mode, mode=c, verify=verify)
+        elif sel == 1:
+            c = _iask_choice("BT default", ["on", "off"])
+            _irun(cmd_bt_default, state=c, verify=verify)
+        elif sel == 2:
+            c = _iask_choice("BT auto-mute", ["off", "-12db", "full"])
+            _irun(cmd_bt_auto_mute, mode=c, verify=verify)
+
+
+def _isub_eq(verify: bool) -> None:
+    while True:
+        sel = _imenu("EQ settings", [
+            "eq-preset  Select EQ preset index (0x04 = custom EQ)",
+            "eq-bands   Set 10 custom EQ band values (0-40, 20=flat)",
+        ])
+        if sel is None:
+            return
+        if sel == 0:
+            raw = _iask("Preset index (hex or decimal, e.g. 0x04)", "0x04")
+            try:
+                idx = int(raw, 0)
+            except ValueError:
+                print("  Invalid value — use hex (0x..) or decimal.")
+                input("  Press Enter to continue...")
+                continue
+            _irun(cmd_eq_preset, index=idx, verify=verify)
+        elif sel == 1:
+            print("  Enter 10 band values (0-40, 20=flat/0 dB), space-separated:")
+            raw = _iask("Bands", "20 20 20 20 20 20 20 20 20 20")
+            try:
+                bands = [int(x) for x in raw.split()]
+                if len(bands) != 10:
+                    raise ValueError(f"need exactly 10, got {len(bands)}")
+                for i, b in enumerate(bands):
+                    if not 0 <= b <= 40:
+                        raise ValueError(f"band {i + 1} out of range: {b}")
+            except ValueError as exc:
+                print(f"  Invalid input: {exc}")
+                input("  Press Enter to continue...")
+                continue
+            _irun(cmd_eq_bands, bands=bands, verify=verify)
+
+
+def _isub_oled(verify: bool) -> None:
+    while True:
+        sel = _imenu("OLED display", [
+            "oled-clear    Blank the display",
+            "oled-release  Return control to GG/Sonar",
+            "oled-text     Draw static text",
+            "oled-scroll   Scroll text across the display",
+            "oled-img      Draw a static image",
+            "oled-anim     Play a frame-by-frame animation",
+            "oled-gif      Play a GIF animation",
+        ])
+        if sel is None:
+            return
+        if sel == 0:
+            _irun(cmd_oled_clear, verify=verify)
+        elif sel == 1:
+            _irun(cmd_oled_release, verify=verify)
+        elif sel == 2:
+            text = _iask("Text to display")
+            x    = _iask_int("X position (0-127)", 0, 127, 0)
+            y    = _iask_int("Y position (0-63)",  0, 63,  0)
+            inv  = _iask("Invert? [y/N]", "n").lower() in ("y", "yes")
+            font = _iask("Font path (.ttf, blank=default)", "")
+            _irun(cmd_oled_text, text=text, x=x, y=y, invert=inv,
+                  font=font, font_size=16, verify=verify)
+        elif sel == 3:
+            text = _iask("Text to scroll")
+            fps  = _iask_float("FPS", 1.0, 60.0, 20.0)
+            inv  = _iask("Invert? [y/N]", "n").lower() in ("y", "yes")
+            font = _iask("Font path (.ttf, blank=default)", "")
+            _irun(cmd_oled_scroll, text=text, fps=fps, invert=inv,
+                  font=font, font_size=16, verify=verify)
+        elif sel == 4:
+            path      = _iask("Image file path")
+            threshold = _iask_int("Binarize threshold (0-255)", 0, 255, 128)
+            _irun(cmd_oled_img, path=path, threshold=threshold, verify=verify)
+        elif sel == 5:
+            print("  Enter frame image paths one at a time; blank line when done.")
+            frames: list[str] = []
+            while True:
+                fp = _iask(f"Frame {len(frames) + 1} path (blank to finish)", "")
+                if not fp:
+                    break
+                frames.append(fp)
+            if not frames:
+                input("  No frames entered. Press Enter to continue...")
+                continue
+            fps       = _iask_float("FPS", 1.0, 60.0, 10.0)
+            loops     = _iask_int("Loops (-1=infinite)", -1, 9999, 1)
+            threshold = _iask_int("Binarize threshold (0-255)", 0, 255, 128)
+            _irun(cmd_oled_anim, frames=frames, fps=fps, loops=loops,
+                  threshold=threshold, verify=verify)
+        elif sel == 6:
+            path      = _iask("GIF file path")
+            fps       = _iask_float("FPS (0=use embedded delays)", 0.0, 60.0, 0.0)
+            loops     = _iask_int("Loops (-1=infinite)", -1, 9999, 1)
+            threshold = _iask_int("Binarize threshold (0-255)", 0, 255, 128)
+            _irun(cmd_oled_gif, path=path, fps=fps, loops=loops,
+                  threshold=threshold, verify=verify)
+
+
+def _isub_edge(verify: bool) -> None:
+    while True:
+        sel = _imenu("Edge cases (S9)", [
+            "edge-volume-min    Set volume to 0%  (raw=0x38)",
+            "edge-volume-max    Set volume to 100% (raw=0x00)",
+            "edge-sidetone-oob  Raw sidetone byte — bypasses enum validation",
+            "edge-mic-vol-oob   Raw mic volume byte — bypasses range validation",
+        ])
+        if sel is None:
+            return
+        if sel == 0:
+            _irun(cmd_edge_volume_min, verify=verify)
+        elif sel == 1:
+            _irun(cmd_edge_volume_max, verify=verify)
+        elif sel == 2:
+            raw = _iask("Raw sidetone byte (hex or decimal)", "0x04")
+            try:
+                val = int(raw, 0)
+            except ValueError:
+                print("  Invalid value.")
+                input("  Press Enter to continue...")
+                continue
+            _irun(cmd_edge_sidetone_oob, value=val, verify=verify)
+        elif sel == 3:
+            raw = _iask("Raw mic volume byte (hex or decimal)", "0x00")
+            try:
+                val = int(raw, 0)
+            except ValueError:
+                print("  Invalid value.")
+                input("  Press Enter to continue...")
+                continue
+            _irun(cmd_edge_mic_vol_oob, value=val, verify=verify)
+
+
+def _interactive_mode() -> None:
+    verify = False
+    categories: list[tuple[str, object]] = [
+        ("Query commands",    _isub_query),
+        ("Listen for events", _isub_listen),
+        ("Audio settings",    _isub_audio),
+        ("Display & Power",   _isub_display_power),
+        ("Connectivity",      _isub_connectivity),
+        ("EQ settings",       _isub_eq),
+        ("OLED display",      _isub_oled),
+        ("Edge cases",        _isub_edge),
+    ]
+    print()
+    print("  Arctis Nova Pro -- Interactive Test CLI")
+    print("  Connect the headset before continuing.")
+    while True:
+        v_state = "ON" if verify else "OFF"
+        options = [label for label, _ in categories]
+        options.append(f"Toggle verify after writes  (currently {v_state})")
+        sel = _imenu("Main Menu", options, is_root=True)
+        if sel is None:
+            print("\n  Bye.\n")
+            return
+        if sel == len(categories):
+            verify = not verify
+            print(f"\n  Verify after writes is now {'ON' if verify else 'OFF'}.")
+        else:
+            categories[sel][1](verify)
+
+
 # ── Argument parser ────────────────────────────────────────────────────────
 
 def build_parser():
-    import argparse
-
     p = argparse.ArgumentParser(
         prog="test_cli.py",
         description="Arctis Nova Pro — unified test CLI (covers TestChecklist.md)",
@@ -621,8 +994,13 @@ def build_parser():
         action="store_true",
         help="Re-query after each write and show before/after field values",
     )
+    p.add_argument(
+        "--interactive", "-i",
+        action="store_true",
+        help="Launch interactive terminal menu (no subcommand needed)",
+    )
 
-    sub = p.add_subparsers(dest="command", required=True)
+    sub = p.add_subparsers(dest="command", required=False)
 
     # ── Query ──────────────────────────────────────────────────────────────
     sub.add_parser("query",  help="Run all four queries: status + miceq + firmware + serial (§2)")
@@ -793,6 +1171,12 @@ _HANDLERS = {
 
 def main() -> None:
     args = build_parser().parse_args()
+    if args.interactive:
+        _interactive_mode()
+        return
+    if not args.command:
+        build_parser().print_help()
+        sys.exit(2)
     _HANDLERS[args.command](args)
 
 
