@@ -24,7 +24,7 @@ class StatusData:
     bt_active:           bool
     mic_muted:           bool
     anc_mode:            AncMode
-    oled_brightness:     int          # 1–10
+    mic_led_brightness:  int          # 1–10
     wireless_mode:       WirelessMode
 
 

@@ -96,7 +96,7 @@ def decode_status_packet(data: list[int]) -> StatusData:
         bt_active           = data[C.B0_BT] == 0x01,
         mic_muted           = data[C.B0_MUTE] == 0x01,
         anc_mode            = AncMode(data[C.B0_ANC]),
-        oled_brightness     = data[C.B0_OLED],
+        mic_led_brightness  = data[C.B0_MIC_LED],
         wireless_mode       = WirelessMode(data[C.B0_MODE2G]),
     )
 

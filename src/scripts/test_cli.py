@@ -107,7 +107,7 @@ def _print_status(s: StatusData) -> None:
     print(f"  BT active        : {s.bt_active}")
     print(f"  Mic muted        : {s.mic_muted}  (0xB0[9])")
     print(f"  ANC mode         : {s.anc_mode.name}  (0xB0[10]={s.anc_mode.value:#04x})")
-    print(f"  OLED brightness  : {s.oled_brightness}/10  (0xB0[11]={s.oled_brightness:#04x})")
+    print(f"  Mic LED brightness: {s.mic_led_brightness}/10  (0xB0[11]={s.mic_led_brightness:#04x})")
     print(f"  Wireless mode    : {s.wireless_mode.name}  (0xB0[13]={s.wireless_mode.value:#04x})")
 
 
@@ -329,7 +329,7 @@ def cmd_oled_brightness(args) -> None:
         print("Done.")
         if args.verify:
             after = h.get_status()
-            _verify_field("0xB0[11] oled_brightness", before.oled_brightness, after.oled_brightness, level)
+            _verify_field("0xB0[11] mic_led_brightness", before.mic_led_brightness, after.mic_led_brightness, level)
 
 
 def cmd_mic_led(args) -> None:

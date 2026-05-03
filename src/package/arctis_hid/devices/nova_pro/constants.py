@@ -61,7 +61,7 @@ B0_HBAT    = 6    # headset battery raw (÷8×100=%)
 B0_DBAT    = 7    # dock battery raw   (÷8×100=%)
 B0_MUTE    = 9    # 0x00=unmuted  0x01=muted
 B0_ANC     = 10   # 0x00=off  0x01=transparency  0x02=ANC
-B0_OLED    = 11   # OLED brightness 1–10
+B0_MIC_LED = 11   # mic LED brightness 1–10
 B0_MODE2G  = 13   # 0x00=performance  0x01=extended range
 
 # ── 0x20 response byte indices ─────────────────────────────────────────────
