@@ -15,6 +15,7 @@ Analyze these refrences in detail and understand how applicable and useful they 
 - **Headset User Manual**: https://downloads.steelseriescdn.com/guides/arctis_nova_pro_wl_x_pig_cs_cz.pdf
 - **Arctis Nova 7X HID Protocol**: https://github.com/cheahkhing/arctis-headset-hid/blob/main/docs/PROTOCOL.md
 - **HeadsetControl repo**: https://github.com/Sapd/HeadsetControl
+- **GG OLED**: https://github.com/JerwuQu/ggoled
 
 ## Plan
 
