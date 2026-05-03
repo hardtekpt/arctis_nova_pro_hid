@@ -14,11 +14,11 @@ Supported input formats:
             pyshark wraps tshark; Wireshark must be installed with tshark.
 
 Usage:
-  python scripts/parse_gg_capture.py capture.json
-  python scripts/parse_gg_capture.py capture.pcapng
-  python scripts/parse_gg_capture.py capture.json --device 3.17
-  python scripts/parse_gg_capture.py capture.json --out-only
-  python scripts/parse_gg_capture.py capture.json --in-only
+  python scripts/parse_gg_capture.py --file capture.json
+  python scripts/parse_gg_capture.py --file capture.pcapng
+  python scripts/parse_gg_capture.py --file capture.json --device 3.17
+  python scripts/parse_gg_capture.py --file capture.json --out-only
+  python scripts/parse_gg_capture.py --file capture.json --in-only
 
 How to obtain the capture file:
   See docs/WiresharkCaptureGuide.md for step-by-step instructions.
@@ -367,7 +367,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description="Decode Wireshark USB capture of GG Engine ↔ Arctis Nova Pro"
     )
-    ap.add_argument("capture", help="Capture file (.json or .pcapng/.pcap)")
+    ap.add_argument("--file", "-f", required=True, metavar="FILE",
+                    help="Capture file (.json or .pcapng/.pcap)")
     ap.add_argument(
         "--device", "-d",
         metavar="BUS.ADDR",
@@ -385,7 +386,7 @@ def main() -> None:
     )
     args = ap.parse_args()
 
-    p = Path(args.capture)
+    p = Path(args.file)
     if not p.exists():
         print(f"ERROR: file not found: {p}")
         sys.exit(1)
