@@ -736,7 +736,7 @@ Enables or disables the ChatMix feature on the base station.
 | `connected` | `0xB5` | `boolean \| null` |
 | `wireless` | `0xB5` | `boolean \| null` |
 | `bluetooth` | `0xB5` | `boolean \| null` |
-| `oled_brightness` | `0x85` | `number \| null` (1–10) |
+| `oled_brightness` | `0x85` | `number \| null` (1–10) — **no known query byte**; `0xB0[14–15]` are candidates |
 | `chatmix_game` | `0x45`, `0x20`[20] | `number \| null` (0–100) |
 | `chatmix_chat` | `0x45`, `0x20`[21] | `number \| null` (0–100) |
 | `transparency_level` | `0xB9`, `0xB0`[8] | `number \| null` (1–10) |
