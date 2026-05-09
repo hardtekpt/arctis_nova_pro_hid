@@ -1,6 +1,7 @@
-"""Tests for OLED bitmap encoder (encode_frame) and ArctisNovaProOled draw_raw/clear/release."""
+"""Tests for OLED bitmap encoder (encode_frame) and ArctisNovaProOled draw_raw/clear/release/hold."""
 from __future__ import annotations
 
+import time
 from unittest.mock import MagicMock
 
 import pytest
@@ -196,6 +197,139 @@ class TestRelease:
         oled, transport = make_oled()
         oled.release()
         transport.write.assert_called_with(C.CMD_OLED_RELEASE)
+
+
+# ── release stops hold ────────────────────────────────────────────────────────
+
+
+class TestReleaseStopsHold:
+    def test_release_stops_active_hold(self):
+        oled, _ = make_oled()
+        oled.draw_raw(bytes(BITMAP_SIZE))
+        oled.hold(interval=0.5)
+        assert oled.holding
+        oled.release()
+        assert not oled.holding
+
+    def test_release_sends_correct_command_even_when_hold_was_active(self):
+        oled, transport = make_oled()
+        oled.draw_raw(bytes(BITMAP_SIZE))
+        oled.hold(interval=0.5)
+        oled.release()
+        transport.write.assert_called_with(C.CMD_OLED_RELEASE)
+
+
+# ── hold loop ─────────────────────────────────────────────────────────────────
+
+
+class TestHold:
+    def test_hold_starts_background_thread(self):
+        oled, _ = make_oled()
+        oled.draw_raw(bytes(BITMAP_SIZE))
+        assert not oled.holding
+        oled.hold(interval=1.0)
+        assert oled.holding
+        oled.unhold()
+
+    def test_holding_is_false_before_hold(self):
+        oled, _ = make_oled()
+        assert not oled.holding
+
+    def test_unhold_stops_thread(self):
+        oled, _ = make_oled()
+        oled.draw_raw(bytes(BITMAP_SIZE))
+        oled.hold(interval=1.0)
+        oled.unhold()
+        assert not oled.holding
+
+    def test_hold_raises_when_nothing_drawn(self):
+        oled, _ = make_oled()
+        with pytest.raises(ValueError, match="No frame drawn"):
+            oled.hold()
+
+    def test_hold_with_explicit_bitmap_draws_and_holds(self):
+        oled, transport = make_oled()
+        bm = bytes(BITMAP_SIZE)
+        oled.hold(bm, interval=1.0)
+        assert oled.holding
+        assert oled._last_bitmap == bm
+        oled.unhold()
+
+    def test_hold_reissues_last_bitmap_over_time(self):
+        oled, transport = make_oled()
+        bm = bytes([0xFF] * BITMAP_SIZE)
+        oled.draw_raw(bm)
+        count_before = transport.write_feature_report.call_count
+        oled.hold(interval=0.05)
+        time.sleep(0.2)
+        oled.unhold()
+        assert transport.write_feature_report.call_count > count_before + 2
+
+    def test_hold_updates_when_new_draw_is_called(self):
+        oled, _ = make_oled()
+        bm1 = bytes(BITMAP_SIZE)
+        bm2 = bytes([0xFF] * BITMAP_SIZE)
+        oled.draw_raw(bm1)
+        oled.hold(interval=1.0)
+        oled.draw_raw(bm2)
+        assert oled._last_bitmap == bm2
+        oled.unhold()
+
+    def test_draw_raw_hold_true_starts_loop(self):
+        oled, _ = make_oled()
+        oled.draw_raw(bytes(BITMAP_SIZE), hold=True)
+        assert oled.holding
+        oled.unhold()
+
+    def test_draw_raw_hold_false_does_not_start_loop(self):
+        oled, _ = make_oled()
+        oled.draw_raw(bytes(BITMAP_SIZE), hold=False)
+        assert not oled.holding
+
+    def test_hold_explicit_bitmap_raises_on_wrong_size(self):
+        oled, _ = make_oled()
+        with pytest.raises(ValueError):
+            oled.hold(bytes(BITMAP_SIZE - 1))
+
+    def test_calling_hold_twice_restarts_loop(self):
+        oled, _ = make_oled()
+        oled.draw_raw(bytes(BITMAP_SIZE))
+        oled.hold(interval=1.0)
+        thread1 = oled._hold_thread
+        oled.hold(interval=1.0)
+        thread2 = oled._hold_thread
+        assert thread1 is not thread2
+        assert oled.holding
+        oled.unhold()
+
+
+# ── last_bitmap tracking ───────────────────────────────────────────────────────
+
+
+class TestLastBitmap:
+    def test_last_bitmap_is_none_initially(self):
+        oled, _ = make_oled()
+        assert oled._last_bitmap is None
+
+    def test_draw_raw_sets_last_bitmap(self):
+        oled, _ = make_oled()
+        bm = bytes([0xAB] * BITMAP_SIZE)
+        oled.draw_raw(bm)
+        assert oled._last_bitmap == bm
+
+    def test_clear_sets_last_bitmap_to_zeros(self):
+        oled, _ = make_oled()
+        oled.clear()
+        assert oled._last_bitmap == bytes(BITMAP_SIZE)
+
+    def test_last_bitmap_updated_on_each_draw(self):
+        oled, _ = make_oled()
+        bm1 = bytes(BITMAP_SIZE)
+        bm2 = bytes([0xFF] * BITMAP_SIZE)
+        oled.draw_raw(bm1)
+        assert oled._last_bitmap == bm1
+        oled.draw_raw(bm2)
+        assert oled._last_bitmap == bm2
 
 
 # ── width / height properties ──────────────────────────────────────────────────

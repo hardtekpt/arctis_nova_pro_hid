@@ -58,6 +58,12 @@ with discover() as h:
     h.oled.draw_text("Hello!")
     h.oled.draw_image("banner.png")
     h.oled.play_gif("spinner.gif", loops=3)
+
+# OLED hold loop — keep content visible despite firmware animations
+with discover() as h:
+    h.oled.draw_text("Always on", hold=True)   # redraws every 100 ms
+    time.sleep(60)                              # content survives volume knob changes
+    h.oled.unhold()
     # oled.release() called automatically on context exit
 ```
 
@@ -297,32 +303,69 @@ Display height in pixels (`64`).
 
 ### Core Methods
 
-#### `draw_raw(bitmap: bytes) → None`
+#### `draw_raw(bitmap: bytes, *, hold: bool = False, hold_interval: float = 0.1) → None`
 Send a pre-encoded bitmap directly to the display.
 
 `bitmap` must be exactly **1024 bytes** in column-major 1-bit format (use `encode_frame()` to produce it from a PIL Image).
 
+Pass `hold=True` to start the continuous hold loop after drawing (see [`hold()`](#holdbitmap-bytes--none--interval-float--01--none) below).
+
 #### `clear() → None`
-Blank the display (all pixels off).
+Blank the display (all pixels off). If the hold loop is active it continues, now reissuing the blank frame. Call `release()` to fully return control to GG/Sonar.
 
 #### `release() → None`
-Return OLED control to SteelSeries GG / Sonar. Called automatically when the `ArctisNovaProOled` is used as a context manager or when the parent headset closes.
+Stop any active hold loop, then return OLED control to SteelSeries GG / Sonar. Called automatically when the parent headset closes.
+
+---
+
+### Hold Loop
+
+The hold loop continuously reissues the last drawn frame at a fixed interval. It runs in a background daemon thread and overwrites any firmware-driven animation (e.g. the volume-change overlay from the base station) on the next tick, keeping your custom content visible.
+
+#### `hold(bitmap: bytes | None = None, *, interval: float = 0.1) → None`
+Start (or restart) the continuous redraw loop.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `bitmap` | `bytes \| None` | `None` | Frame to hold; `None` reuses the last drawn frame |
+| `interval` | `float` | `0.1` | Seconds between redraws (100 ms default) |
+
+If `bitmap` is `None` and no frame has been drawn yet, raises `ValueError`.
+Calling `hold()` while already holding restarts the loop with the new interval. The held content updates automatically whenever a new draw call is made — no need to restart.
+
+```python
+with discover() as h:
+    h.oled.draw_text("Volume: 75%")
+    h.oled.hold()             # keep reissuing every 100 ms
+    time.sleep(30)
+    h.oled.unhold()
+```
+
+#### `unhold() → None`
+Stop the hold loop. The screen stays as-is; the loop simply stops reissuing frames.
+
+#### `holding → bool`
+`True` while the hold loop is actively reissuing frames.
 
 ---
 
 ### Drawing Methods (require Pillow)
 
-#### `draw_image(image: Image | str | Path, threshold: int = 128) → None`
+#### `draw_image(image: Image | str | Path, threshold: int = 128, *, hold: bool = False, hold_interval: float = 0.1) → None`
 Draw a static image. Accepts a PIL `Image` object or a file path (PNG, JPG, GIF, etc.).
 
 The image is resized to 128×64 using Lanczos resampling and converted to 1-bit using the `threshold` value (pixels ≥ threshold become white).
 
+Pass `hold=True` to start the hold loop immediately after drawing.
+
 ```python
 h.oled.draw_image("banner.png")
-h.oled.draw_image("banner.png", threshold=100)  # darker threshold
+h.oled.draw_image("banner.png", threshold=100)        # darker threshold
+h.oled.draw_image("banner.png", hold=True)            # resist firmware animations
+h.oled.draw_image("banner.png", hold=True, hold_interval=0.05)  # 50 ms redraw
 ```
 
-#### `draw_text(text: str, font=None, x: int = 0, y: int = 0, invert: bool = False) → None`
+#### `draw_text(text: str, font=None, x: int = 0, y: int = 0, invert: bool = False, *, hold: bool = False, hold_interval: float = 0.1) → None`
 Render a text string onto the display.
 
 | Parameter | Type | Default | Description |
@@ -332,11 +375,14 @@ Render a text string onto the display.
 | `x` | `int` | `0` | Left pixel offset |
 | `y` | `int` | `0` | Top pixel offset |
 | `invert` | `bool` | `False` | `True` = white text on black background |
+| `hold` | `bool` | `False` | Start the hold loop after drawing |
+| `hold_interval` | `float` | `0.1` | Seconds between redraws when hold is active |
 
 ```python
 from PIL import ImageFont
 font = ImageFont.truetype("arial.ttf", 14)
 h.oled.draw_text("Hello!", font=font, x=10, y=20, invert=True)
+h.oled.draw_text("Always on", hold=True)   # firmware animations won't overwrite this
 ```
 
 #### `scroll_text(text: str, font=None, fps: float = 20.0, invert: bool = False) → None`

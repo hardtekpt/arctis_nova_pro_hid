@@ -865,65 +865,155 @@ def _isub_eq(verify: bool) -> None:
             _irun(cmd_eq_bands, bands=bands, verify=verify)
 
 
-def _isub_oled(verify: bool) -> None:
+def _isub_oled(_verify: bool) -> None:
+    print("\n  Opening headset connection for OLED session (stays open until you leave)...")
+    try:
+        with discover() as h:
+            _oled_session(h)
+    except Exception as exc:
+        print(f"  Connection error: {exc}")
+        input("  Press Enter to continue...")
+
+
+def _oled_session(h) -> None:
+    """Persistent-connection OLED submenu with hold-loop support."""
     while True:
+        hold_state = "ON " if h.oled.holding else "OFF"
         sel = _imenu("OLED display", [
-            "oled-clear    Blank the display",
-            "oled-release  Return control to GG/Sonar",
-            "oled-text     Draw static text",
-            "oled-scroll   Scroll text across the display",
-            "oled-img      Draw a static image",
-            "oled-anim     Play a frame-by-frame animation",
-            "oled-gif      Play a GIF animation",
+            "clear         Blank the display",
+            "release       Return control to GG/Sonar  (also stops hold)",
+            "text          Draw static text",
+            "scroll        Scroll text across the display",
+            "image         Draw a static image",
+            "animation     Play a frame-by-frame animation",
+            "gif           Play a GIF animation",
+            f"hold loop     [{hold_state}]  Toggle — continuously reissue last frame to resist firmware animations",
         ])
         if sel is None:
+            if h.oled.holding:
+                h.oled.unhold()
+                print("  Hold stopped.")
             return
-        if sel == 0:
-            _irun(cmd_oled_clear, verify=verify)
-        elif sel == 1:
-            _irun(cmd_oled_release, verify=verify)
-        elif sel == 2:
-            text = _iask("Text to display")
-            x    = _iask_int("X position (0-127)", 0, 127, 0)
-            y    = _iask_int("Y position (0-63)",  0, 63,  0)
-            inv  = _iask("Invert? [y/N]", "n").lower() in ("y", "yes")
-            font = _iask("Font path (.ttf, blank=default)", "")
-            _irun(cmd_oled_text, text=text, x=x, y=y, invert=inv,
-                  font=font, font_size=16, verify=verify)
-        elif sel == 3:
-            text = _iask("Text to scroll")
-            fps  = _iask_float("FPS", 1.0, 60.0, 20.0)
-            inv  = _iask("Invert? [y/N]", "n").lower() in ("y", "yes")
-            font = _iask("Font path (.ttf, blank=default)", "")
-            _irun(cmd_oled_scroll, text=text, fps=fps, invert=inv,
-                  font=font, font_size=16, verify=verify)
-        elif sel == 4:
-            path      = _iask("Image file path")
-            threshold = _iask_int("Binarize threshold (0-255)", 0, 255, 128)
-            _irun(cmd_oled_img, path=path, threshold=threshold, verify=verify)
-        elif sel == 5:
-            print("  Enter frame image paths one at a time; blank line when done.")
-            frames: list[str] = []
-            while True:
-                fp = _iask(f"Frame {len(frames) + 1} path (blank to finish)", "")
-                if not fp:
-                    break
-                frames.append(fp)
-            if not frames:
-                input("  No frames entered. Press Enter to continue...")
-                continue
-            fps       = _iask_float("FPS", 1.0, 60.0, 10.0)
-            loops     = _iask_int("Loops (-1=infinite)", -1, 9999, 1)
-            threshold = _iask_int("Binarize threshold (0-255)", 0, 255, 128)
-            _irun(cmd_oled_anim, frames=frames, fps=fps, loops=loops,
-                  threshold=threshold, verify=verify)
-        elif sel == 6:
-            path      = _iask("GIF file path")
-            fps       = _iask_float("FPS (0=use embedded delays)", 0.0, 60.0, 0.0)
-            loops     = _iask_int("Loops (-1=infinite)", -1, 9999, 1)
-            threshold = _iask_int("Binarize threshold (0-255)", 0, 255, 128)
-            _irun(cmd_oled_gif, path=path, fps=fps, loops=loops,
-                  threshold=threshold, verify=verify)
+        try:
+            _oled_session_dispatch(h, sel)
+        except SystemExit as exc:
+            if exc.code:
+                print(f"  Error: {exc}")
+            input("\n  Press Enter to continue...")
+        except Exception as exc:
+            print(f"  Error: {exc}")
+            input("\n  Press Enter to continue...")
+
+
+def _oled_session_dispatch(h, sel: int) -> None:
+    if sel == 0:  # clear
+        h.oled.clear()
+        print("  Display cleared.")
+        input("\n  Press Enter to continue...")
+
+    elif sel == 1:  # release
+        h.oled.release()
+        print("  Control returned to GG/Sonar. Hold stopped if it was active.")
+        input("\n  Press Enter to continue...")
+
+    elif sel == 2:  # text
+        _require_oled()
+        text = _iask("Text to display")
+        x    = _iask_int("X position (0-127)", 0, 127, 0)
+        y    = _iask_int("Y position (0-63)",  0, 63,  0)
+        inv  = _iask("Invert? [y/N]", "n").lower() in ("y", "yes")
+        font_path = _iask("Font path (.ttf, blank=default)", "")
+        font = None
+        if font_path:
+            from PIL import ImageFont
+            font = ImageFont.truetype(font_path, size=16)
+        h.oled.draw_text(text, font=font, x=x, y=y, invert=inv)
+        print("  Text drawn.")
+        if h.oled.holding:
+            print("  Hold loop is active — new frame is now being held.")
+        input("\n  Press Enter to continue...")
+
+    elif sel == 3:  # scroll
+        _require_oled()
+        text = _iask("Text to scroll")
+        fps  = _iask_float("FPS", 1.0, 60.0, 20.0)
+        inv  = _iask("Invert? [y/N]", "n").lower() in ("y", "yes")
+        font_path = _iask("Font path (.ttf, blank=default)", "")
+        font = None
+        if font_path:
+            from PIL import ImageFont
+            font = ImageFont.truetype(font_path, size=16)
+        print("  Scrolling... (Ctrl-C to stop early)")
+        try:
+            h.oled.scroll_text(text, font=font, fps=fps, invert=inv)
+        except KeyboardInterrupt:
+            print("\n  Scroll interrupted.")
+        print("  Done.")
+        input("\n  Press Enter to continue...")
+
+    elif sel == 4:  # image
+        _require_oled()
+        path      = _iask("Image file path")
+        threshold = _iask_int("Binarize threshold (0-255)", 0, 255, 128)
+        h.oled.draw_image(path, threshold=threshold)
+        print("  Image drawn.")
+        if h.oled.holding:
+            print("  Hold loop is active — new frame is now being held.")
+        input("\n  Press Enter to continue...")
+
+    elif sel == 5:  # animation
+        _require_oled()
+        print("  Enter frame image paths one at a time; blank line when done.")
+        frames: list[str] = []
+        while True:
+            fp = _iask(f"Frame {len(frames) + 1} path (blank to finish)", "")
+            if not fp:
+                break
+            frames.append(fp)
+        if not frames:
+            print("  No frames entered.")
+            input("\n  Press Enter to continue...")
+            return
+        fps       = _iask_float("FPS", 1.0, 60.0, 10.0)
+        loops     = _iask_int("Loops (-1=infinite)", -1, 9999, 1)
+        threshold = _iask_int("Binarize threshold (0-255)", 0, 255, 128)
+        real_loops = 0 if loops < 0 else loops
+        print("  Playing animation... (Ctrl-C to stop early)")
+        try:
+            h.oled.play_animation(frames, fps=fps, loops=real_loops, threshold=threshold)
+        except KeyboardInterrupt:
+            print("\n  Animation interrupted.")
+        print("  Done.")
+        input("\n  Press Enter to continue...")
+
+    elif sel == 6:  # gif
+        _require_oled()
+        path      = _iask("GIF file path")
+        fps_raw   = _iask_float("FPS (0=use embedded delays)", 0.0, 60.0, 0.0)
+        loops     = _iask_int("Loops (-1=infinite)", -1, 9999, 1)
+        threshold = _iask_int("Binarize threshold (0-255)", 0, 255, 128)
+        real_loops = 0 if loops < 0 else loops
+        real_fps   = fps_raw if fps_raw > 0.0 else None
+        print("  Playing GIF... (Ctrl-C to stop early)")
+        try:
+            h.oled.play_gif(path, fps=real_fps, loops=real_loops, threshold=threshold)
+        except KeyboardInterrupt:
+            print("\n  GIF interrupted.")
+        print("  Done.")
+        input("\n  Press Enter to continue...")
+
+    elif sel == 7:  # hold toggle
+        if h.oled.holding:
+            h.oled.unhold()
+            print("  Hold loop stopped.")
+        else:
+            if h.oled._last_bitmap is None:
+                print("  Nothing drawn yet — draw text or an image first, then enable hold.")
+            else:
+                interval_ms = _iask_int("Redraw interval ms (50-1000)", 50, 1000, 100)
+                h.oled.hold(interval=interval_ms / 1000.0)
+                print(f"  Hold loop started ({interval_ms} ms). Firmware animations will be overwritten.")
+        input("\n  Press Enter to continue...")
 
 
 def _isub_edge(verify: bool) -> None:
