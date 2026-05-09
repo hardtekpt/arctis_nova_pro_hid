@@ -13,6 +13,7 @@ Usage examples (all arguments use -- notation):
     python scripts/test_cli.py --command query
     python scripts/test_cli.py --command status
     python scripts/test_cli.py --command miceq
+    python scripts/test_cli.py --command display
 
     # Section 1 — event listener (interact with headset)
     python scripts/test_cli.py --command listen
@@ -67,6 +68,7 @@ from arctis_hid import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    DisplayData,
     GainLevel,
     HomeScreenMode,
     MicEqData,
@@ -113,6 +115,13 @@ def _print_status(s: StatusData) -> None:
     print(f"  Mic LED brightness: {s.mic_led_brightness}/10  (0xB0[11]={s.mic_led_brightness:#04x})")
     print(f"  Auto-off timeout : {s.auto_off_timeout.name}  (0xB0[12]={s.auto_off_timeout.value:#04x})")
     print(f"  Wireless mode    : {s.wireless_mode.name}  (0xB0[13]={s.wireless_mode.value:#04x})")
+
+
+def _print_display(d: DisplayData) -> None:
+    _sep("Display (0x80)")
+    print(f"  Dim timeout      : {d.dim_timeout.name}  (0x80[2]={d.dim_timeout.value:#04x})")
+    print(f"  OLED brightness  : {d.oled_brightness}/10  (0x80[3]={d.oled_brightness:#04x})")
+    print(f"  Home screen      : {d.home_screen_mode.name}  (0x80[5]={d.home_screen_mode.value:#04x})")
 
 
 def _print_miceq(m: MicEqData) -> None:
@@ -167,6 +176,7 @@ def cmd_query(args) -> None:
     with discover() as h:
         _print_status(h.get_status())
         _print_miceq(h.get_mic_eq())
+        _print_display(h.get_display())
         _sep("Device info")
         print(f"  Firmware         : {h.get_firmware_version()}")
         print(f"  Serial number    : {h.get_serial_number()}")
@@ -180,6 +190,11 @@ def cmd_status(args) -> None:
 def cmd_miceq(args) -> None:
     with discover() as h:
         _print_miceq(h.get_mic_eq())
+
+
+def cmd_display(args) -> None:
+    with discover() as h:
+        _print_display(h.get_display())
 
 
 # ── Listen handler — TestChecklist §1 ─────────────────────────────────────
@@ -337,12 +352,12 @@ def cmd_oled_brightness(args) -> None:
         sys.exit("oled-brightness must be 1–10")
     print(f"Setting OLED brightness → {level}/10…")
     with discover() as h:
-        before = h.get_status() if args.verify else None
+        before = h.get_display() if args.verify else None
         h.set_oled_brightness(level)
         print("Done.")
         if args.verify:
-            after = h.get_status()
-            _verify_field("0xB0[11] mic_led_brightness", before.mic_led_brightness, after.mic_led_brightness, level)
+            after = h.get_display()
+            _verify_field("0x80[3] oled_brightness", before.oled_brightness, after.oled_brightness, level)
 
 
 def cmd_mic_led(args) -> None:
@@ -366,10 +381,12 @@ def cmd_dim_timeout(args) -> None:
     step = _timeout(args.step)
     print(f"Setting dim timeout → {args.step}…")
     with discover() as h:
+        before = h.get_display() if args.verify else None
         h.set_dim_timeout(step)
         print("Done.")
         if args.verify:
-            _no_verify_field("dim timeout has no reflected query field")
+            after = h.get_display()
+            _verify_field("0x80[2] dim_timeout", before.dim_timeout.name, after.dim_timeout.name, step.name)
 
 
 def cmd_home_screen(args) -> None:
@@ -377,10 +394,12 @@ def cmd_home_screen(args) -> None:
     mode = mode_map[args.mode]
     print(f"Setting home screen → {args.mode.upper()}…")
     with discover() as h:
+        before = h.get_display() if args.verify else None
         h.set_home_screen_mode(mode)
         print("Done.")
         if args.verify:
-            _no_verify_field("home screen mode has no reflected query field")
+            after = h.get_display()
+            _verify_field("0x80[5] home_screen_mode", before.home_screen_mode.name, after.home_screen_mode.name, mode.name)
 
 
 def cmd_auto_off(args) -> None:
@@ -728,13 +747,14 @@ def _irun(handler, **kwargs) -> None:
 def _isub_query(verify: bool) -> None:
     while True:
         sel = _imenu("Query commands", [
-            "All queries  (status + miceq + firmware + serial)",
+            "All queries  (status + miceq + display + firmware + serial)",
             "Status only  (0xB0)",
             "Mic/EQ only  (0x20)",
+            "Display only (0x80)",
         ])
         if sel is None:
             return
-        _irun([cmd_query, cmd_status, cmd_miceq][sel], verify=verify)
+        _irun([cmd_query, cmd_status, cmd_miceq, cmd_display][sel], verify=verify)
 
 
 def _isub_listen(_verify: bool) -> None:
@@ -805,6 +825,7 @@ def _isub_display_power(verify: bool) -> None:
     _TCHOICES = ["off", "1", "5", "10", "15", "30", "60"]
     while True:
         sel = _imenu("Display & Power", [
+            "display      Query current display settings (0x80)",
             "dim-timeout  Set OLED dim timeout",
             "home-screen  Set home screen mode",
             "auto-off     Set headset auto-off timeout",
@@ -812,12 +833,14 @@ def _isub_display_power(verify: bool) -> None:
         if sel is None:
             return
         if sel == 0:
+            _irun(cmd_display, verify=verify)
+        elif sel == 1:
             c = _iask_choice("Dim timeout (minutes; 'off' to disable)", _TCHOICES)
             _irun(cmd_dim_timeout, step=c, verify=verify)
-        elif sel == 1:
+        elif sel == 2:
             c = _iask_choice("Home screen mode", ["detailed", "simple"])
             _irun(cmd_home_screen, mode=c, verify=verify)
-        elif sel == 2:
+        elif sel == 3:
             c = _iask_choice("Auto-off timeout (minutes; 'off' to disable)", _TCHOICES)
             _irun(cmd_auto_off, step=c, verify=verify)
 
@@ -1094,7 +1117,7 @@ def _interactive_mode() -> None:
 # ── Argument parser ────────────────────────────────────────────────────────
 
 _ALL_COMMANDS = [
-    "query", "status", "miceq", "listen",
+    "query", "status", "miceq", "display", "listen",
     "volume", "mic-vol", "sidetone", "anc", "transparency", "gain",
     "oled-brightness", "mic-led", "audio-output", "stream-volumes", "chatmix",
     "dim-timeout", "home-screen", "auto-off",
@@ -1239,6 +1262,7 @@ _HANDLERS = {
     "query":              cmd_query,
     "status":             cmd_status,
     "miceq":              cmd_miceq,
+    "display":            cmd_display,
     "listen":             cmd_listen,
     "volume":             cmd_volume,
     "mic-vol":            cmd_mic_vol,
