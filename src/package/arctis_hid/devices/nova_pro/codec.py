@@ -98,6 +98,8 @@ def decode_status_packet(data: list[int]) -> StatusData:
         anc_mode            = AncMode(data[C.B0_ANC]),
         mic_led_brightness  = data[C.B0_MIC_LED],
         wireless_mode       = WirelessMode(data[C.B0_MODE2G]),
+        bt_auto_mute        = BtAutoMute(data[C.B0_BT_AUTOMUTE]),
+        auto_off_timeout    = TimeoutStep(data[C.B0_AUTO_OFF]),
     )
 
 

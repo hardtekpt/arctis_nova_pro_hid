@@ -470,8 +470,10 @@ class StatusData:
     bt_active:           bool           # True if Bluetooth stream is active
     mic_muted:           bool
     anc_mode:            AncMode
-    mic_led_brightness:  int            # 1–10  (0xB0[11]; OLED brightness is write-only via 0x85, no readback)
+    mic_led_brightness:  int            # 1–10  (0xB0[11])
     wireless_mode:       WirelessMode
+    bt_auto_mute:        BtAutoMute     # 0xB0[3]: OFF / DB_MINUS_12 / FULL
+    auto_off_timeout:    TimeoutStep    # 0xB0[12]: OFF=0 … SIXTY_MIN=6
 ```
 
 ---

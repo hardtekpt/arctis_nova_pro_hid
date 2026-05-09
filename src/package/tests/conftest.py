@@ -22,20 +22,24 @@ def make_b0_packet(
     anc: int = 0x00,
     mic_led: int = 5,
     mode2g: int = 0x00,
+    bt_automute: int = 0x00,
+    auto_off: int = 0x00,
 ) -> list[int]:
     """Build a fake 0xB0 status response packet (64 bytes)."""
     pkt = [0] * 64
     pkt[0] = C.REPORT_ID
     pkt[1] = C.CMD_STATUS
-    pkt[C.B0_CONN]    = conn
-    pkt[C.B0_BT]      = bt
-    pkt[C.B0_HBAT]    = hbat
-    pkt[C.B0_DBAT]    = dbat
-    pkt[8]            = transp      # transparency level byte (not in C constants)
-    pkt[C.B0_MUTE]    = mute
-    pkt[C.B0_ANC]     = anc
-    pkt[C.B0_MIC_LED] = mic_led
-    pkt[C.B0_MODE2G]  = mode2g
+    pkt[C.B0_BT_AUTOMUTE] = bt_automute
+    pkt[C.B0_CONN]        = conn
+    pkt[C.B0_BT]          = bt
+    pkt[C.B0_HBAT]        = hbat
+    pkt[C.B0_DBAT]        = dbat
+    pkt[8]                = transp      # transparency level byte (not in C constants)
+    pkt[C.B0_MUTE]        = mute
+    pkt[C.B0_ANC]         = anc
+    pkt[C.B0_MIC_LED]     = mic_led
+    pkt[C.B0_AUTO_OFF]    = auto_off
+    pkt[C.B0_MODE2G]      = mode2g
     return pkt
 
 

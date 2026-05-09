@@ -55,14 +55,16 @@ OLED_HEIGHT            = 64     # confirmed via ggoled source (ggoled SCREEN_HEI
 
 # ── 0xB0 response byte indices ─────────────────────────────────────────────
 
-B0_CONN    = 4    # 0x01=2.4GHz only  0x04=2.4GHz+BT
-B0_BT      = 5    # 0x00=off  0x01=active
-B0_HBAT    = 6    # headset battery raw (÷8×100=%)
-B0_DBAT    = 7    # dock battery raw   (÷8×100=%)
-B0_MUTE    = 9    # 0x00=unmuted  0x01=muted
-B0_ANC     = 10   # 0x00=off  0x01=transparency  0x02=ANC
-B0_MIC_LED = 11   # mic LED brightness 1–10
-B0_MODE2G  = 13   # 0x00=performance  0x01=extended range
+B0_BT_AUTOMUTE = 3    # 0x00=off  0x01=-12dB  0x02=full (BT auto-mute) ✅ confirmed 2026-05-09
+B0_CONN        = 4    # 0x01=2.4GHz only  0x04=2.4GHz+BT
+B0_BT          = 5    # 0x00=off  0x01=active
+B0_HBAT        = 6    # headset battery raw (÷8×100=%)
+B0_DBAT        = 7    # dock battery raw   (÷8×100=%)
+B0_MUTE        = 9    # 0x00=unmuted  0x01=muted
+B0_ANC         = 10   # 0x00=off  0x01=transparency  0x02=ANC
+B0_MIC_LED     = 11   # mic LED brightness 1–10
+B0_AUTO_OFF    = 12   # auto-off timeout 0=off 1=1min … 6=60min ✅ confirmed 2026-05-09
+B0_MODE2G      = 13   # 0x00=performance  0x01=extended range
 
 # ── 0x20 response byte indices ─────────────────────────────────────────────
 
