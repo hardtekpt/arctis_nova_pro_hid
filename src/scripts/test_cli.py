@@ -106,9 +106,11 @@ def _print_status(s: StatusData) -> None:
     print(f"  Dock battery     : {s.dock_battery_pct:.0f}%")
     print(f"  Connectivity     : {s.connectivity_mode:#04x}")
     print(f"  BT active        : {s.bt_active}")
+    print(f"  BT auto-mute     : {s.bt_auto_mute.name}  (0xB0[3]={s.bt_auto_mute.value:#04x})")
     print(f"  Mic muted        : {s.mic_muted}  (0xB0[9])")
     print(f"  ANC mode         : {s.anc_mode.name}  (0xB0[10]={s.anc_mode.value:#04x})")
     print(f"  Mic LED brightness: {s.mic_led_brightness}/10  (0xB0[11]={s.mic_led_brightness:#04x})")
+    print(f"  Auto-off timeout : {s.auto_off_timeout.name}  (0xB0[12]={s.auto_off_timeout.value:#04x})")
     print(f"  Wireless mode    : {s.wireless_mode.name}  (0xB0[13]={s.wireless_mode.value:#04x})")
 
 
@@ -382,10 +384,12 @@ def cmd_auto_off(args) -> None:
     step = _timeout(args.step)
     print(f"Setting auto-off timeout → {args.step}…")
     with discover() as h:
+        before = h.get_status() if args.verify else None
         h.set_auto_off_timeout(step)
         print("Done.")
         if args.verify:
-            _no_verify_field("auto-off timeout has no reflected query field")
+            after = h.get_status()
+            _verify_field("0xB0[12] auto_off_timeout", before.auto_off_timeout.name, after.auto_off_timeout.name, step.name)
 
 
 def cmd_chatmix(args) -> None:
@@ -426,10 +430,12 @@ def cmd_bt_auto_mute(args) -> None:
     mode = mode_map[args.mode]
     print(f"Setting BT auto-mute → {args.mode.upper()}…")
     with discover() as h:
+        before = h.get_status() if args.verify else None
         h.set_bt_auto_mute(mode)
         print("Done.")
         if args.verify:
-            _no_verify_field("BT auto-mute has no reflected query field")
+            after = h.get_status()
+            _verify_field("0xB0[3] bt_auto_mute", before.bt_auto_mute.name, after.bt_auto_mute.name, mode.name)
 
 
 def cmd_audio_output(args) -> None:

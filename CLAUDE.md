@@ -106,7 +106,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Command | Returns |
 |---------|---------|
-| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, mic LED brightness, 2.4 GHz mode |
+| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, transparency level, mic LED brightness, auto off timeout, 2.4 GHz mode |
 | `0x20` | Mic/EQ: gain, mic vol, sidetone, audio output, ChatMix, stream volumes, 10 EQ bands, headset vol |
 | `0x10` | Firmware version (ASCII, null-terminated) |
 | `0x12` | Serial number (ASCII, null-terminated) |
@@ -117,6 +117,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Byte | Meaning | Values |
 |------|---------|--------|
+| [3] | BT auto-mute | `0x00`=off, `0x01`=-12 dB, `0x02`=full ✅ |
 | [4] | Connectivity mode | `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active |
 | [5] | BT state | `0x00`=off, `0x01`=active |
 | [6] | Headset battery raw | ÷ 8 × 100 = % |
@@ -125,6 +126,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | [9] | Mic mute | `0x00`=unmuted, `0x01`=muted |
 | [10] | ANC mode | `0x00`=off, `0x01`=transparency, `0x02`=ANC |
 | [11] | Mic LED brightness | 1–10 |
+| [12] | Auto off timeout | 0=off, 1=1 min, 2=5 min, 3=10 min, 4=15 min, 5=30 min, 6=60 min ✅ |
 | [13] | 2.4 GHz mode | `0x00`=performance/speed, `0x01`=extended range |
 
 ### `0x20` response field map

@@ -6,9 +6,11 @@ import pytest
 from arctis_hid.core.types import (
     AncMode,
     AudioOutput,
+    BtAutoMute,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
+    TimeoutStep,
     WirelessMode,
 )
 from arctis_hid.devices.nova_pro import constants as C
@@ -212,6 +214,36 @@ class TestDecodeStatusPacket:
     def test_wireless_mode_extended_range(self):
         pkt = make_b0_packet(mode2g=0x01)
         assert decode_status_packet(pkt).wireless_mode == WirelessMode.EXTENDED_RANGE
+
+    def test_bt_auto_mute_off(self):
+        pkt = make_b0_packet(bt_automute=0x00)
+        assert decode_status_packet(pkt).bt_auto_mute == BtAutoMute.OFF
+
+    def test_bt_auto_mute_minus_12_db(self):
+        pkt = make_b0_packet(bt_automute=0x01)
+        assert decode_status_packet(pkt).bt_auto_mute == BtAutoMute.DB_MINUS_12
+
+    def test_bt_auto_mute_full(self):
+        pkt = make_b0_packet(bt_automute=0x02)
+        assert decode_status_packet(pkt).bt_auto_mute == BtAutoMute.FULL
+
+    def test_auto_off_timeout_off(self):
+        pkt = make_b0_packet(auto_off=0x00)
+        assert decode_status_packet(pkt).auto_off_timeout == TimeoutStep.OFF
+
+    def test_auto_off_timeout_sixty_min(self):
+        pkt = make_b0_packet(auto_off=0x06)
+        assert decode_status_packet(pkt).auto_off_timeout == TimeoutStep.SIXTY_MIN
+
+    def test_auto_off_timeout_all_steps(self):
+        expected = [
+            TimeoutStep.OFF, TimeoutStep.ONE_MIN, TimeoutStep.FIVE_MIN,
+            TimeoutStep.TEN_MIN, TimeoutStep.FIFTEEN_MIN,
+            TimeoutStep.THIRTY_MIN, TimeoutStep.SIXTY_MIN,
+        ]
+        for raw, step in enumerate(expected):
+            pkt = make_b0_packet(auto_off=raw)
+            assert decode_status_packet(pkt).auto_off_timeout == step
 
 
 # ── 0x20 mic/EQ packet decoding ────────────────────────────────────────────────

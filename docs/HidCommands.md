@@ -745,9 +745,9 @@ Enables or disables the ChatMix feature on the base station.
 | `dim_screen_timeout` | `0x83` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
 | `home_screen_mode` | `0x89` | `number \| null` (0 or 1) |
 | `mic_led_brightness` | `0xBF`, `0xB0`[11] | `number \| null` (1–10) |
-| `auto_off_timeout` | `0xC1` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
+| `auto_off_timeout` | `0xC1`, `0xB0`[12] | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
 | `wireless_2ghz_mode` | `0xC3`, `0xB0`[13] | `"performance" \| "range" \| null` |
-| `bt_auto_mute` | `0xB3` | `"off" \| "-12dB" \| "on" \| null` |
+| `bt_auto_mute` | `0xB3`, `0xB0`[3] | `"off" \| "-12dB" \| "on" \| null` |
 | `bt_default` | `0xB2` | `"off" \| "on" \| null` |
 | `stream_main` | `0x47` | `number \| null` (0–100) |
 | `stream_aux` | `0x47` | `number \| null` (0–100) |
@@ -772,7 +772,8 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0xB0` | Command echo |
-| 2–3 | `0x00` | Unknown |
+| 2 | `0x00` | Unknown (always `0x00` in all observed sessions) |
+| 3 | `0x00`–`0x02` | **BT auto-mute** — same encoding as `0xB3` event: `0x00`=off, `0x01`=-12 dB, `0x02`=full. Confirmed 2026-05-09 ✅ |
 | 4 | `0x01` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active (mirrors `0xB5` data[2]) ✅ |
 | 5 | `0x00` / `0x01` | **BT state** — `0x00`=off, `0x01`=BT active (mirrors `0xB5` data[3]) ✅ |
 | 6 | `0x00`–`0x08` | **Headset battery** raw (÷ 8 × 100 = %) ✅ |
@@ -781,7 +782,7 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 | 9 | `0x00` / `0x01` | **Mic mute** — `0x00`=unmuted, `0x01`=muted ✅ |
 | 10 | `0x00`–`0x02` | **ANC mode** — `0x00`=off, `0x01`=transparency, `0x02`=anc ✅ |
 | 11 | `0x01`–`0x0A` | **Mic LED brightness** (1–10; `0x0A`=10=max) ✅ |
-| 12 | `0x00` | Constant |
+| 12 | `0x00`–`0x06` | **Auto off timeout** — same encoding as `0xC1` event: 0=off, 1=1 min, 2=5 min, 3=10 min, 4=15 min, 5=30 min, 6=60 min. Confirmed 2026-05-09. ✅ |
 | 13 | `0x00` / `0x01` | **2.4 GHz mode** — `0x00`=performance/speed, `0x01`=extended range ✅ |
 | 14–15 | `0x08 0x08` | Constant |
 

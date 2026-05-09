@@ -57,6 +57,8 @@ class TestStatusData:
             anc_mode=AncMode.OFF,
             mic_led_brightness=5,
             wireless_mode=WirelessMode.PERFORMANCE,
+            bt_auto_mute=BtAutoMute.OFF,
+            auto_off_timeout=TimeoutStep.OFF,
         )
         return StatusData(**{**defaults, **kwargs})
 
