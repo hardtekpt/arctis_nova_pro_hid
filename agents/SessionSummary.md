@@ -228,7 +228,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 ## What is still unknown / needs more work
 
 1. **OLED draw not yet tested on physical hardware.** The `0x93` protocol was confirmed from ggoled source (not a live capture on our bench device). Functional test against PID `0x12E0` still needed; bitmap encoding and report timing should be verified visually.
-2. **No query command for 3 settings** — audio output (`0x43`), dim screen (`0x83`), home screen (`0x89`). GG reads them somehow. BT default via `0xB0[2]`, BT auto-mute via `0xB0[3]`, auto off via `0xB0[12]`, and mic LED brightness via `0xB0[11]` are all queryable (confirmed 2026-05-09 or earlier).
+2. **No query command for 2 settings** — dim screen (`0x83`), home screen (`0x89`). GG reads them somehow. `0xB0[14–15]` (both `0x08`, currently "constant") are the prime candidates. Audio output is readable via `0x20[19]`; BT default via `0xB0[2]`, BT auto-mute via `0xB0[3]`, auto off via `0xB0[12]`, mic LED brightness via `0xB0[11]`.
 3. **EQ preset name → index mapping** — `0x04`=custom confirmed; `0x00–0x03` and `0x05–0x18` = named presets (19 total), names unknown.
 4. **`0xA3` idle timeout** — candidate command from Nova 7X; not yet tested on Nova Pro.
 5. **Write persistence verification** — most write commands persist across power cycles per `0x09` send, but only a subset have been explicitly tested after reboot.
