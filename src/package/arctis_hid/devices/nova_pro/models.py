@@ -32,6 +32,13 @@ class StatusData:
 
 
 @dataclass
+class DisplayData:
+    dim_timeout:       TimeoutStep    # 0x80[2]: OFF=0 … SIXTY_MIN=6
+    oled_brightness:   int            # 0x80[3]: 1–10
+    home_screen_mode:  HomeScreenMode # 0x80[5]: DETAILED=0  SIMPLE=1
+
+
+@dataclass
 class MicEqData:
     volume_pct:      float
     gain:            GainLevel

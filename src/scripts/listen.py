@@ -41,16 +41,18 @@ PACKET_SIZE  = 64
 POLL_TIMEOUT = 50      # ms per handle per loop tick
 
 # ── Query commands ────────────────────────────────────────────────────────────
-# 0xB0, 0x20, 0x10, 0x12 confirmed on Nova Pro (session 2026-05-01).
-# 0xA0 sent but no response observed – likely unsupported on Nova Pro.
-# 0x80 under investigation – candidate for base-station display settings
-#      (OLED brightness, dim screen timeout, home screen mode).
+# All confirmed on Nova Pro:
+#   0xB0: status (battery, connectivity, ANC, BT, mic mute, mic LED, wireless mode)
+#   0x20: mic / EQ (gain, sidetone, audio output, ChatMix, EQ bands)
+#   0x10: firmware version (ASCII string)
+#   0x12: serial number (ASCII string)
+#   0x80: base-station display (dim screen timeout, OLED brightness, home screen mode)
 QUERY_COMMANDS = [
-    (0xB0, "status        (battery, partial decode – see HidCommands.md §6.1)"),
+    (0xB0, "status        (battery, connectivity, ANC, BT, mic mute, mic LED, wireless mode)"),
     (0x20, "mic / EQ      (gain level, sidetone raw, 10 EQ band values)"),
     (0x10, "firmware ver  (ASCII string)"),
     (0x12, "serial number (ASCII string)"),
-    (0x80, "base-station? (candidate for OLED brightness / dim screen / home screen)"),
+    (0x80, "display       (dim screen timeout, OLED brightness, home screen mode)"),
 ]
 
 # ── Known incoming event decoders (confirmed on Nova Pro) ────────────────────
@@ -247,9 +249,15 @@ def decode_packet(data: list[int], source: str) -> str | None:
             f"eq_preset={eq_preset_str}(0x{eq_preset:02X})  eq_bands=[{eq_bands}]"
         )
 
-    if cmd == 0x80 and len(data) > 2:
-        fields = "  ".join(f"[{i}]=0x{data[i]:02X}({data[i]})" for i in range(2, min(12, len(data))))
-        return f"{tag}  0x80 response   → {fields}"
+    if cmd == 0x80 and len(data) > 5:
+        _DIM = {0: "off", 1: "1min", 2: "5min", 3: "10min", 4: "15min", 5: "30min", 6: "60min"}
+        dim   = _DIM.get(data[2], f"?({data[2]})")
+        oled  = data[3]
+        home  = {0: "detailed", 1: "simple"}.get(data[5], f"?({data[5]})")
+        return (
+            f"{tag}  Display         → "
+            f"dim_timeout={dim}  oled_brightness={oled}/10  home_screen={home}"
+        )
 
     if cmd in (0x10, 0x12) and len(data) > 2:
         label = "Firmware" if cmd == 0x10 else "Serial"

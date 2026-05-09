@@ -17,6 +17,7 @@ from arctis_hid.devices.nova_pro import constants as C
 from arctis_hid.devices.nova_pro.codec import (
     decode_ascii_response,
     decode_battery,
+    decode_display_packet,
     decode_gain_event,
     decode_gain_query,
     decode_mic_eq_packet,
@@ -26,7 +27,7 @@ from arctis_hid.devices.nova_pro.codec import (
     encode_volume,
 )
 
-from .conftest import make_20_packet, make_b0_packet
+from .conftest import make_20_packet, make_80_packet, make_b0_packet
 
 
 # ── Volume encoding ────────────────────────────────────────────────────────────
@@ -309,3 +310,35 @@ class TestDecodeMicEqPacket:
         assert result.stream_main_vol == 80
         assert result.stream_aux_vol == 60
         assert result.stream_mic_vol == 40
+
+
+# ── 0x80 display settings packet decoding ─────────────────────────────────────
+
+
+class TestDecodeDisplayPacket:
+    def test_dim_timeout_off(self):
+        pkt = make_80_packet(dim_timeout=0)
+        assert decode_display_packet(pkt).dim_timeout == TimeoutStep.OFF
+
+    def test_dim_timeout_all_steps(self):
+        expected = [
+            TimeoutStep.OFF, TimeoutStep.ONE_MIN, TimeoutStep.FIVE_MIN,
+            TimeoutStep.TEN_MIN, TimeoutStep.FIFTEEN_MIN,
+            TimeoutStep.THIRTY_MIN, TimeoutStep.SIXTY_MIN,
+        ]
+        for raw, step in enumerate(expected):
+            pkt = make_80_packet(dim_timeout=raw)
+            assert decode_display_packet(pkt).dim_timeout == step
+
+    def test_oled_brightness_passthrough(self):
+        for level in (1, 5, 10):
+            pkt = make_80_packet(oled_bright=level)
+            assert decode_display_packet(pkt).oled_brightness == level
+
+    def test_home_screen_detailed(self):
+        pkt = make_80_packet(home_screen=0)
+        assert decode_display_packet(pkt).home_screen_mode == HomeScreenMode.DETAILED
+
+    def test_home_screen_simple(self):
+        pkt = make_80_packet(home_screen=1)
+        assert decode_display_packet(pkt).home_screen_mode == HomeScreenMode.SIMPLE

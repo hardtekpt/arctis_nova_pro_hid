@@ -13,10 +13,11 @@ POLL_TIMEOUT_MS = 50
 
 # ── Query command bytes ────────────────────────────────────────────────────
 
-CMD_STATUS   = 0xB0   # battery, connectivity, ANC, mic mute, OLED brightness
+CMD_STATUS   = 0xB0   # battery, connectivity, ANC, mic mute, mic LED, wireless mode
 CMD_MIC_EQ   = 0x20   # gain, mic vol, sidetone, audio output, ChatMix, EQ bands
 CMD_FIRMWARE = 0x10   # ASCII firmware version (also pushed unsolicited on reconnect)
 CMD_SERIAL   = 0x12   # ASCII serial number
+CMD_DISPLAY  = 0x80   # base-station display: dim timeout, OLED brightness, home screen
 
 # ── Write command bytes ────────────────────────────────────────────────────
 
@@ -66,6 +67,12 @@ B0_ANC         = 10   # 0x00=off  0x01=transparency  0x02=ANC
 B0_MIC_LED     = 11   # mic LED brightness 1–10
 B0_AUTO_OFF    = 12   # auto-off timeout 0=off 1=1min … 6=60min ✅ confirmed 2026-05-09
 B0_MODE2G      = 13   # 0x00=performance  0x01=extended range
+
+# ── 0x80 response byte indices ─────────────────────────────────────────────
+
+B80_DIM_TIMEOUT = 2   # dim screen timeout 0=off 1=1min … 6=60min ✅ confirmed 2026-05-09
+B80_OLED_BRIGHT = 3   # OLED brightness 1–10 ✅ confirmed 2026-05-09
+B80_HOME_SCREEN = 5   # 0x00=detailed  0x01=simple ✅ confirmed 2026-05-09
 
 # ── 0x20 response byte indices ─────────────────────────────────────────────
 

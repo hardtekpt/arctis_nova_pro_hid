@@ -16,9 +16,9 @@ from arctis_hid.core.types import (
     WirelessMode,
 )
 from arctis_hid.devices.nova_pro import constants as C
-from arctis_hid.devices.nova_pro.models import MicEqData, StatusData
+from arctis_hid.devices.nova_pro.models import DisplayData, MicEqData, StatusData
 
-from .conftest import make_20_packet, make_b0_packet
+from .conftest import make_20_packet, make_80_packet, make_b0_packet
 
 
 # ── Query methods ──────────────────────────────────────────────────────────────
@@ -77,6 +77,23 @@ class TestGetSerialNumber:
         packet = [0x06, 0x12, 0x41, 0x42, 0x43, 0x00] + [0] * 58
         mock_transport.query.return_value = packet
         assert mock_headset.get_serial_number() == "ABC"
+
+
+class TestGetDisplay:
+    def test_sends_correct_opcode(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_80_packet()
+        mock_headset.get_display()
+        mock_transport.query.assert_called_once_with(C.CMD_DISPLAY)
+
+    def test_returns_display_data(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_80_packet(
+            dim_timeout=3, oled_bright=7, home_screen=1
+        )
+        result = mock_headset.get_display()
+        assert isinstance(result, DisplayData)
+        assert result.dim_timeout == TimeoutStep.TEN_MIN
+        assert result.oled_brightness == 7
+        assert result.home_screen_mode == HomeScreenMode.SIMPLE
 
 
 # ── Write methods — correct command byte + payload + save ─────────────────────

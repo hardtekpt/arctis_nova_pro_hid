@@ -1,6 +1,6 @@
 # Arctis Nova Pro Wireless — HID Command Reference
 
-_Last verified: `2026-05-03` — derived from `baseStationEvents.ts`, `oled/service.ts`, Arctis-on-Linux, Arctis Nova 7X protocol, direct HID capture on PID `0x12E0`, and [ggoled](https://github.com/JerwuQu/ggoled) source (OLED protocol)_
+_Last verified: `2026-05-09` — derived from `baseStationEvents.ts`, `oled/service.ts`, Arctis-on-Linux, Arctis Nova 7X protocol, direct HID capture on PID `0x12E0`, and [ggoled](https://github.com/JerwuQu/ggoled) source (OLED protocol)_
 
 This document catalogues every HID packet format discovered for the Arctis Nova Pro Wireless base station (USB receiver). It is written so another agent or developer can re-implement compatible HID communication without reading the source files.
 
@@ -819,6 +819,23 @@ Also pushed **unsolicited** on the `0xFFC0` handle when the headset re-establish
 #### `0x12` — Serial Number ✅
 
 Response bytes `[2+]`: null-terminated ASCII string, e.g. `'6152048313222500747'`.
+
+#### `0x80` — Base-Station Display Settings ✅
+
+Confirmed `2026-05-09`. Returns dim screen timeout, OLED brightness, and home screen mode — the three settings displayed in GG that were not present in `0xB0` or `0x20`.
+
+Response: `[0x06, 0x80, dim_timeout, oled_brightness, ?, home_screen, ...]`
+
+| Byte | Value observed | Meaning |
+|---|---|---|
+| 0 | `0x06` | Report ID |
+| 1 | `0x80` | Command echo |
+| 2 | `0x00`–`0x06` | **Dim screen timeout** — same step encoding as `0x83` event and `0xC1`/`0xB0[12]`: 0=off, 1=1 min, 2=5 min, 3=10 min, 4=15 min, 5=30 min, 6=60 min ✅ |
+| 3 | `0x01`–`0x0A` | **OLED brightness** (1–10; same range as `0x85` event/write) ✅ |
+| 4 | unknown | Not yet decoded |
+| 5 | `0x00` / `0x01` | **Home screen mode** — `0x00`=detailed, `0x01`=simple (mirrors `0x89` event data[2]) ✅ |
+
+**Key discovery note:** OLED brightness, dim screen timeout, and home screen mode are all base-station display settings and are grouped under this separate query opcode rather than `0xB0`. GG queries `0x80` at startup to populate these settings.
 
 ---
 

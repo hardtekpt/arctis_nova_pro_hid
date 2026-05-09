@@ -106,10 +106,11 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Command | Returns |
 |---------|---------|
-| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, transparency level, mic LED brightness, auto off timeout, 2.4 GHz mode |
+| `0xB0` | Status: battery, connectivity, ANC mode, mic mute, transparency level, mic LED brightness, BT default, BT auto-mute, auto off timeout, 2.4 GHz mode |
 | `0x20` | Mic/EQ: gain, mic vol, sidetone, audio output, ChatMix, stream volumes, 10 EQ bands, headset vol |
 | `0x10` | Firmware version (ASCII, null-terminated) |
 | `0x12` | Serial number (ASCII, null-terminated) |
+| `0x80` | Base-station display: dim screen timeout `[2]`, OLED brightness `[3]`, home screen mode `[5]` |
 
 `0x10` is also pushed **unsolicited** on Col01 when the headset reconnects wirelessly.
 
@@ -129,6 +130,14 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | [11] | Mic LED brightness | 1–10 |
 | [12] | Auto off timeout | 0=off, 1=1 min, 2=5 min, 3=10 min, 4=15 min, 5=30 min, 6=60 min ✅ |
 | [13] | 2.4 GHz mode | `0x00`=performance/speed, `0x01`=extended range |
+
+### `0x80` response field map
+
+| Byte | Meaning | Values |
+|------|---------|--------|
+| [2] | Dim screen timeout | 0=off, 1=1 min, 2=5 min, 3=10 min, 4=15 min, 5=30 min, 6=60 min ✅ |
+| [3] | OLED brightness | 1–10 ✅ |
+| [5] | Home screen mode | `0x00`=detailed, `0x01`=simple ✅ |
 
 ### `0x20` response field map
 
@@ -213,7 +222,8 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 - **EQ bands**: 10 bytes at `0x20[7–16]`, range 0–40, `0x14`=flat. Write via `0x33` with profile `0x00` (2.4 GHz) or `0x01` (BT) — not yet verified on Nova Pro.
 - **Volume encoding**: `raw = round((1 − pct/100) × 56)`; `0x38`=0%, `0x00`=100%.
 - **2.4 GHz mode** (`0xC3`): no Col02 event fires when changed from GG — it is a silent write. Query via `0xB0[13]`.
-- **Discovery pattern**: to find an unknown command, run `probe_b0_diff.py` while toggling the setting in GG — it diffs all 64 bytes of `0xB0` before/after. Then probe candidate command bytes with `probe_write.py` watching for the identified byte to change.
+- **Base-station display settings** (OLED brightness, dim screen timeout, home screen mode) are NOT in `0xB0` or `0x20`. They live under a separate query opcode `0x80`. All three confirmed 2026-05-09.
+- **Discovery pattern**: to find an unknown command, run `probe_b0_diff.py` while toggling the setting in GG — it diffs all 64 bytes of `0xB0` before/after. Then probe candidate command bytes with `probe_write.py` watching for the identified byte to change. If `0xB0` shows no change, try querying adjacent opcodes (e.g. `0x80`) and inspecting all response bytes.
 - **OLED draw (`0x93`)**: confirmed 128×64 display, column-major 1-bit bitmap, two 1024-byte `send_feature_report()` calls per frame (left half x=0, right half x=64). Use `headset.oled` (returns `ArctisNovaProOled`). Requires `pip install 'arctis-hid[oled]'` (Pillow). `0x95` interrupt write returns control to GG.
 - **OLED vs interrupt transport**: `0x93` draw uses `send_feature_report()` (1024 bytes), not `write()` (64 bytes). Never mix them. `0x85` brightness and `0x95` release still use `write()`.
 
