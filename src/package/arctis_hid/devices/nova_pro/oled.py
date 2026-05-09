@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import threading
 import time
 from pathlib import Path
 from typing import Union
@@ -58,6 +59,9 @@ class ArctisNovaProOled(AbstractOled):
 
     def __init__(self, transport: HidTransport) -> None:
         self._transport = transport
+        self._last_bitmap: bytes | None = None
+        self._hold_stop = threading.Event()
+        self._hold_thread: threading.Thread | None = None
 
     # ── AbstractOled ───────────────────────────────────────────────────────
 
@@ -69,19 +73,91 @@ class ArctisNovaProOled(AbstractOled):
     def height(self) -> int:
         return C.OLED_HEIGHT
 
-    def draw_raw(self, bitmap: bytes) -> None:
-        """Send a pre-encoded column-major 1-bit bitmap (1024 bytes)."""
+    def draw_raw(self, bitmap: bytes, *, hold: bool = False, hold_interval: float = 0.1) -> None:
+        """Send a pre-encoded column-major 1-bit bitmap (1024 bytes).
+
+        hold: if True, start the continuous hold loop after drawing.
+        hold_interval: seconds between redraws when hold is active.
+        """
         if len(bitmap) != BITMAP_SIZE:
             raise ValueError(f"bitmap must be {BITMAP_SIZE} bytes, got {len(bitmap)}")
         self._send_frame(bitmap)
+        if hold:
+            self.hold(interval=hold_interval)
 
     def clear(self) -> None:
-        """Blank the display (all pixels off)."""
+        """Blank the display (all pixels off).
+
+        If a hold loop is active it continues, now reissuing the blank frame.
+        Call release() to fully return control to GG/Sonar.
+        """
         self._send_frame(bytes(BITMAP_SIZE))
 
     def release(self) -> None:
-        """Return OLED control to GG / Sonar."""
+        """Return OLED control to GG / Sonar.
+
+        Stops any active hold loop before sending the release command.
+        """
+        self.unhold()
         self._transport.write(C.CMD_OLED_RELEASE)
+
+    # ── Hold loop ──────────────────────────────────────────────────────────────
+
+    def hold(self, bitmap: bytes | None = None, *, interval: float = 0.1) -> None:
+        """Continuously reissue a frame to overpower firmware animations.
+
+        Starts a daemon thread that resends the bitmap every *interval* seconds.
+        While active, any firmware-driven animation (e.g. volume change overlay)
+        is overwritten on the next redraw tick, keeping your content visible.
+
+        If *bitmap* is None the last frame sent by any draw method is used.
+        If no frame has been drawn yet, raises ValueError.
+
+        Calling hold() again while already holding restarts the loop (e.g. to
+        change the interval); the held content updates automatically whenever
+        a new draw call is made — no need to restart.
+
+        Args:
+            bitmap: 1024-byte column-major frame to hold, or None for last drawn.
+            interval: seconds between redraws (default 0.1 s = 100 ms).
+        """
+        if bitmap is not None:
+            if len(bitmap) != BITMAP_SIZE:
+                raise ValueError(f"bitmap must be {BITMAP_SIZE} bytes, got {len(bitmap)}")
+            self._send_frame(bitmap)
+        if self._last_bitmap is None:
+            raise ValueError("No frame drawn yet — draw something first, or pass a bitmap.")
+        self.unhold()
+        self._hold_stop.clear()
+        self._hold_thread = threading.Thread(
+            target=self._hold_loop,
+            args=(interval,),
+            daemon=True,
+            name="oled-hold",
+        )
+        self._hold_thread.start()
+
+    def unhold(self) -> None:
+        """Stop the continuous hold loop (does not change what is on screen)."""
+        if self._hold_thread and self._hold_thread.is_alive():
+            self._hold_stop.set()
+            self._hold_thread.join(timeout=2.0)
+        self._hold_thread = None
+        self._hold_stop.clear()
+
+    @property
+    def holding(self) -> bool:
+        """True while the hold loop is actively reissuing frames."""
+        return self._hold_thread is not None and self._hold_thread.is_alive()
+
+    def _hold_loop(self, interval: float) -> None:
+        while not self._hold_stop.wait(interval):
+            bm = self._last_bitmap
+            if bm is not None:
+                try:
+                    self._send_frame(bm)
+                except Exception:
+                    pass
 
     # ── High-level drawing API ─────────────────────────────────────────────
 
@@ -89,10 +165,19 @@ class ArctisNovaProOled(AbstractOled):
         self,
         image: Union["Image.Image", str, Path],
         threshold: int = 128,
+        *,
+        hold: bool = False,
+        hold_interval: float = 0.1,
     ) -> None:
-        """Draw a static image. Accepts a PIL Image or a file path (PNG, JPG, GIF…)."""
+        """Draw a static image. Accepts a PIL Image or a file path (PNG, JPG, GIF…).
+
+        hold: if True, start the continuous hold loop after drawing.
+        hold_interval: seconds between redraws when hold is active.
+        """
         _require_pil()
         self._send_frame(encode_frame(_open_image(image).convert("RGBA"), threshold))
+        if hold:
+            self.hold(interval=hold_interval)
 
     def draw_text(
         self,
@@ -101,11 +186,16 @@ class ArctisNovaProOled(AbstractOled):
         x: int = 0,
         y: int = 0,
         invert: bool = False,
+        *,
+        hold: bool = False,
+        hold_interval: float = 0.1,
     ) -> None:
         """Render text onto the display.
 
         font: PIL ImageFont object (FreeType or bitmap), or None for the built-in default.
         invert: swap foreground/background (white text on black vs black on white).
+        hold: if True, start the continuous hold loop after drawing.
+        hold_interval: seconds between redraws when hold is active.
         """
         _require_pil()
         bg, fg = (255, 0) if invert else (0, 255)
@@ -115,6 +205,8 @@ class ArctisNovaProOled(AbstractOled):
             font = _default_font()
         draw.text((x, y), text, fill=fg, font=font)
         self._send_frame(encode_frame(canvas))
+        if hold:
+            self.hold(interval=hold_interval)
 
     def scroll_text(
         self,
@@ -197,6 +289,7 @@ class ArctisNovaProOled(AbstractOled):
 
     def _send_frame(self, bitmap: bytes) -> None:
         """Split a 128-wide bitmap into two 64-column 0x93 feature reports."""
+        self._last_bitmap = bitmap
         bpc = C.OLED_HEIGHT // 8          # bytes per column = 8
         half_w = C.OLED_REPORT_SPLIT_SZ   # 64
 
