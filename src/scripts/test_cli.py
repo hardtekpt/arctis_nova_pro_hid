@@ -354,10 +354,12 @@ def cmd_mic_led(args) -> None:
         sys.exit("mic-led must be 1–10")
     print(f"Setting mic LED brightness → {level}/10…")
     with discover() as h:
+        before = h.get_status() if args.verify else None
         h.set_mic_led_brightness(level)
         print("Done.")
         if args.verify:
-            _no_verify_field("mic LED brightness has no reflected query field")
+            after = h.get_status()
+            _verify_field("0xB0[11] mic_led_brightness", before.mic_led_brightness, after.mic_led_brightness, level)
 
 
 def cmd_dim_timeout(args) -> None:
