@@ -27,6 +27,7 @@ pip install -e 'src/package/[oled]'   # adds Pillow for OLED drawing
 6. [Data Models](#data-models)
    - [`StatusData`](#statusdata)
    - [`MicEqData`](#miceqdata)
+   - [`DisplayData`](#displaydata)
 7. [Events](#events)
 8. [Enums](#enums)
 9. [Exceptions](#exceptions)
@@ -145,6 +146,16 @@ Return the firmware version string (ASCII, from command `0x10`).
 
 #### `get_serial_number() → str`
 Return the device serial number (ASCII, from command `0x12`).
+
+#### `get_display() → DisplayData`
+Query the base-station display settings: dim screen timeout, OLED brightness, and home screen mode (from command `0x80`).
+
+```python
+d = h.get_display()
+print(d.oled_brightness)    # 7
+print(d.dim_timeout)        # TimeoutStep.THIRTY_MIN
+print(d.home_screen_mode)   # HomeScreenMode.DETAILED
+```
 
 ---
 
@@ -498,6 +509,20 @@ class MicEqData:
     stream_main_vol: int            # 0–100
     stream_aux_vol:  int            # 0–100
     stream_mic_vol:  int            # 0–100
+```
+
+---
+
+### `DisplayData`
+
+Returned by `get_display()`. Snapshot of base-station display settings.
+
+```python
+@dataclass
+class DisplayData:
+    dim_timeout:       TimeoutStep    # 0x80[2]: OFF=0 … SIXTY_MIN=6
+    oled_brightness:   int            # 0x80[3]: 1–10
+    home_screen_mode:  HomeScreenMode # 0x80[5]: DETAILED=0  SIMPLE=1
 ```
 
 ---

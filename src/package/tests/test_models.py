@@ -25,6 +25,7 @@ from arctis_hid.devices.nova_pro.models import (
     ChatMixEvent,
     ConnectivityEvent,
     DimTimeoutEvent,
+    DisplayData,
     EqBandEvent,
     EqPresetEvent,
     GainEvent,
@@ -136,6 +137,41 @@ class TestMicEqData:
 
     def test_gain_stored(self):
         assert self._make(gain=GainLevel.HIGH).gain == GainLevel.HIGH
+
+
+# ── DisplayData ────────────────────────────────────────────────────────────────
+
+
+class TestDisplayData:
+    def _make(self, **kwargs) -> DisplayData:
+        defaults = dict(
+            dim_timeout=TimeoutStep.OFF,
+            oled_brightness=5,
+            home_screen_mode=HomeScreenMode.DETAILED,
+        )
+        return DisplayData(**{**defaults, **kwargs})
+
+    def test_is_dataclass(self):
+        assert dataclasses.is_dataclass(DisplayData)
+
+    def test_dim_timeout_is_timeout_step(self):
+        assert isinstance(self._make().dim_timeout, TimeoutStep)
+
+    def test_oled_brightness_stored(self):
+        assert self._make(oled_brightness=8).oled_brightness == 8
+
+    def test_home_screen_mode_is_home_screen_mode(self):
+        assert isinstance(self._make().home_screen_mode, HomeScreenMode)
+
+    def test_field_values_stored_correctly(self):
+        dd = self._make(
+            dim_timeout=TimeoutStep.THIRTY_MIN,
+            oled_brightness=3,
+            home_screen_mode=HomeScreenMode.SIMPLE,
+        )
+        assert dd.dim_timeout == TimeoutStep.THIRTY_MIN
+        assert dd.oled_brightness == 3
+        assert dd.home_screen_mode == HomeScreenMode.SIMPLE
 
 
 # ── Event dataclasses — field types and values ─────────────────────────────────

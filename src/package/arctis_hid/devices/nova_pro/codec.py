@@ -28,6 +28,7 @@ from .models import (
     ChatMixEvent,
     ConnectivityEvent,
     DimTimeoutEvent,
+    DisplayData,
     EqBandEvent,
     EqPresetEvent,
     GainEvent,
@@ -101,6 +102,16 @@ def decode_status_packet(data: list[int]) -> StatusData:
         bt_default          = data[C.B0_BT_DEFAULT] == 0x01,
         bt_auto_mute        = BtAutoMute(data[C.B0_BT_AUTOMUTE]),
         auto_off_timeout    = TimeoutStep(data[C.B0_AUTO_OFF]),
+    )
+
+
+# ── 0x80 display settings packet ──────────────────────────────────────────
+
+def decode_display_packet(data: list[int]) -> DisplayData:
+    return DisplayData(
+        dim_timeout      = TimeoutStep(data[C.B80_DIM_TIMEOUT]),
+        oled_brightness  = data[C.B80_OLED_BRIGHT],
+        home_screen_mode = HomeScreenMode(data[C.B80_HOME_SCREEN]),
     )
 
 

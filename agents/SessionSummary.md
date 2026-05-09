@@ -1,6 +1,6 @@
 # Session Summary — HID Discovery + API Build
 
-Sessions: `2026-05-01` / `2026-05-02` (Phase 1 discovery) / `2026-05-03` (Phase 2 API build + Phase 3 OLED)
+Sessions: `2026-05-01` / `2026-05-02` (Phase 1 discovery) / `2026-05-03` (Phase 2 API build + Phase 3 OLED) / `2026-05-09` (0xB0 full decode + 0x80 discovery)
 
 ## What this project is
 
@@ -132,9 +132,10 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 | Command | Response content |
 |---------|-----------------|
 | `0xB0` | Status (battery, connectivity, ANC, mic mute, transparency level, mic LED brightness, BT default `[2]`, BT auto-mute `[3]`, auto off timeout `[12]`, 2.4 GHz mode) |
-| `0x20` | Mic/EQ params (gain, mic vol, sidetone, EQ bands, ChatMix, stream volumes, headset vol) |
+| `0x20` | Mic/EQ params (gain, mic vol, sidetone, EQ bands, ChatMix, stream volumes, headset vol, audio output) |
 | `0x10` | Firmware version (ASCII; also pushed unsolicited on wireless reconnect) |
 | `0x12` | Serial number (ASCII) |
+| `0x80` | Base-station display: dim screen timeout `[2]`, OLED brightness `[3]`, home screen mode `[5]`. Confirmed 2026-05-09. |
 
 ### Write commands (always follow with `0x09`)
 
@@ -225,10 +226,19 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 
 ---
 
+## Phase 1 session-09 key lessons (2026-05-09)
+
+1. **Not all queryable settings live in `0xB0`.** Base-station display settings (OLED brightness, dim screen timeout, home screen mode) are grouped under a separate query opcode `0x80`. GG issues this query in addition to `0xB0`/`0x20` at startup.
+2. **Interrogating an unknown opcode first is faster than diffing `0xB0`.** Rather than assuming all settings are in known queries, sending `0x80` as a raw query and inspecting all response bytes found the answer in one shot.
+3. **The timeout step encoding is reused verbatim across dim screen (`0x80[2]`), auto-off (`0xB0[12]`), and both write/event commands (`0x83`/`0xC1`)**. The `TimeoutStep` enum captures this shared encoding.
+4. **`0xB0[11]` is mic LED brightness** — was mistakenly labelled "unknown" early in the session; the `listen.py` decode already printed it correctly.
+
+---
+
 ## What is still unknown / needs more work
 
 1. **OLED draw not yet tested on physical hardware.** The `0x93` protocol was confirmed from ggoled source (not a live capture on our bench device). Functional test against PID `0x12E0` still needed; bitmap encoding and report timing should be verified visually.
-2. **No query command for 3 settings** — OLED brightness (`0x85`), dim screen (`0x83`), home screen (`0x89`). GG reads all three when the settings page loads. `0xB0[14–15]` (both `0x08`, currently "constant") are the prime candidates — note `0x08` = 8 which is a plausible default brightness/timeout value. Audio output is readable via `0x20[19]`; BT default via `0xB0[2]`, BT auto-mute via `0xB0[3]`, auto off via `0xB0[12]`, mic LED brightness via `0xB0[11]`.
+2. **All settings now queryable** — `0x80` confirmed 2026-05-09 as the missing query for OLED brightness `[3]`, dim screen timeout `[2]`, and home screen mode `[5]`. Zero unknowns remain across the five confirmed query commands (`0xB0`, `0x20`, `0x10`, `0x12`, `0x80`).
 3. **EQ preset name → index mapping** — `0x04`=custom confirmed; `0x00–0x03` and `0x05–0x18` = named presets (19 total), names unknown.
 4. **`0xA3` idle timeout** — candidate command from Nova 7X; not yet tested on Nova Pro.
 5. **Write persistence verification** — most write commands persist across power cycles per `0x09` send, but only a subset have been explicitly tested after reboot.

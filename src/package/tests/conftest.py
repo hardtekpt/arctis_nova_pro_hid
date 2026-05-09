@@ -82,6 +82,21 @@ def make_20_packet(
     return pkt
 
 
+def make_80_packet(
+    dim_timeout: int = 0,
+    oled_bright: int = 5,
+    home_screen: int = 0,
+) -> list[int]:
+    """Build a fake 0x80 display settings response packet (64 bytes)."""
+    pkt = [0] * 64
+    pkt[0] = C.REPORT_ID
+    pkt[1] = C.CMD_DISPLAY
+    pkt[C.B80_DIM_TIMEOUT] = dim_timeout
+    pkt[C.B80_OLED_BRIGHT] = oled_bright
+    pkt[C.B80_HOME_SCREEN] = home_screen
+    return pkt
+
+
 def make_event_packet(opcode: int, *payload: int) -> list[int]:
     """Build a fake Col02 event packet (64 bytes).
 
