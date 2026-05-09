@@ -131,7 +131,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 
 | Command | Response content |
 |---------|-----------------|
-| `0xB0` | Status (battery, connectivity, ANC, mic mute, transparency level, mic LED brightness, BT auto-mute `[3]`, auto off timeout `[12]`, 2.4 GHz mode) |
+| `0xB0` | Status (battery, connectivity, ANC, mic mute, transparency level, mic LED brightness, BT default `[2]`, BT auto-mute `[3]`, auto off timeout `[12]`, 2.4 GHz mode) |
 | `0x20` | Mic/EQ params (gain, mic vol, sidetone, EQ bands, ChatMix, stream volumes, headset vol) |
 | `0x10` | Firmware version (ASCII; also pushed unsolicited on wireless reconnect) |
 | `0x12` | Serial number (ASCII) |
@@ -228,7 +228,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 ## What is still unknown / needs more work
 
 1. **OLED draw not yet tested on physical hardware.** The `0x93` protocol was confirmed from ggoled source (not a live capture on our bench device). Functional test against PID `0x12E0` still needed; bitmap encoding and report timing should be verified visually.
-2. **No query command for 5 settings** — BT default (`0xB2`), audio output (`0x43`), dim screen (`0x83`), home screen (`0x89`), mic LED brightness (`0xBF`). GG reads them somehow. Auto off (`0xC1`) is readable via `0xB0[12]` and BT auto-mute (`0xB3`) is readable via `0xB0[3]` (both confirmed 2026-05-09).
+2. **No query command for 4 settings** — audio output (`0x43`), dim screen (`0x83`), home screen (`0x89`), mic LED brightness (`0xBF`). GG reads them somehow. BT default is readable via `0xB0[2]`, BT auto-mute via `0xB0[3]`, auto off via `0xB0[12]` (all confirmed 2026-05-09).
 3. **EQ preset name → index mapping** — `0x04`=custom confirmed; `0x00–0x03` and `0x05–0x18` = named presets (19 total), names unknown.
 4. **`0xA3` idle timeout** — candidate command from Nova 7X; not yet tested on Nova Pro.
 5. **Write persistence verification** — most write commands persist across power cycles per `0x09` send, but only a subset have been explicitly tested after reboot.

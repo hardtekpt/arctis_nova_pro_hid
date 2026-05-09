@@ -472,6 +472,7 @@ class StatusData:
     anc_mode:            AncMode
     mic_led_brightness:  int            # 1–10  (0xB0[11])
     wireless_mode:       WirelessMode
+    bt_default:          bool           # 0xB0[2]: True=on (BT auto-connect enabled)
     bt_auto_mute:        BtAutoMute     # 0xB0[3]: OFF / DB_MINUS_12 / FULL
     auto_off_timeout:    TimeoutStep    # 0xB0[12]: OFF=0 … SIXTY_MIN=6
 ```

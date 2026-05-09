@@ -748,7 +748,7 @@ Enables or disables the ChatMix feature on the base station.
 | `auto_off_timeout` | `0xC1`, `0xB0`[12] | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
 | `wireless_2ghz_mode` | `0xC3`, `0xB0`[13] | `"performance" \| "range" \| null` |
 | `bt_auto_mute` | `0xB3`, `0xB0`[3] | `"off" \| "-12dB" \| "on" \| null` |
-| `bt_default` | `0xB2` | `"off" \| "on" \| null` |
+| `bt_default` | `0xB2`, `0xB0`[2] | `"off" \| "on" \| null` |
 | `stream_main` | `0x47` | `number \| null` (0–100) |
 | `stream_aux` | `0x47` | `number \| null` (0–100) |
 | `stream_mic` | `0x47` | `number \| null` (0–100) |
@@ -772,7 +772,7 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0xB0` | Command echo |
-| 2 | `0x00` | Unknown (always `0x00` in all observed sessions) |
+| 2 | `0x00` / `0x01` | **BT default** (auto-connect) — `0x00`=off, `0x01`=on. Same encoding as `0xB2` event. Confirmed 2026-05-09 ✅ |
 | 3 | `0x00`–`0x02` | **BT auto-mute** — same encoding as `0xB3` event: `0x00`=off, `0x01`=-12 dB, `0x02`=full. Confirmed 2026-05-09 ✅ |
 | 4 | `0x01` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active (mirrors `0xB5` data[2]) ✅ |
 | 5 | `0x00` / `0x01` | **BT state** — `0x00`=off, `0x01`=BT active (mirrors `0xB5` data[3]) ✅ |

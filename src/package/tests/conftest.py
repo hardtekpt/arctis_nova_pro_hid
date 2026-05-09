@@ -22,6 +22,7 @@ def make_b0_packet(
     anc: int = 0x00,
     mic_led: int = 5,
     mode2g: int = 0x00,
+    bt_default: int = 0x00,
     bt_automute: int = 0x00,
     auto_off: int = 0x00,
 ) -> list[int]:
@@ -29,6 +30,7 @@ def make_b0_packet(
     pkt = [0] * 64
     pkt[0] = C.REPORT_ID
     pkt[1] = C.CMD_STATUS
+    pkt[C.B0_BT_DEFAULT]  = bt_default
     pkt[C.B0_BT_AUTOMUTE] = bt_automute
     pkt[C.B0_CONN]        = conn
     pkt[C.B0_BT]          = bt
