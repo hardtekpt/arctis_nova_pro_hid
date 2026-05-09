@@ -248,10 +248,7 @@ def decode_packet(data: list[int], source: str) -> str | None:
         )
 
     if cmd == 0x80 and len(data) > 2:
-        # Format unknown; print every non-zero byte with its index for analysis.
-        fields = "  ".join(
-            f"[{i}]=0x{b:02X}({b})" for i, b in enumerate(data) if i >= 2 and b != 0
-        ) or "(all zeros)"
+        fields = "  ".join(f"[{i}]=0x{data[i]:02X}({data[i]})" for i in range(2, min(12, len(data))))
         return f"{tag}  0x80 response   → {fields}"
 
     if cmd in (0x10, 0x12) and len(data) > 2:
