@@ -5,6 +5,7 @@
 - Only merge to the main/master branch when I say.
 - When merging to master, automatically create a new tag with an incremented version according to the implemented feature (micro, minor, major).
 - After any change to package source files under `src/package/arctis_hid/`, update `src/package/DOCUMENTATION.md` to reflect the change (new/removed/renamed methods, changed signatures, new enums or events, etc.).
+- After any change to package source files under `src/package/arctis_hid/`, update `src/package/tests/` to reflect the change: add tests for new methods/events/enums, remove or rename tests for removed/renamed symbols, and update byte-level assertions when encoding logic changes. Run `python -m pytest src/package/tests/ -v` from `src/package/` and ensure all tests pass before merging.
 
 ---
 
