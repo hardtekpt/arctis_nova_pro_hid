@@ -43,11 +43,14 @@ POLL_TIMEOUT = 50      # ms per handle per loop tick
 # ── Query commands ────────────────────────────────────────────────────────────
 # 0xB0, 0x20, 0x10, 0x12 confirmed on Nova Pro (session 2026-05-01).
 # 0xA0 sent but no response observed – likely unsupported on Nova Pro.
+# 0x80 under investigation – candidate for base-station display settings
+#      (OLED brightness, dim screen timeout, home screen mode).
 QUERY_COMMANDS = [
     (0xB0, "status        (battery, partial decode – see HidCommands.md §6.1)"),
     (0x20, "mic / EQ      (gain level, sidetone raw, 10 EQ band values)"),
     (0x10, "firmware ver  (ASCII string)"),
     (0x12, "serial number (ASCII string)"),
+    (0x80, "base-station? (candidate for OLED brightness / dim screen / home screen)"),
 ]
 
 # ── Known incoming event decoders (confirmed on Nova Pro) ────────────────────
@@ -243,6 +246,13 @@ def decode_packet(data: list[int], source: str) -> str | None:
             f"stream_main={stream_main}  stream_aux={stream_aux}  stream_mic={stream_mic}  "
             f"eq_preset={eq_preset_str}(0x{eq_preset:02X})  eq_bands=[{eq_bands}]"
         )
+
+    if cmd == 0x80 and len(data) > 2:
+        # Format unknown; print every non-zero byte with its index for analysis.
+        fields = "  ".join(
+            f"[{i}]=0x{b:02X}({b})" for i, b in enumerate(data) if i >= 2 and b != 0
+        ) or "(all zeros)"
+        return f"{tag}  0x80 response   → {fields}"
 
     if cmd in (0x10, 0x12) and len(data) > 2:
         label = "Firmware" if cmd == 0x10 else "Serial"
