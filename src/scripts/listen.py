@@ -211,12 +211,13 @@ def decode_packet(data: list[int], source: str) -> str | None:
         wmode    = _WMODE.get(data[13], f"0x{data[13]:02X}") if len(data) > 13 else "?"
         auto_off = _TIMEOUT.get(data[12], f"?({data[12]})") if len(data) > 12 else "?"
         bt_mute  = _BTMUTE.get(data[3], f"?({data[3]})")
+        bt_def   = "on" if data[2] == 1 else "off"
         return (
             f"{tag}  Status          → "
             f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
             f"conn={conn}  mic_mute={muted}  anc={anc}  trans_level={trans}  "
-            f"bt={bt}  bt_auto_mute={bt_mute}  mic_led_brightness={data[11]}  "
-            f"auto_off={auto_off}  2.4ghz_mode={wmode}"
+            f"bt={bt}  bt_default={bt_def}  bt_auto_mute={bt_mute}  "
+            f"mic_led_brightness={data[11]}  auto_off={auto_off}  2.4ghz_mode={wmode}"
         )
 
     # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).

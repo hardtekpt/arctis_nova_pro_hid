@@ -117,6 +117,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Byte | Meaning | Values |
 |------|---------|--------|
+| [2] | BT default (auto-connect) | `0x00`=off, `0x01`=on ✅ |
 | [3] | BT auto-mute | `0x00`=off, `0x01`=-12 dB, `0x02`=full ✅ |
 | [4] | Connectivity mode | `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active |
 | [5] | BT state | `0x00`=off, `0x01`=active |

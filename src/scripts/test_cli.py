@@ -106,6 +106,7 @@ def _print_status(s: StatusData) -> None:
     print(f"  Dock battery     : {s.dock_battery_pct:.0f}%")
     print(f"  Connectivity     : {s.connectivity_mode:#04x}")
     print(f"  BT active        : {s.bt_active}")
+    print(f"  BT default       : {'on' if s.bt_default else 'off'}  (0xB0[2])")
     print(f"  BT auto-mute     : {s.bt_auto_mute.name}  (0xB0[3]={s.bt_auto_mute.value:#04x})")
     print(f"  Mic muted        : {s.mic_muted}  (0xB0[9])")
     print(f"  ANC mode         : {s.anc_mode.name}  (0xB0[10]={s.anc_mode.value:#04x})")
@@ -419,10 +420,12 @@ def cmd_bt_default(args) -> None:
     enabled = args.state == "on"
     print(f"Setting BT default → {'on' if enabled else 'off'}…")
     with discover() as h:
+        before = h.get_status() if args.verify else None
         h.set_bt_default(enabled)
         print("Done.")
         if args.verify:
-            _no_verify_field("BT default has no reflected query field")
+            after = h.get_status()
+            _verify_field("0xB0[2] bt_default", before.bt_default, after.bt_default, enabled)
 
 
 def cmd_bt_auto_mute(args) -> None:

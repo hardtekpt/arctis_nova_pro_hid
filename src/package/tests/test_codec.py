@@ -215,6 +215,14 @@ class TestDecodeStatusPacket:
         pkt = make_b0_packet(mode2g=0x01)
         assert decode_status_packet(pkt).wireless_mode == WirelessMode.EXTENDED_RANGE
 
+    def test_bt_default_off(self):
+        pkt = make_b0_packet(bt_default=0x00)
+        assert decode_status_packet(pkt).bt_default is False
+
+    def test_bt_default_on(self):
+        pkt = make_b0_packet(bt_default=0x01)
+        assert decode_status_packet(pkt).bt_default is True
+
     def test_bt_auto_mute_off(self):
         pkt = make_b0_packet(bt_automute=0x00)
         assert decode_status_packet(pkt).bt_auto_mute == BtAutoMute.OFF
