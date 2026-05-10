@@ -83,12 +83,12 @@ def decode_packet(data: list[int], source: str) -> str | None:
     if cmd == 0xB5 and len(data) > 4:
         _CONN = {0x01: "2.4GHz", 0x04: "2.4GHz+BT"}
         if source.strip() == "CTRL":
-            # Query response: [3]=connectivity mode, [4]=BT device connected
-            conn_mode    = _CONN.get(data[3], f"0x{data[3]:02X}")
-            bt_connected = data[4] == 0x01
+            # Query response: [2]=connectivity mode, [3]=BT device connected (0x01=yes, 0x02=no)
+            conn_mode    = _CONN.get(data[2], f"0x{data[2]:02X}")
+            bt_connected = data[3] == 0x01
             return (
                 f"{tag}  Connectivity    → conn_mode={conn_mode}  bt_connected={bt_connected}"
-                f"  [3]=0x{data[3]:02X} [4]=0x{data[4]:02X}"
+                f"  [2]=0x{data[2]:02X} [3]=0x{data[3]:02X}"
             )
         else:
             # Incoming event: [2]=connectivity mode, [3]=BT state, [4]=wireless flag
