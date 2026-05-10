@@ -9,6 +9,7 @@ from arctis_hid.core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    ConnectivityMode,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
@@ -52,7 +53,7 @@ class TestStatusData:
         defaults = dict(
             headset_battery_pct=100.0,
             dock_battery_pct=50.0,
-            connectivity_mode=0x01,
+            connectivity_mode=ConnectivityMode.WIRELESS_ONLY,
             bt_active=False,
             mic_muted=False,
             anc_mode=AncMode.OFF,
@@ -189,8 +190,8 @@ class TestEventDataclasses:
         assert e.dock_pct == 50.0
 
     def test_connectivity_event(self):
-        e = ConnectivityEvent(mode=0x04, bt_active=True, wireless=True)
-        assert e.mode == 0x04
+        e = ConnectivityEvent(mode=ConnectivityMode.WIRELESS_AND_BT, bt_active=True, wireless=True)
+        assert e.mode == ConnectivityMode.WIRELESS_AND_BT
         assert e.bt_active is True
         assert e.wireless is True
 
@@ -322,3 +323,7 @@ class TestEnums:
     def test_home_screen_mode_values(self):
         assert HomeScreenMode.DETAILED == 0
         assert HomeScreenMode.SIMPLE == 1
+
+    def test_connectivity_mode_values(self):
+        assert ConnectivityMode.WIRELESS_ONLY == 0x01
+        assert ConnectivityMode.WIRELESS_AND_BT == 0x04

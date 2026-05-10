@@ -487,7 +487,7 @@ Returned by `get_status()`. Snapshot of headset status.
 class StatusData:
     headset_battery_pct: float          # 0.0–100.0
     dock_battery_pct:    float          # 0.0–100.0
-    connectivity_mode:   int            # 0x01=2.4GHz only  0x04=2.4GHz+BT
+    connectivity_mode:   ConnectivityMode  # WIRELESS_ONLY or WIRELESS_AND_BT
     bt_active:           bool           # True if Bluetooth stream is active
     mic_muted:           bool
     anc_mode:            AncMode
@@ -547,7 +547,7 @@ Each event is a dataclass. The callback receives a single instance.
 |-------|---------|--------|
 | `VolumeEvent` | Volume wheel turned | `percent: float` (0–100) |
 | `BatteryEvent` | Battery level update | `headset_pct: float`, `dock_pct: float` |
-| `ConnectivityEvent` | Wireless connection changed | `mode: int`, `bt_active: bool`, `wireless: bool` |
+| `ConnectivityEvent` | Wireless connection changed | `mode: ConnectivityMode`, `bt_active: bool`, `wireless: bool` |
 | `AncModeEvent` | ANC button pressed | `mode: AncMode` |
 | `MicMuteEvent` | Mic mute button pressed | `muted: bool` |
 | `ChatMixEvent` | ChatMix dial turned | `game: int` (0–100), `chat: int` (0–100) |
@@ -585,6 +585,14 @@ class AncMode(IntEnum):
     OFF          = 0
     TRANSPARENCY = 1
     ANC          = 2
+```
+
+### `ConnectivityMode`
+Which radio links are active (returned by `StatusData.connectivity_mode` and `ConnectivityEvent.mode`).
+```python
+class ConnectivityMode(IntEnum):
+    WIRELESS_ONLY   = 0x01   # 2.4 GHz wireless link only
+    WIRELESS_AND_BT = 0x04   # 2.4 GHz wireless + Bluetooth active
 ```
 
 ### `GainLevel`
