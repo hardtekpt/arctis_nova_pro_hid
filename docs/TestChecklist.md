@@ -356,6 +356,21 @@ After confirming each write command works, verify the setting survives a full po
 
 ---
 
+## 11. Factory Reset — `0xFD`
+
+> ⚠ **DESTRUCTIVE — irreversible.** All user settings are wiped; device reboots. Run this test only on a headset that can be reconfigured afterwards.
+
+Use `python src/scripts/test_cli.py --command factory-reset` (requires `--confirm` flag or interactive confirmation).
+
+| # | Test | Command | Expected | Status |
+|---|------|---------|----------|--------|
+| 11.1 | Packet encoding | Unit test | `transport.write` called with `[0x06, 0xFD]` and no `0x09` follows | ✅ (unit) |
+| 11.2 | Physical factory reset | `h.factory_reset()` on live device | Device disconnects and reboots; all settings return to factory defaults | ⬜ |
+| 11.3 | Settings cleared after reset | Re-query `0xB0` after reboot | Battery/ANC/etc. fields show factory defaults | ⬜ |
+| 11.4 | No `0x09` sent | Packet trace / unit test | Exactly one write call (`0xFD`); no save packet follows | ✅ (unit) |
+
+---
+
 ## 9. Edge Cases
 
 | # | Test | Expected | Status |

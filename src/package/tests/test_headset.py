@@ -373,3 +373,19 @@ class TestSetAutoOffTimeout:
     def test_save_called(self, mock_headset, mock_transport):
         mock_headset.set_auto_off_timeout(TimeoutStep.OFF)
         mock_transport.write.assert_called_with(C.CMD_SAVE)
+
+
+class TestFactoryReset:
+    def test_sends_correct_opcode(self, mock_headset, mock_transport):
+        mock_headset.factory_reset()
+        mock_transport.write.assert_called_once_with(C.CMD_FACTORY_RESET)
+
+    def test_no_save_sent(self, mock_headset, mock_transport):
+        mock_headset.factory_reset()
+        calls = mock_transport.write.call_args_list
+        sent_cmds = [c[0][0] for c in calls]
+        assert C.CMD_SAVE not in sent_cmds, "0x09 save must NOT be sent after factory reset"
+
+    def test_exactly_one_write(self, mock_headset, mock_transport):
+        mock_headset.factory_reset()
+        assert mock_transport.write.call_count == 1

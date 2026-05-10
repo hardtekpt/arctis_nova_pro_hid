@@ -233,6 +233,16 @@ Set the headset home screen layout (detailed or simple).
 #### `set_auto_off_timeout(step: TimeoutStep) → None`
 Set the auto power-off timeout.
 
+#### `factory_reset() → None`
+Reset the headset to factory defaults (command `0xFD`).
+
+> **⚠ DESTRUCTIVE — irreversible.** All settings (EQ presets, ANC mode, volume, timeouts, BT config, OLED settings, etc.) are wiped. The device disconnects and reboots immediately. This command does **not** send a `0x09` save afterwards.
+
+```python
+with discover() as h:
+    h.factory_reset()   # device will disconnect; context manager exit is a no-op
+```
+
 ---
 
 ### Event Mode

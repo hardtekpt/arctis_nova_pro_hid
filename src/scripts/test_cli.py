@@ -40,6 +40,9 @@ Usage examples (all arguments use -- notation):
     python scripts/test_cli.py --command bt-default --state on
     python scripts/test_cli.py --command bt-auto-mute --mode off
 
+    # Section 11 — factory reset (DESTRUCTIVE)
+    python scripts/test_cli.py --command factory-reset --confirm
+
     # Section 10 — OLED (requires Pillow)
     python scripts/test_cli.py --command oled-text --text "Hello"
     python scripts/test_cli.py --command oled-text --text "Hi" --x 10 --y 20 --invert
@@ -650,6 +653,26 @@ def cmd_edge_mic_vol_oob(args) -> None:
         )
 
 
+# ── Factory reset handler — TestChecklist §11 ─────────────────────────────
+
+def cmd_factory_reset(args) -> None:
+    if not getattr(args, "confirm", False):
+        sys.exit(
+            "error: --command factory-reset requires --confirm\n"
+            "  This command ERASES ALL SETTINGS and reboots the device.\n"
+            "  Add --confirm to proceed."
+        )
+    print(
+        "\n"
+        "  ⚠  WARNING: FACTORY RESET\n"
+        "  All headset settings will be erased and the device will reboot.\n"
+        "  This cannot be undone.\n"
+    )
+    with discover() as h:
+        h.factory_reset()
+    print("Done. The device has disconnected and is rebooting to factory defaults.")
+
+
 # ── Interactive mode ───────────────────────────────────────────────────────
 
 def _imenu(title: str, options: list[str], is_root: bool = False) -> int | None:
@@ -1084,6 +1107,27 @@ def _isub_edge(verify: bool) -> None:
             _irun(cmd_edge_mic_vol_oob, value=val, verify=verify)
 
 
+def _isub_factory_reset(_verify: bool) -> None:
+    print(
+        "\n"
+        "  !! FACTORY RESET !!\n"
+        "  This will ERASE ALL SETTINGS and reboot the device.\n"
+        "  There is no undo.\n"
+    )
+    confirm = _iask("Type 'yes' to confirm", "no")
+    if confirm.lower() != "yes":
+        print("  Aborted.")
+        input("  Press Enter to continue...")
+        return
+    try:
+        with discover() as h:
+            h.factory_reset()
+        print("  Done. Device is rebooting to factory defaults.")
+    except Exception as exc:
+        print(f"  Error: {exc}")
+    input("  Press Enter to continue...")
+
+
 def _interactive_mode() -> None:
     verify = False
     categories: list[tuple[str, object]] = [
@@ -1095,6 +1139,7 @@ def _interactive_mode() -> None:
         ("EQ settings",       _isub_eq),
         ("OLED display",      _isub_oled),
         ("Edge cases",        _isub_edge),
+        ("Factory reset ⚠",  _isub_factory_reset),
     ]
     print()
     print("  Arctis Nova Pro -- Interactive Test CLI")
@@ -1126,6 +1171,7 @@ _ALL_COMMANDS = [
     "oled-clear", "oled-release", "oled-text", "oled-scroll",
     "oled-img", "oled-anim", "oled-gif",
     "edge-volume-min", "edge-volume-max", "edge-sidetone-oob", "edge-mic-vol-oob",
+    "factory-reset",
 ]
 
 _REQUIRED: dict[str, list[str]] = {
@@ -1252,6 +1298,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--fps",       type=float,               help="Frames/sec (scroll default 20, anim default 10, gif default=embedded)  [oled-scroll | oled-anim | oled-gif]")
     p.add_argument("-l", "--loops", type=int, default=1,   help="Loop count, -1=infinite  [oled-anim | oled-gif]")
     p.add_argument("--threshold", type=int,   default=128,  help="Binarize threshold 0-255  [oled-img | oled-anim | oled-gif]")
+    p.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Required acknowledgement for destructive commands  [factory-reset]",
+    )
 
     return p
 
@@ -1294,6 +1345,7 @@ _HANDLERS = {
     "edge-volume-max":    cmd_edge_volume_max,
     "edge-sidetone-oob":  cmd_edge_sidetone_oob,
     "edge-mic-vol-oob":   cmd_edge_mic_vol_oob,
+    "factory-reset":      cmd_factory_reset,
 }
 
 

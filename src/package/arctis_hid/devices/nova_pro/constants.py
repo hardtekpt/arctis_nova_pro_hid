@@ -41,6 +41,7 @@ CMD_STREAM_VOLS  = 0x47   # stream volumes multi-byte [main, 0x00, aux, mic]
 CMD_EQ_PRESET    = 0x2E   # EQ preset index (0x04=custom)
 CMD_EQ_BANDS     = 0x33   # custom EQ bands — 10 bytes at [2–11], each 0–40
 CMD_SAVE         = 0x09   # persist all writes to flash — always send after writes
+CMD_FACTORY_RESET = 0xFD  # ⚠ factory reset — erases all settings; do NOT send 0x09 after
 
 # ── OLED commands (feature reports, not interrupt writes) ──────────────────
 # Protocol confirmed; pixel format and display geometry to be verified by capture.

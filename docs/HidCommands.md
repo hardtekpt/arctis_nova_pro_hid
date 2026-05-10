@@ -874,8 +874,17 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0x2E` | Select EQ preset / custom | `[2]` | 0–18 | `0x04`=custom EQ; `0x00–0x03` and `0x05–0x18` = named presets (19 total). Same encoding as event (§3.21) ✅ |
 | `0x33` | Set custom EQ band levels | `[2–11]` = 10 band values | 0–40 each | `[0x06, 0x33, b1, b2, ..., b10, 0x00×52]`; 20=flat/0 dB; no profile prefix; switch to custom EQ first (`0x2E` `0x04`) ✅ |
 | `0x09` | Save / persist | — | — | Call after any write to commit to flash ✅ |
+| `0xFD` | **Factory reset** ⚠ | — | — | **DESTRUCTIVE — irreversible.** Erases all settings and reboots the device. Do **NOT** send `0x09` after this. Confirmed `2026-05-10`. ✅ |
 
-### 6.4 Candidate Write Commands 🔬
+### 6.4 Factory Reset — `0xFD` ✅
+
+Confirmed `2026-05-10`. Sending `[0x06, 0xFD, 0x00×62]` triggers a full factory reset on the device. **Do not send `0x09` (save) after this command** — the device erases and reboots on its own.
+
+> **⚠ DESTRUCTIVE AND IRREVERSIBLE.** All user settings (EQ presets, ANC mode, volume, timeouts, BT configuration, OLED settings, etc.) are wiped. The device will disconnect from the host and reboot to factory defaults. There is no recovery path.
+
+---
+
+### 6.5 Candidate Write Commands 🔬
 
 Not yet verified on Nova Pro. Origin: Arctis Nova 7X protocol + HeadsetControl.
 
@@ -889,7 +898,7 @@ Not yet verified on Nova Pro. Origin: Arctis Nova 7X protocol + HeadsetControl.
 `0xB9` is confirmed as both the incoming event and the write command for transparency level.
 Both are now listed in §6.3.
 
-### 6.5 Candidate EQ Commands 🔬
+### 6.6 Candidate EQ Commands 🔬
 
 | Command | Description | Notes |
 |---|---|---|

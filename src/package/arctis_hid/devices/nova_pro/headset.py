@@ -173,6 +173,15 @@ class ArctisNovaProWireless(AbstractHeadset):
         self._transport.write(C.CMD_AUTO_OFF, [int(step)])
         self._save()
 
+    def factory_reset(self) -> None:
+        """Reset the headset to factory defaults (command 0xFD).
+
+        **DESTRUCTIVE — irreversible.** All settings (EQ, ANC, volume, timeouts,
+        BT config, etc.) are wiped. The device will disconnect and reboot.
+        Do NOT call _save() (0x09) after this command.
+        """
+        self._transport.write(C.CMD_FACTORY_RESET)
+
     # ── event mode ─────────────────────────────────────────────────────────
 
     def on(self, event: str, callback: Callable) -> None:

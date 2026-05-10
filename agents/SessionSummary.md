@@ -162,6 +162,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 | `0x2E` | EQ preset select | 0–24 (0x04=custom) |
 | `0x33` | Custom EQ bands | 10 bytes at [2–11], 0–40, 20=flat |
 | `0x09` | Save / persist | — always send after writes |
+| `0xFD` | **Factory reset** ⚠ | **DESTRUCTIVE** — erases all settings, reboots device; do NOT send `0x09` after. Confirmed 2026-05-10. |
 
 ### OLED commands (confirmed, implemented in `oled.py`)
 
@@ -233,6 +234,13 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 2. **Interrogating an unknown opcode first is faster than diffing `0xB0`.** Rather than assuming all settings are in known queries, sending `0x80` as a raw query and inspecting all response bytes found the answer in one shot.
 3. **The timeout step encoding is reused verbatim across dim screen (`0x80[2]`), auto-off (`0xB0[12]`), and both write/event commands (`0x83`/`0xC1`)**. The `TimeoutStep` enum captures this shared encoding.
 4. **`0xB0[11]` is mic LED brightness** — was mistakenly labelled "unknown" early in the session; the `listen.py` decode already printed it correctly.
+
+---
+
+## Phase 1 session-10 key lessons (2026-05-10)
+
+1. **`0xFD` triggers a factory reset.** Sending `[0x06, 0xFD, 0x00×62]` on Col01 causes the device to erase all settings and reboot. No `0x09` (save) should follow — the device acts immediately. This is the only confirmed command that requires no save and is irreversible. All other write commands follow the standard send+save pattern.
+2. **Discovery pattern for destructive commands.** `probe_query_scan.py` flagged `0xFD` as a response-returning opcode during an all-256 scan. The side effect (factory reset) was only evident after power-cycling the headset — the scan result alone would not distinguish it from a harmless query.
 
 ---
 
