@@ -36,7 +36,7 @@ python src/scripts/listen.py --no-query  # listen-only, no writes
 **Key internals:**
 - Opens both `0xFFC0` (control) and `0xFF00` (events) handles via `hidapi`
 - Polls both at 50 ms intervals
-- Runs the startup query set: `0xB0`, `0x20`, `0x10`, `0x12`
+- Runs the startup query set: `0xB0`, `0x20`, `0x10`, `0x12`, `0x80`
 - Packet decoder lives in `decode_packet()` — imported by `probe_write.py`
 
 ---
@@ -70,7 +70,7 @@ python src/scripts/probe_write.py --cmd 0x25 --param 0x1C --no-save
 ```
 
 **Discovery workflow:**
-1. Run `probe_b0_diff.py` while toggling a GG setting to identify which `0xB0` byte changes.
+1. Run `probe_full_diff.py` while toggling a GG setting to identify which `0xB0`/`0x20` byte changes.
 2. Run `probe_write.py --cmd <candidate> --param <value>` and observe `[DIFF]` output.
 3. If the same byte changes, the command is confirmed.
 
@@ -104,7 +104,7 @@ python src/scripts/probe_full_diff.py
 python src/scripts/probe_query_scan.py
 ```
 
-**Output:** Prints each opcode that returned a non-zero response with the raw bytes. Unknown responses are candidates for deeper investigation with `probe_write.py` or `probe_b0_diff.py`.
+**Output:** Prints each opcode that returned a non-zero response with the raw bytes. Unknown responses are candidates for deeper investigation with `probe_write.py` or `probe_full_diff.py`.
 
 **Caution:** Sending unknown write commands (as opposed to queries) can change device settings. This script only sends read-style packets but some opcodes may trigger side effects.
 
@@ -233,9 +233,10 @@ python src/scripts/test_cli.py --verify --command <CMD> [flags...]
 
 **Query commands (§2):**
 ```bash
-python src/scripts/test_cli.py --command query    # all four queries at once
+python src/scripts/test_cli.py --command query    # all queries at once (0xB0/0x20/0x80/0x10/0x12)
 python src/scripts/test_cli.py --command status   # 0xB0 status packet
 python src/scripts/test_cli.py --command miceq    # 0x20 mic/EQ packet
+python src/scripts/test_cli.py --command display  # 0x80 base-station display packet
 ```
 
 **Event listener (§1):**
@@ -286,3 +287,27 @@ python src/scripts/test_cli.py --command edge-mic-vol-oob  --value 0x00
 ```
 
 **`--verify` behaviour:** When passed, the script queries the relevant field before and after the write and prints `before → after [OK/UNEXPECTED]`. Commands with no query-reflected field print a note to verify visually or via `--command listen`.
+
+---
+
+## probe_sonar_api.py
+
+**Purpose:** Query the SteelSeries GG Sonar local REST API to discover EQ preset names and audio configuration data. Reads `coreProps.json` to find the Sonar HTTPS address, then queries the `/configs` and `/configs/selected` endpoints.
+
+This is a supplementary discovery tool for mapping EQ preset indices to human-readable names (the HID `0x2E`/`0x20[6]` preset index → name mapping is not exposed over HID). GG Sonar runs a local HTTPS server with a self-signed certificate; the script ignores certificate errors.
+
+**Usage:**
+```bash
+python src/scripts/probe_sonar_api.py
+python src/scripts/probe_sonar_api.py --endpoint /configs/selected
+python src/scripts/probe_sonar_api.py --endpoint /volumeSettings/classic
+```
+
+**Flags:**
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--endpoint` | No | Extra endpoint to fetch in addition to `/configs`, `/configs/selected`, `/features` |
+
+**Output:** JSON responses from each endpoint, pretty-printed. Any `HTTP 404` or connection error is printed with context rather than crashing.
+
+**Requirements:** SteelSeries GG / Engine 3 must be running. `coreProps.json` must exist at `C:\ProgramData\SteelSeries\SteelSeries Engine 3\coreProps.json`. No additional pip packages — uses Python stdlib only.

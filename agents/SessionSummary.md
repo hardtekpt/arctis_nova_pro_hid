@@ -43,6 +43,7 @@ src/
     probe_query_scan.py # scan all 256 opcodes as potential query commands
     find_usb_bus.py     # identify which Wireshark USBPcap interface to use
     parse_gg_capture.py # decode a Wireshark .json/.pcapng capture of GG traffic
+    probe_sonar_api.py  # query GG Sonar REST API for EQ preset names and audio config
     test_cli.py         # unified test CLI covering TestChecklist.md
   api/
     __init__.py         # original stub — superseded by src/package/
