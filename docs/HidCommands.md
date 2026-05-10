@@ -736,8 +736,8 @@ Enables or disables the ChatMix feature on the base station.
 | `connected` | `0xB5` event | `boolean \| null` |
 | `wireless` | `0xB5` event | `boolean \| null` |
 | `bluetooth` | `0xB5` event | `boolean \| null` |
-| `connectivity_mode` | `0xB5` query `[3]`, `0xB0[4]` | `ConnectivityMode \| null` |
-| `bt_connected` | `0xB5` query `[4]` | `boolean \| null` |
+| `connectivity_mode` | `0xB5` query `[2]`, `0xB0[4]` | `ConnectivityMode \| null` |
+| `bt_connected` | `0xB5` query `[3]` | `boolean \| null` |
 | `oled_brightness` | `0x85`, `0x80`[3] | `number \| null` (1–10) |
 | `chatmix_game` | `0x45`, `0x20`[20] | `number \| null` (0–100) |
 | `chatmix_chat` | `0x45`, `0x20`[21] | `number \| null` (0–100) |
@@ -832,9 +832,8 @@ Response: `[0x06, 0xB5, ?, conn_mode, bt_connected, ...]`
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0xB5` | Command echo |
-| 2 | unknown | Not yet decoded |
-| 3 | `0x01` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT (same values as `0xB5` event `[2]` and `0xB0[4]`) ✅ |
-| 4 | `0x00` / `0x01` | **BT device connected** — `0x01`=BT device currently connected, `0x00`=not connected ✅ |
+| 2 | `0x01` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT (same values as `0xB5` event `[2]` and `0xB0[4]`) ✅ |
+| 3 | `0x01` / `0x02` | **BT device connected** — `0x01`=BT device currently connected, `0x02`=not connected ✅ |
 
 #### `0x80` — Base-Station Display Settings ✅
 

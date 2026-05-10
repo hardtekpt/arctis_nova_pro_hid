@@ -58,8 +58,8 @@ OLED_HEIGHT            = 64     # confirmed via ggoled source (ggoled SCREEN_HEI
 
 # ── 0xB5 response byte indices ─────────────────────────────────────────────
 
-B5_CONN         = 3   # 0x01=2.4GHz only  0x04=2.4GHz+BT (ConnectivityMode)
-B5_BT_CONNECTED = 4   # 0x01=BT device connected  0x00=not connected
+B5_CONN         = 2   # 0x01=2.4GHz only  0x04=2.4GHz+BT (ConnectivityMode)
+B5_BT_CONNECTED = 3   # 0x01=BT device connected  0x02=not connected
 
 # ── 0xB0 response byte indices ─────────────────────────────────────────────
 

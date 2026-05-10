@@ -99,7 +99,7 @@ def make_80_packet(
 
 def make_b5_packet(
     conn: int = 0x01,
-    bt_connected: int = 0x00,
+    bt_connected: int = 0x02,
 ) -> list[int]:
     """Build a fake 0xB5 connectivity query response packet (64 bytes)."""
     pkt = [0] * 64

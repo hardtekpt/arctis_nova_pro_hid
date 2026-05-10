@@ -332,7 +332,7 @@ class TestDecodeConnectivityPacket:
         assert decode_connectivity_packet(pkt).bt_connected is True
 
     def test_bt_connected_false(self):
-        pkt = make_b5_packet(bt_connected=0x00)
+        pkt = make_b5_packet(bt_connected=0x02)
         assert decode_connectivity_packet(pkt).bt_connected is False
 
 
