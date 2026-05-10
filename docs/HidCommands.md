@@ -766,7 +766,7 @@ All queries use: `[0x06, cmdByte, 0x00, ..., 0x00]` (64 bytes). Confirmed in ses
 
 #### `0xB0` — Status ✅
 
-Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, anc, mic_led, ...]`
+Response: `[0x06, 0xB0, bt_default, bt_auto_mute, conn_mode, bt_state, headset_bat, dock_bat, transparency, mic_mute, anc, mic_led, auto_off, wireless_mode, 0x08, 0x08]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
@@ -788,7 +788,7 @@ Response: `[0x06, 0xB0, ?, ?, conn, bt, headset_bat, dock_bat, 0x08, mic_mute, a
 
 #### `0x20` — Mic / EQ Params ✅
 
-Response: `[0x06, 0x20, ?, vol_raw, gain, 0, eq_preset, eq×10, mic_vol, sidetone, audio_out, game, chat, stream_main, 0, stream_aux, stream_mic, ...]`
+Response: `[0x06, 0x20, 0x01, vol_raw, gain, 0x00, eq_preset, eq_b1..b10, mic_vol, sidetone, audio_out, game, chat, stream_main, 0x00, stream_aux, stream_mic]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
@@ -824,7 +824,7 @@ Response bytes `[2+]`: null-terminated ASCII string, e.g. `'6152048313222500747'
 
 Confirmed `2026-05-09`. Returns dim screen timeout, OLED brightness, and home screen mode — the three settings displayed in GG that were not present in `0xB0` or `0x20`.
 
-Response: `[0x06, 0x80, dim_timeout, oled_brightness, ?, home_screen, ...]`
+Response: `[0x06, 0x80, dim_timeout, oled_brightness, ?, home_screen]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
