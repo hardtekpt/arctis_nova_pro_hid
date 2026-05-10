@@ -89,6 +89,9 @@ Run `python src/listen.py` and check the startup output lines.
 | 2.12 | `0x20` Mic/EQ | `eq_bands` | 10 hex values; `14 14 14 14 14 14 14 14 14 14` = flat | ⬜ |
 | 2.13 | `0x10` Firmware | ASCII string | Firmware version string present, no garbage | ⬜ |
 | 2.14 | `0x12` Serial | ASCII string | Serial number string present | ⬜ |
+| 2.15 | `0x80` Display | `dim_timeout` | Matches base-station dim screen timeout setting | ⬜ |
+| 2.16 | `0x80` Display | `oled_brightness` | 1–10, matches current OLED brightness in GG | ⬜ |
+| 2.17 | `0x80` Display | `home_screen_mode` | `detailed` or `simple`, matches GG setting | ⬜ |
 
 ---
 

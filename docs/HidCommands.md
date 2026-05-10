@@ -736,14 +736,14 @@ Enables or disables the ChatMix feature on the base station.
 | `connected` | `0xB5` | `boolean \| null` |
 | `wireless` | `0xB5` | `boolean \| null` |
 | `bluetooth` | `0xB5` | `boolean \| null` |
-| `oled_brightness` | `0x85` | `number \| null` (1–10) — **no known query byte**; `0xB0[14–15]` are candidates |
+| `oled_brightness` | `0x85`, `0x80`[3] | `number \| null` (1–10) |
 | `chatmix_game` | `0x45`, `0x20`[20] | `number \| null` (0–100) |
 | `chatmix_chat` | `0x45`, `0x20`[21] | `number \| null` (0–100) |
 | `transparency_level` | `0xB9`, `0xB0`[8] | `number \| null` (1–10) |
 | `gain_level` | `0x27`, `0x20`[4] | `number \| null` (1=low, 2=high) |
 | `mic_volume` | `0x37`, `0x20`[17] | `number \| null` (1–10) |
-| `dim_screen_timeout` | `0x83` | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
-| `home_screen_mode` | `0x89` | `number \| null` (0 or 1) |
+| `dim_screen_timeout` | `0x83`, `0x80`[2] | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
+| `home_screen_mode` | `0x89`, `0x80`[5] | `number \| null` (0 or 1) |
 | `mic_led_brightness` | `0xBF`, `0xB0`[11] | `number \| null` (1–10) |
 | `auto_off_timeout` | `0xC1`, `0xB0`[12] | `number \| null` (0–6; 0=off, 1=1 min … 6=60 min) |
 | `wireless_2ghz_mode` | `0xC3`, `0xB0`[13] | `"performance" \| "range" \| null` |
