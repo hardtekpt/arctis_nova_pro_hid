@@ -102,11 +102,32 @@ python src/scripts/probe_full_diff.py
 **Usage:**
 ```bash
 python src/scripts/probe_query_scan.py
+python src/scripts/probe_query_scan.py --delay 0.15   # slower, more reliable
+python src/scripts/probe_query_scan.py --start 0x80   # resume from a specific opcode
 ```
 
-**Output:** Prints each opcode that returned a non-zero response with the raw bytes. Unknown responses are candidates for deeper investigation with `probe_write.py` or `probe_full_diff.py`.
+**Flags:**
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--delay` | `0.12` | Seconds to wait for a response after each query |
+| `--start` | `0x00` | First opcode to scan |
+| `--end` | `0xFF` | Last opcode to scan (inclusive) |
 
-**Caution:** Sending unknown write commands (as opposed to queries) can change device settings. This script only sends read-style packets but some opcodes may trigger side effects.
+**Output:**
+- `KNOWN:` — one of the confirmed query commands (`0xB0`, `0x20`, `0x10`, `0x12`, `0x80`)
+- `RESPONSIVE:` — new hit with full 64-byte hex dump
+- `.` — no response (safe/silent opcode)
+- `[RESET]` — the command caused the base station to disconnect
+
+**Reset detection:** If a query opcode causes the base station to disconnect (the `write()` or `read()` call throws `OSError`), the script:
+1. Logs `[RESET] 0xXX caused a disconnect` with the error message.
+2. Waits up to 30 s for the device to reappear and re-opens the handle.
+3. Queries firmware version (`0x10`) and prints whether it changed vs. the baseline recorded at startup.
+4. Resumes scanning from the next opcode.
+
+Reset opcodes are collected and printed in the final summary alongside any newly discovered responsive opcodes.
+
+**Caution:** Sending unknown write commands (as opposed to queries) can change device settings. This script only sends read-style packets but some opcodes may trigger side effects including device resets.
 
 ---
 
