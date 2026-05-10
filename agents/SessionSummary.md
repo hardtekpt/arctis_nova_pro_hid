@@ -113,7 +113,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 | `0xBD` | ANC mode | `[2]`=0 off, 1 transparency, 2 ANC | |
 | `0xBB` | Mic mute | `[2]`=0 unmuted, 1 muted | Hardware button only |
 | `0x45` | ChatMix dial | `[2]`=game (0–100), `[3]`=chat (0–100) | Only fires when ChatMix enabled (`0x49`) |
-| `0x27` | Gain level | `[2]`=1 low, 2 high | Inverted vs write encoding |
+| `0x27` | Gain level | `[2]`=1 low, 2 high | Same encoding as write |
 | `0x37` | Mic volume | `[2]`=level (1–10) | |
 | `0x83` | Dim screen timeout | `[2]`=0–6 | |
 | `0x89` | Home screen mode | `[2]`=0 detailed, 1 simple | |
@@ -152,7 +152,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 | `0x89` | Home screen mode | 0–1 |
 | `0xBF` | Mic LED brightness | 1–10 |
 | `0xC1` | Auto off timeout | 0–6 |
-| `0x27` | Gain | 0=high, 1=low (**inverted** vs event/query) |
+| `0x27` | Gain | 1=low, 2=high (same encoding as event/query) |
 | `0x49` | ChatMix enable | 0–1 |
 | `0xC3` | 2.4 GHz mode | 0–1 (silent — no Col02 event) |
 | `0xB2` | BT default | 0–1 |
@@ -176,7 +176,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 ## Phase 1 key lessons
 
 1. **Event opcode = write opcode** — without exception across all confirmed commands.
-2. **`0x27` gain is the only encoding asymmetry found** — write `0x00`=high, but event/query use `0x02`=high.
+2. **No write/event encoding asymmetry found** — `0x27` gain uses `0x01`=low, `0x02`=high consistently across write, event, and query.
 3. **Some writes are silent** — `0xC3` produces no Col02 event; verify via re-querying `0xB0[13]`.
 4. **Always diff all 64 bytes of `0xB0`** in probes, not just `[10]`. Early probes missed `0xB2`.
 5. **Trust confirmed write values over inferred event mapping.** `0xB3` was initially decoded wrong from log sequence.
@@ -208,7 +208,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 
 ## Phase 2 key lessons (2026-05-03)
 
-1. **Separate codec layer from the API layer.** All byte-level encoding quirks (inverted volume, asymmetric gain, battery scaling, `0x10` noise filter) live in `codec.py`. The headset class never touches raw bytes — it calls codec helpers. This made the headset class straightforward to write and easy to audit.
+1. **Separate codec layer from the API layer.** All byte-level encoding quirks (inverted volume, battery scaling, `0x10` noise filter) live in `codec.py`. The headset class never touches raw bytes — it calls codec helpers. This made the headset class straightforward to write and easy to audit.
 
 2. **Create the AbstractOled interface before the implementation exists.** By defining `AbstractOled` and stubbing `headset.oled → None` now, the public API contract is set. Phase 3 just wires in the concrete class without breaking any callers.
 
@@ -218,7 +218,7 @@ Rule: auto-merge feature → development; only merge to master when the user exp
 
 5. **Auto-select custom EQ preset before writing bands.** `set_eq_bands()` internally sends `CMD_EQ_PRESET 0x04` before `CMD_EQ_BANDS`. Without this the write silently does nothing. Encapsulate the multi-step protocol in one method to prevent user footguns.
 
-6. **Encode `GainLevel` as LOW=0/HIGH=1 in the enum, then invert at the write boundary.** `encode_gain(GainLevel.HIGH) → 0x00`. Keeping the enum semantically correct (LOW < HIGH) and inverting only at the codec edge is cleaner than an inverted enum.
+6. **Encode `GainLevel` as LOW=0/HIGH=1 in the enum.** `encode_gain(GainLevel.HIGH) → 0x02`, matching the event/query encoding. Keeping the enum semantically correct (LOW < HIGH) makes the codec straightforward.
 
 7. **Daemon threads for the event loop.** `start()` creates a `daemon=True` thread so the process can exit cleanly even if `stop()` is never called. `listen()` simply calls `start()` + `thread.join()`.
 

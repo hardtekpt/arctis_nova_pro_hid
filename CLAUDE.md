@@ -171,7 +171,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0x89` | Set home screen mode | 0–1 | 0=detailed, 1=simple |
 | `0xBF` | Set mic LED brightness | 1–10 | |
 | `0xC1` | Set auto off timeout | 0–6 | 0=off; 1–6 = 1/5/10/15/30/60 min |
-| `0x27` | Set gain | 0–1 | **0=high, 1=low** ⚠ inverted vs event/query |
+| `0x27` | Set gain | 1–2 | 1=low, 2=high (same as event/query) |
 | `0x49` | ChatMix enable | 0–1 | 0=disable, 1=enable |
 | `0xC3` | Set 2.4 GHz mode | 0–1 | 0=performance/speed, 1=extended range |
 | `0xB2` | Set BT default | 0–1 | 0=off, 1=on |
@@ -215,7 +215,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 - **Open both handles**: Col01 (`0xFFC0`) for queries/writes; Col02 (`0xFF00`) for events. Use `device.set_nonblocking(1)` and poll at ~50 ms.
 - **Save after writes**: `0x09` is confirmed required on Nova Pro — settings revert on power cycle without it.
-- **`0x27` gain encoding asymmetry**: write uses `0x00`=high / `0x01`=low; incoming event and `0x20` query use `0x01`=low / `0x02`=high. Abstract this in the API.
+- **`0x27` gain encoding**: `0x01`=low, `0x02`=high — identical for write, incoming event, and `0x20` query. No asymmetry.
 - **`0x10` noise**: device pushes unsolicited firmware version packets on Col01 when headset wirelessly reconnects — filter by checking `data[1] == 0x10`.
 - **ChatMix**: `0x45` events only fire when ChatMix is enabled (`0x49` param `0x01`).
 - **Volume write**: `0x25` confirmed writable with the same inverted encoding as the event.
