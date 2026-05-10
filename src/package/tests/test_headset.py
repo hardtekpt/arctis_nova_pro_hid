@@ -180,9 +180,9 @@ class TestSetOledBrightness:
 
 
 class TestSetGain:
-    def test_high_encodes_to_0x00(self, mock_headset, mock_transport):
+    def test_high_encodes_to_0x02(self, mock_headset, mock_transport):
         mock_headset.set_gain(GainLevel.HIGH)
-        mock_transport.write.assert_any_call(C.CMD_GAIN, [0x00])
+        mock_transport.write.assert_any_call(C.CMD_GAIN, [0x02])
 
     def test_low_encodes_to_0x01(self, mock_headset, mock_transport):
         mock_headset.set_gain(GainLevel.LOW)

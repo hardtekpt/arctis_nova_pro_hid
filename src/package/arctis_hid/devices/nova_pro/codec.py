@@ -64,12 +64,10 @@ def decode_battery(raw: int) -> float:
 
 
 # ── Gain ───────────────────────────────────────────────────────────────────
-# Write encoding is inverted relative to event/query encoding.
-# Write:       0x00 = high,  0x01 = low
-# Event/query: 0x01 = low,   0x02 = high
+# Write, event, and query all use the same encoding: 0x01 = low, 0x02 = high.
 
 def encode_gain(level: GainLevel) -> int:
-    return 0x00 if level == GainLevel.HIGH else 0x01
+    return 0x02 if level == GainLevel.HIGH else 0x01
 
 
 def decode_gain_query(raw: int) -> GainLevel:

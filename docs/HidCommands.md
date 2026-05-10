@@ -864,7 +864,7 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0x89` | Set home screen mode | `[2]` | 0–1 | `0x00`=detailed, `0x01`=simple; also the incoming event byte (§3.12) ✅ |
 | `0xBF` | Set mic LED brightness | `[2]` | 1–10 | Also the incoming event byte (§3.13) ✅ |
 | `0xC1` | Set auto off timeout | `[2]` | 0–6 | `0`=off, `1`=1 min, `2`=5 min, `3`=10 min, `4`=15 min, `5`=30 min, `6`=60 min; also the incoming event byte (§3.14) ✅ |
-| `0x27` | Set gain level | `[2]` | 0–1 | **Write encoding differs from event encoding:** `0x00`=high, `0x01`=low. Incoming event (§3.9) uses `0x01`=low, `0x02`=high ✅ |
+| `0x27` | Set gain level | `[2]` | 1–2 | `0x01`=low, `0x02`=high — same encoding as event (§3.9) and `0x20[4]` query ✅ |
 | `0x49` | ChatMix enable/disable | `[2]` | 0–1 | `0x00`=disable, `0x01`=enable; `0x45` dial events only fire when enabled (§4.3) ✅ |
 | `0xC3` | Set 2.4 GHz mode | `[2]` | 0–1 | `0x00`=performance/speed, `0x01`=extended range; `0xB0[13]` reflects current value; also the incoming event byte (§3.16) ✅ |
 | `0xB2` | Set Bluetooth default | `[2]` | 0–1 | `0x00`=off, `0x01`=on; also the incoming event byte (§3.20) ✅ |

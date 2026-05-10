@@ -182,7 +182,7 @@ Set the transparency (ambient sound) level. `level`: 1–10. Only has an audible
 Set OLED display brightness. `level`: 1–10.
 
 #### `set_gain(level: GainLevel) → None`
-Set microphone gain. Note: wire encoding is **inverted** vs. the event/query encoding — this is handled internally.
+Set microphone gain.
 
 #### `set_mic_led_brightness(level: int) → None`
 Set the brightness of the mic mute LED indicator. `level`: 1–10.
@@ -594,7 +594,7 @@ class GainLevel(IntEnum):
     LOW  = 0
     HIGH = 1
 ```
-**Important:** The wire encoding for writes is **inverted** (`0x00`=HIGH, `0x01`=LOW). The package handles this transparently — always use `GainLevel.LOW` / `GainLevel.HIGH`.
+Wire encoding: `0x01`=LOW, `0x02`=HIGH (same for write, event, and query).
 
 ### `SidetoneLevel`
 Mic monitoring volume in headset.

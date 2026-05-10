@@ -98,8 +98,8 @@ class TestDecodeBattery:
 
 
 class TestEncodeGain:
-    def test_high_maps_to_0x00(self):
-        assert encode_gain(GainLevel.HIGH) == 0x00
+    def test_high_maps_to_0x02(self):
+        assert encode_gain(GainLevel.HIGH) == 0x02
 
     def test_low_maps_to_0x01(self):
         assert encode_gain(GainLevel.LOW) == 0x01
@@ -112,10 +112,9 @@ class TestDecodeGainQuery:
     def test_raw_0x02_is_high(self):
         assert decode_gain_query(0x02) == GainLevel.HIGH
 
-    def test_write_high_then_query_reads_high(self):
-        # encode_gain(HIGH)=0x00, but query uses 0x02 for HIGH — they're different
-        # This test documents the intentional asymmetry: write 0x00, read back 0x02
-        assert encode_gain(GainLevel.HIGH) != decode_gain_query(0x02).value
+    def test_write_high_matches_query_encoding(self):
+        # write and query both use 0x02 for HIGH — no asymmetry
+        assert encode_gain(GainLevel.HIGH) == 0x02
         assert decode_gain_query(0x02) == GainLevel.HIGH
 
 
