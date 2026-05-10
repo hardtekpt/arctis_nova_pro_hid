@@ -102,8 +102,9 @@ python src/scripts/probe_full_diff.py
 **Usage:**
 ```bash
 python src/scripts/probe_query_scan.py
-python src/scripts/probe_query_scan.py --delay 0.15   # slower, more reliable
-python src/scripts/probe_query_scan.py --start 0x80   # resume from a specific opcode
+python src/scripts/probe_query_scan.py --delay 0.15          # slower, more reliable
+python src/scripts/probe_query_scan.py --start 0x80          # resume from a specific opcode
+python src/scripts/probe_query_scan.py --check-settings      # detect per-opcode mutations
 ```
 
 **Flags:**
@@ -112,22 +113,40 @@ python src/scripts/probe_query_scan.py --start 0x80   # resume from a specific o
 | `--delay` | `0.12` | Seconds to wait for a response after each query |
 | `--start` | `0x00` | First opcode to scan |
 | `--end` | `0xFF` | Last opcode to scan (inclusive) |
+| `--check-settings` | off | Snapshot and diff all known settings after every probe |
 
-**Output:**
+**Output labels:**
 - `KNOWN:` — one of the confirmed query commands (`0xB0`, `0x20`, `0x10`, `0x12`, `0x80`)
-- `RESPONSIVE:` — new hit with full 64-byte hex dump
-- `.` — no response (safe/silent opcode)
+- `RESPONSIVE:` — new opcode that returned non-trivial data; full 64-byte hex dump
+- `MUTATING:` — no response data, but settings changed (only with `--check-settings`)
+- `.` — no response, no settings change (silent/benign opcode)
 - `[RESET]` — the command caused the base station to disconnect
 
-**Reset detection:** If a query opcode causes the base station to disconnect (the `write()` or `read()` call throws `OSError`), the script:
+**Reset detection:** If an opcode causes the base station to disconnect (`OSError` on write or read), the script:
 1. Logs `[RESET] 0xXX caused a disconnect` with the error message.
 2. Waits up to 30 s for the device to reappear and re-opens the handle.
 3. Queries firmware version (`0x10`) and prints whether it changed vs. the baseline recorded at startup.
-4. Resumes scanning from the next opcode.
+4. With `--check-settings`, snapshots settings immediately after reconnect and shows what changed.
+5. Resumes scanning from the next opcode.
 
-Reset opcodes are collected and printed in the final summary alongside any newly discovered responsive opcodes.
+**Settings tracking (`--check-settings`):** After every probe, queries `0xB0` (status), `0x20` (mic/EQ), and `0x80` (display) and diffs the full response against the previous snapshot. This uses a rolling baseline — the "after" snapshot for opcode N becomes the "before" snapshot for opcode N+1, so each row in the summary shows only the incremental changes from that specific opcode. A `← N setting(s) changed` suffix is appended to KNOWN/RESPONSIVE/MUTATING lines inline. The final summary prints a full settings-change table:
 
-**Caution:** Sending unknown write commands (as opposed to queries) can change device settings. This script only sends read-style packets but some opcodes may trigger side effects including device resets.
+```
+SETTINGS CHANGES PER COMMAND (3 commands affected settings):
+
+  0x25  [RESPONSIVE]
+    headset_volume: 82% → 57%
+
+  0x39  [MUTATING]
+    sidetone: off → low
+
+  0x2E  [KNOWN]
+    eq_preset: preset 0x00 → custom
+```
+
+Fields tracked: all named fields from `0xB0[2–13]`, `0x20[3–25]`, and `0x80[2,3,5]`, with human-readable value formatting (battery as %, gain as low/high, timeouts as "5 min", etc.). Adds ~0.3 s overhead per opcode (~77 s extra over a full scan).
+
+**Caution:** Sending unknown opcodes as queries can change device settings. This script only sends read-style packets (no `0x09` save), but some opcodes trigger side effects including silent writes and device resets.
 
 ---
 
