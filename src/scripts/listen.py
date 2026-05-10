@@ -47,12 +47,14 @@ POLL_TIMEOUT = 50      # ms per handle per loop tick
 #   0x10: firmware version (ASCII string)
 #   0x12: serial number (ASCII string)
 #   0x80: base-station display (dim screen timeout, OLED brightness, home screen mode)
+#   0xB5: connectivity (connectivity mode [3], BT device connected [4])
 QUERY_COMMANDS = [
     (0xB0, "status        (battery, connectivity, ANC, BT, mic mute, mic LED, wireless mode)"),
     (0x20, "mic / EQ      (gain level, sidetone raw, 10 EQ band values)"),
     (0x10, "firmware ver  (ASCII string)"),
     (0x12, "serial number (ASCII string)"),
     (0x80, "display       (dim screen timeout, OLED brightness, home screen mode)"),
+    (0xB5, "connectivity  (connectivity mode [3], BT device connected [4])"),
 ]
 
 # ── Known incoming event decoders (confirmed on Nova Pro) ────────────────────
@@ -79,14 +81,24 @@ def decode_packet(data: list[int], source: str) -> str | None:
         return f"{tag}  Volume          → {pct}% (raw=0x{raw:02X})"
 
     if cmd == 0xB5 and len(data) > 4:
-        wireless  = data[4] == 8
-        bluetooth = data[3] == 1
-        # data[2]: 0x01 = 2.4 GHz only; 0x04 = 2.4 GHz + Bluetooth active
-        # data[3]: 0x01 = BT active; 0x02 = BT transitioning/paired not streaming
-        return (
-            f"{tag}  Connectivity    → wireless={wireless} bluetooth={bluetooth}"
-            f"  [2]=0x{data[2]:02X} [3]=0x{data[3]:02X}"
-        )
+        _CONN = {0x01: "2.4GHz", 0x04: "2.4GHz+BT"}
+        if source.strip() == "CTRL":
+            # Query response: [3]=connectivity mode, [4]=BT device connected
+            conn_mode    = _CONN.get(data[3], f"0x{data[3]:02X}")
+            bt_connected = data[4] == 0x01
+            return (
+                f"{tag}  Connectivity    → conn_mode={conn_mode}  bt_connected={bt_connected}"
+                f"  [3]=0x{data[3]:02X} [4]=0x{data[4]:02X}"
+            )
+        else:
+            # Incoming event: [2]=connectivity mode, [3]=BT state, [4]=wireless flag
+            wireless  = data[4] == 8
+            bluetooth = data[3] == 1
+            # data[3]: 0x01=BT active; 0x02=BT transitioning/paired not streaming
+            return (
+                f"{tag}  Connectivity    → wireless={wireless} bluetooth={bluetooth}"
+                f"  [2]=0x{data[2]:02X} [3]=0x{data[3]:02X}"
+            )
 
     if cmd == 0xB7 and len(data) > 3:
         h = round(min(100, data[2] / 8 * 100))
