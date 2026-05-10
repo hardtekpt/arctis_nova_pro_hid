@@ -149,10 +149,10 @@ Write a Python snippet for each (template at bottom of this section). Send the c
 | 4.2.5 | `0xBF` Mic LED brightness | `0x01`–`0x0A` | Send each level; confirm LED changes | Visual ✅ |
 | 4.2.6 | `0xC1` Auto off off | `0x00` | Send; leave idle | Headset stays on ✅ |
 | 4.2.7 | `0xC1` Auto off 5 min | `0x02` | Send; leave idle 5 min | Headset powers off ✅ |
-| 4.2.8 | `0x27` Gain high | `0x00` | Send; confirm gain is high | `0x20`[4] = `0x02`; `0x27` event fires with `0x02` ✅ |
+| 4.2.8 | `0x27` Gain high | `0x02` | Send; confirm gain is high | `0x20`[4] = `0x02`; `0x27` event fires with `0x02` ✅ |
 | 4.2.9 | `0x27` Gain low | `0x01` | Send; confirm gain is low | `0x20`[4] = `0x01`; `0x27` event fires with `0x01` ✅ |
 
-> **`0x27` write encoding note:** write param `0x00`=high, `0x01`=low — inverted from the event/query encoding (`0x01`=low, `0x02`=high).
+> **`0x27` write encoding:** `0x01`=low, `0x02`=high — same as event and query encoding.
 
 ### 4.3 ANC mode and transparency level writes
 
