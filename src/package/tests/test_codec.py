@@ -18,6 +18,7 @@ from arctis_hid.devices.nova_pro import constants as C
 from arctis_hid.devices.nova_pro.codec import (
     decode_ascii_response,
     decode_battery,
+    decode_connectivity_packet,
     decode_display_packet,
     decode_gain_event,
     decode_gain_query,
@@ -28,7 +29,7 @@ from arctis_hid.devices.nova_pro.codec import (
     encode_volume,
 )
 
-from .conftest import make_20_packet, make_80_packet, make_b0_packet
+from .conftest import make_20_packet, make_80_packet, make_b0_packet, make_b5_packet
 
 
 # ── Volume encoding ────────────────────────────────────────────────────────────
@@ -310,6 +311,29 @@ class TestDecodeMicEqPacket:
         assert result.stream_main_vol == 80
         assert result.stream_aux_vol == 60
         assert result.stream_mic_vol == 40
+
+
+# ── 0xB5 connectivity query packet decoding ───────────────────────────────────
+
+
+class TestDecodeConnectivityPacket:
+    def test_wireless_only(self):
+        pkt = make_b5_packet(conn=0x01, bt_connected=0x00)
+        result = decode_connectivity_packet(pkt)
+        assert result.connectivity_mode == ConnectivityMode.WIRELESS_ONLY
+
+    def test_wireless_and_bt(self):
+        pkt = make_b5_packet(conn=0x04, bt_connected=0x01)
+        result = decode_connectivity_packet(pkt)
+        assert result.connectivity_mode == ConnectivityMode.WIRELESS_AND_BT
+
+    def test_bt_connected_true(self):
+        pkt = make_b5_packet(bt_connected=0x01)
+        assert decode_connectivity_packet(pkt).bt_connected is True
+
+    def test_bt_connected_false(self):
+        pkt = make_b5_packet(bt_connected=0x00)
+        assert decode_connectivity_packet(pkt).bt_connected is False
 
 
 # ── 0x80 display settings packet decoding ─────────────────────────────────────

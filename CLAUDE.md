@@ -111,6 +111,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | `0x10` | Firmware version (ASCII, null-terminated) |
 | `0x12` | Serial number (ASCII, null-terminated) |
 | `0x80` | Base-station display: dim screen timeout `[2]`, OLED brightness `[3]`, home screen mode `[5]` |
+| `0xB5` | Connectivity: connectivity mode `[3]`, BT device connected `[4]` |
 
 `0x10` is also pushed **unsolicited** on Col01 when the headset reconnects wirelessly.
 
@@ -130,6 +131,13 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | [11] | Mic LED brightness | 1–10 |
 | [12] | Auto off timeout | 0=off, 1=1 min, 2=5 min, 3=10 min, 4=15 min, 5=30 min, 6=60 min ✅ |
 | [13] | 2.4 GHz mode | `0x00`=performance/speed, `0x01`=extended range |
+
+### `0xB5` response field map
+
+| Byte | Meaning | Values |
+|------|---------|--------|
+| [3] | Connectivity mode | `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT |
+| [4] | BT device connected | `0x00`=not connected, `0x01`=connected |
 
 ### `0x80` response field map
 

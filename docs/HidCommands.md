@@ -733,9 +733,11 @@ Enables or disables the ChatMix feature on the base station.
 | `anc_mode` | `0xBD`, `0xB5`, `0xB0`[10] | `"off" \| "transparency" \| "anc" \| null` |
 | `mic_mute` | `0xBB`, `0xB0`[9] | `boolean \| null` |
 | `sidetone_level` | `0x39`, `0x20`[18] | `number \| null` (0–3) |
-| `connected` | `0xB5` | `boolean \| null` |
-| `wireless` | `0xB5` | `boolean \| null` |
-| `bluetooth` | `0xB5` | `boolean \| null` |
+| `connected` | `0xB5` event | `boolean \| null` |
+| `wireless` | `0xB5` event | `boolean \| null` |
+| `bluetooth` | `0xB5` event | `boolean \| null` |
+| `connectivity_mode` | `0xB5` query `[3]`, `0xB0[4]` | `ConnectivityMode \| null` |
+| `bt_connected` | `0xB5` query `[4]` | `boolean \| null` |
 | `oled_brightness` | `0x85`, `0x80`[3] | `number \| null` (1–10) |
 | `chatmix_game` | `0x45`, `0x20`[20] | `number \| null` (0–100) |
 | `chatmix_chat` | `0x45`, `0x20`[21] | `number \| null` (0–100) |
@@ -819,6 +821,20 @@ Also pushed **unsolicited** on the `0xFFC0` handle when the headset re-establish
 #### `0x12` — Serial Number ✅
 
 Response bytes `[2+]`: null-terminated ASCII string, e.g. `'6152048313222500747'`.
+
+#### `0xB5` — Connectivity ✅
+
+Confirmed `2026-05-10`. Returns the current connectivity mode and BT connection state. Same opcode as the `0xB5` incoming event, but the response byte layout differs (mode is at `[3]` here vs `[2]` in the event).
+
+Response: `[0x06, 0xB5, ?, conn_mode, bt_connected, ...]`
+
+| Byte | Value observed | Meaning |
+|---|---|---|
+| 0 | `0x06` | Report ID |
+| 1 | `0xB5` | Command echo |
+| 2 | unknown | Not yet decoded |
+| 3 | `0x01` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT (same values as `0xB5` event `[2]` and `0xB0[4]`) ✅ |
+| 4 | `0x00` / `0x01` | **BT device connected** — `0x01`=BT device currently connected, `0x00`=not connected ✅ |
 
 #### `0x80` — Base-Station Display Settings ✅
 

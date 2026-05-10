@@ -17,7 +17,7 @@ from .core.types import (
 )
 
 # Query response models
-from .devices.nova_pro.models import DisplayData, MicEqData, StatusData
+from .devices.nova_pro.models import ConnectivityData, DisplayData, MicEqData, StatusData
 
 # Event dataclasses
 from .devices.nova_pro.models import (
@@ -72,6 +72,7 @@ __all__ = [
     "StatusData",
     "MicEqData",
     "DisplayData",
+    "ConnectivityData",
     # events
     "VolumeEvent",
     "BatteryEvent",

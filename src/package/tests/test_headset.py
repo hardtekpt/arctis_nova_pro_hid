@@ -9,6 +9,7 @@ from arctis_hid.core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    ConnectivityMode,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
@@ -16,9 +17,9 @@ from arctis_hid.core.types import (
     WirelessMode,
 )
 from arctis_hid.devices.nova_pro import constants as C
-from arctis_hid.devices.nova_pro.models import DisplayData, MicEqData, StatusData
+from arctis_hid.devices.nova_pro.models import ConnectivityData, DisplayData, MicEqData, StatusData
 
-from .conftest import make_20_packet, make_80_packet, make_b0_packet
+from .conftest import make_20_packet, make_80_packet, make_b0_packet, make_b5_packet
 
 
 # ── Query methods ──────────────────────────────────────────────────────────────
@@ -77,6 +78,26 @@ class TestGetSerialNumber:
         packet = [0x06, 0x12, 0x41, 0x42, 0x43, 0x00] + [0] * 58
         mock_transport.query.return_value = packet
         assert mock_headset.get_serial_number() == "ABC"
+
+
+class TestGetConnectivity:
+    def test_sends_correct_opcode(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b5_packet()
+        mock_headset.get_connectivity()
+        mock_transport.query.assert_called_once_with(C.CMD_CONNECTIVITY)
+
+    def test_returns_connectivity_data(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b5_packet(conn=0x04, bt_connected=0x01)
+        result = mock_headset.get_connectivity()
+        assert isinstance(result, ConnectivityData)
+        assert result.connectivity_mode == ConnectivityMode.WIRELESS_AND_BT
+        assert result.bt_connected is True
+
+    def test_bt_not_connected(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b5_packet(conn=0x01, bt_connected=0x00)
+        result = mock_headset.get_connectivity()
+        assert result.connectivity_mode == ConnectivityMode.WIRELESS_ONLY
+        assert result.bt_connected is False
 
 
 class TestGetDisplay:

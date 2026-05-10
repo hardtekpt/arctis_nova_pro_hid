@@ -92,6 +92,8 @@ Run `python src/listen.py` and check the startup output lines.
 | 2.15 | `0x80` Display | `dim_timeout` | Matches base-station dim screen timeout setting | ⬜ |
 | 2.16 | `0x80` Display | `oled_brightness` | 1–10, matches current OLED brightness in GG | ⬜ |
 | 2.17 | `0x80` Display | `home_screen_mode` | `detailed` or `simple`, matches GG setting | ⬜ |
+| 2.18 | `0xB5` Connectivity | `connectivity_mode` | `WIRELESS_ONLY` or `WIRELESS_AND_BT`, matches current state | ⬜ |
+| 2.19 | `0xB5` Connectivity | `bt_connected` | `True` when a BT device is connected, `False` otherwise | ⬜ |
 
 ---
 

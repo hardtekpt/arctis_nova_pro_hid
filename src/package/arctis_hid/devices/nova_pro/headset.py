@@ -19,7 +19,7 @@ from ...exceptions import DeviceIOError
 from ..base import AbstractHeadset, AbstractOled
 from . import constants as C
 from . import codec
-from .models import DisplayData, MicEqData, StatusData
+from .models import ConnectivityData, DisplayData, MicEqData, StatusData
 
 
 class ArctisNovaProWireless(AbstractHeadset):
@@ -73,6 +73,10 @@ class ArctisNovaProWireless(AbstractHeadset):
     def get_serial_number(self) -> str:
         data = self._transport.query(C.CMD_SERIAL)
         return codec.decode_ascii_response(data)
+
+    def get_connectivity(self) -> ConnectivityData:
+        data = self._transport.query(C.CMD_CONNECTIVITY)
+        return codec.decode_connectivity_packet(data)
 
     def get_display(self) -> DisplayData:
         data = self._transport.query(C.CMD_DISPLAY)

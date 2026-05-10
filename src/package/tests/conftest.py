@@ -97,6 +97,19 @@ def make_80_packet(
     return pkt
 
 
+def make_b5_packet(
+    conn: int = 0x01,
+    bt_connected: int = 0x00,
+) -> list[int]:
+    """Build a fake 0xB5 connectivity query response packet (64 bytes)."""
+    pkt = [0] * 64
+    pkt[0] = C.REPORT_ID
+    pkt[1] = C.CMD_CONNECTIVITY
+    pkt[C.B5_CONN]         = conn
+    pkt[C.B5_BT_CONNECTED] = bt_connected
+    return pkt
+
+
 def make_event_packet(opcode: int, *payload: int) -> list[int]:
     """Build a fake Col02 event packet (64 bytes).
 

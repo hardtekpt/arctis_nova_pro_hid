@@ -40,6 +40,12 @@ class DisplayData:
 
 
 @dataclass
+class ConnectivityData:
+    connectivity_mode: ConnectivityMode
+    bt_connected:      bool   # True if a BT device is currently connected
+
+
+@dataclass
 class MicEqData:
     volume_pct:      float
     gain:            GainLevel

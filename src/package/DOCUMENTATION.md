@@ -27,6 +27,7 @@ pip install -e 'src/package/[oled]'   # adds Pillow for OLED drawing
 6. [Data Models](#data-models)
    - [`StatusData`](#statusdata)
    - [`MicEqData`](#miceqdata)
+   - [`ConnectivityData`](#connectivitydata)
    - [`DisplayData`](#displaydata)
 7. [Events](#events)
 8. [Enums](#enums)
@@ -146,6 +147,15 @@ Return the firmware version string (ASCII, from command `0x10`).
 
 #### `get_serial_number() → str`
 Return the device serial number (ASCII, from command `0x12`).
+
+#### `get_connectivity() → ConnectivityData`
+Query the connectivity mode and BT connection state directly (from command `0xB5`).
+
+```python
+c = h.get_connectivity()
+print(c.connectivity_mode)   # ConnectivityMode.WIRELESS_AND_BT
+print(c.bt_connected)        # True
+```
 
 #### `get_display() → DisplayData`
 Query the base-station display settings: dim screen timeout, OLED brightness, and home screen mode (from command `0x80`).
@@ -519,6 +529,19 @@ class MicEqData:
     stream_main_vol: int            # 0–100
     stream_aux_vol:  int            # 0–100
     stream_mic_vol:  int            # 0–100
+```
+
+---
+
+### `ConnectivityData`
+
+Returned by `get_connectivity()`. Snapshot of connectivity state from command `0xB5`.
+
+```python
+@dataclass
+class ConnectivityData:
+    connectivity_mode: ConnectivityMode  # 0xB5[3]: WIRELESS_ONLY or WIRELESS_AND_BT
+    bt_connected:      bool              # 0xB5[4]: True if a BT device is connected
 ```
 
 ---

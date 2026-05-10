@@ -27,6 +27,7 @@ from .models import (
     BtAutoMuteEvent,
     BtDefaultEvent,
     ChatMixEvent,
+    ConnectivityData,
     ConnectivityEvent,
     DimTimeoutEvent,
     DisplayData,
@@ -101,6 +102,15 @@ def decode_status_packet(data: list[int]) -> StatusData:
         bt_default          = data[C.B0_BT_DEFAULT] == 0x01,
         bt_auto_mute        = BtAutoMute(data[C.B0_BT_AUTOMUTE]),
         auto_off_timeout    = TimeoutStep(data[C.B0_AUTO_OFF]),
+    )
+
+
+# ── 0xB5 connectivity query packet ────────────────────────────────────────
+
+def decode_connectivity_packet(data: list[int]) -> ConnectivityData:
+    return ConnectivityData(
+        connectivity_mode = ConnectivityMode(data[C.B5_CONN]),
+        bt_connected      = data[C.B5_BT_CONNECTED] == 0x01,
     )
 
 
