@@ -13,11 +13,12 @@ POLL_TIMEOUT_MS = 50
 
 # ── Query command bytes ────────────────────────────────────────────────────
 
-CMD_STATUS   = 0xB0   # battery, connectivity, ANC, mic mute, mic LED, wireless mode
-CMD_MIC_EQ   = 0x20   # gain, mic vol, sidetone, audio output, ChatMix, EQ bands
-CMD_FIRMWARE = 0x10   # ASCII firmware version (also pushed unsolicited on reconnect)
-CMD_SERIAL   = 0x12   # ASCII serial number
-CMD_DISPLAY  = 0x80   # base-station display: dim timeout, OLED brightness, home screen
+CMD_STATUS       = 0xB0   # battery, connectivity, ANC, mic mute, mic LED, wireless mode
+CMD_MIC_EQ       = 0x20   # gain, mic vol, sidetone, audio output, ChatMix, EQ bands
+CMD_FIRMWARE     = 0x10   # ASCII firmware version (also pushed unsolicited on reconnect)
+CMD_SERIAL       = 0x12   # ASCII serial number
+CMD_DISPLAY      = 0x80   # base-station display: dim timeout, OLED brightness, home screen
+CMD_CONNECTIVITY = 0xB5   # connectivity mode + BT connected state
 
 # ── Write command bytes ────────────────────────────────────────────────────
 
@@ -54,6 +55,11 @@ OLED_REPORTS_PER_FRAME = 2      # left half (x=0) then right half (x=64)
 OLED_REPORT_SPLIT_SZ   = 64     # columns per report (max width ggoled sends per chunk)
 OLED_WIDTH             = 128    # confirmed via ggoled source (ggoled SCREEN_WIDTH)
 OLED_HEIGHT            = 64     # confirmed via ggoled source (ggoled SCREEN_HEIGHT)
+
+# ── 0xB5 response byte indices ─────────────────────────────────────────────
+
+B5_CONN         = 3   # 0x01=2.4GHz only  0x04=2.4GHz+BT (ConnectivityMode)
+B5_BT_CONNECTED = 4   # 0x01=BT device connected  0x00=not connected
 
 # ── 0xB0 response byte indices ─────────────────────────────────────────────
 

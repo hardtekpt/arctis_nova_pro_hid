@@ -14,6 +14,7 @@ Usage examples (all arguments use -- notation):
     python scripts/test_cli.py --command status
     python scripts/test_cli.py --command miceq
     python scripts/test_cli.py --command display
+    python scripts/test_cli.py --command connectivity
 
     # Section 1 — event listener (interact with headset)
     python scripts/test_cli.py --command listen
@@ -71,6 +72,7 @@ from arctis_hid import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    ConnectivityData,
     ConnectivityMode,
     DisplayData,
     GainLevel,
@@ -128,6 +130,12 @@ def _print_display(d: DisplayData) -> None:
     print(f"  Home screen      : {d.home_screen_mode.name}  (0x80[5]={d.home_screen_mode.value:#04x})")
 
 
+def _print_connectivity(c: ConnectivityData) -> None:
+    _sep("Connectivity (0xB5)")
+    print(f"  Connectivity mode: {c.connectivity_mode.name}  (0xB5[3]={c.connectivity_mode.value:#04x})")
+    print(f"  BT connected     : {c.bt_connected}  (0xB5[4])")
+
+
 def _print_miceq(m: MicEqData) -> None:
     _sep("Mic / EQ (0x20)")
     print(f"  Volume           : {m.volume_pct:.1f}%  (0x20[3])")
@@ -181,6 +189,7 @@ def cmd_query(args) -> None:
         _print_status(h.get_status())
         _print_miceq(h.get_mic_eq())
         _print_display(h.get_display())
+        _print_connectivity(h.get_connectivity())
         _sep("Device info")
         print(f"  Firmware         : {h.get_firmware_version()}")
         print(f"  Serial number    : {h.get_serial_number()}")
@@ -199,6 +208,11 @@ def cmd_miceq(args) -> None:
 def cmd_display(args) -> None:
     with discover() as h:
         _print_display(h.get_display())
+
+
+def cmd_connectivity(args) -> None:
+    with discover() as h:
+        _print_connectivity(h.get_connectivity())
 
 
 # ── Listen handler — TestChecklist §1 ─────────────────────────────────────
@@ -771,14 +785,15 @@ def _irun(handler, **kwargs) -> None:
 def _isub_query(verify: bool) -> None:
     while True:
         sel = _imenu("Query commands", [
-            "All queries  (status + miceq + display + firmware + serial)",
+            "All queries  (status + miceq + display + connectivity + firmware + serial)",
             "Status only  (0xB0)",
             "Mic/EQ only  (0x20)",
             "Display only (0x80)",
+            "Connectivity (0xB5)",
         ])
         if sel is None:
             return
-        _irun([cmd_query, cmd_status, cmd_miceq, cmd_display][sel], verify=verify)
+        _irun([cmd_query, cmd_status, cmd_miceq, cmd_display, cmd_connectivity][sel], verify=verify)
 
 
 def _isub_listen(_verify: bool) -> None:
@@ -1163,7 +1178,7 @@ def _interactive_mode() -> None:
 # ── Argument parser ────────────────────────────────────────────────────────
 
 _ALL_COMMANDS = [
-    "query", "status", "miceq", "display", "listen",
+    "query", "status", "miceq", "display", "connectivity", "listen",
     "volume", "mic-vol", "sidetone", "anc", "transparency", "gain",
     "oled-brightness", "mic-led", "audio-output", "stream-volumes", "chatmix",
     "dim-timeout", "home-screen", "auto-off",
@@ -1315,6 +1330,7 @@ _HANDLERS = {
     "status":             cmd_status,
     "miceq":              cmd_miceq,
     "display":            cmd_display,
+    "connectivity":       cmd_connectivity,
     "listen":             cmd_listen,
     "volume":             cmd_volume,
     "mic-vol":            cmd_mic_vol,
