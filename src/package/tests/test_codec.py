@@ -7,6 +7,7 @@ from arctis_hid.core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    ConnectivityMode,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
@@ -154,12 +155,12 @@ class TestDecodeStatusPacket:
     def test_connectivity_mode_2_4_ghz_only(self):
         pkt = make_b0_packet(conn=0x01)
         result = decode_status_packet(pkt)
-        assert result.connectivity_mode == 0x01
+        assert result.connectivity_mode == ConnectivityMode.WIRELESS_ONLY
 
     def test_connectivity_mode_bt_active(self):
         pkt = make_b0_packet(conn=0x04)
         result = decode_status_packet(pkt)
-        assert result.connectivity_mode == 0x04
+        assert result.connectivity_mode == ConnectivityMode.WIRELESS_AND_BT
 
     def test_bt_active_true(self):
         pkt = make_b0_packet(bt=0x01)

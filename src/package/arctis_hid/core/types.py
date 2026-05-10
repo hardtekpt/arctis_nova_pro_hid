@@ -34,6 +34,11 @@ class WirelessMode(IntEnum):
     EXTENDED_RANGE = 1
 
 
+class ConnectivityMode(IntEnum):
+    WIRELESS_ONLY   = 0x01   # 2.4 GHz wireless link only
+    WIRELESS_AND_BT = 0x04   # 2.4 GHz wireless + Bluetooth active
+
+
 class BtAutoMute(IntEnum):
     OFF        = 0
     DB_MINUS_12 = 1

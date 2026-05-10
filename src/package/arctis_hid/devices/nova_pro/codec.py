@@ -11,6 +11,7 @@ from ...core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    ConnectivityMode,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
@@ -91,7 +92,7 @@ def decode_status_packet(data: list[int]) -> StatusData:
     return StatusData(
         headset_battery_pct = decode_battery(data[C.B0_HBAT]),
         dock_battery_pct    = decode_battery(data[C.B0_DBAT]),
-        connectivity_mode   = data[C.B0_CONN],
+        connectivity_mode   = ConnectivityMode(data[C.B0_CONN]),
         bt_active           = data[C.B0_BT] == 0x01,
         mic_muted           = data[C.B0_MUTE] == 0x01,
         anc_mode            = AncMode(data[C.B0_ANC]),
@@ -159,7 +160,7 @@ def decode_event(data: list[int]) -> Any | None:
 
     if cmd == 0xB5:
         return ConnectivityEvent(
-            mode=data[2],
+            mode=ConnectivityMode(data[2]),
             bt_active=data[3] == 0x01,
             wireless=data[4] == 0x08,
         )

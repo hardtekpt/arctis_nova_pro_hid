@@ -6,6 +6,7 @@ from ...core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    ConnectivityMode,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
@@ -20,7 +21,7 @@ from ...core.types import (
 class StatusData:
     headset_battery_pct: float
     dock_battery_pct:    float
-    connectivity_mode:   int          # 0x01=2.4GHz only  0x04=2.4GHz+BT
+    connectivity_mode:   ConnectivityMode
     bt_active:           bool
     mic_muted:           bool
     anc_mode:            AncMode
@@ -71,7 +72,7 @@ class BatteryEvent:
 
 @dataclass
 class ConnectivityEvent:
-    mode:      int    # 0x01=2.4GHz only  0x04=2.4GHz+BT
+    mode:      ConnectivityMode
     bt_active: bool
     wireless:  bool   # True=connected  False=lost
 

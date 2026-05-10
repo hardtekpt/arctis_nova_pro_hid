@@ -71,6 +71,7 @@ from arctis_hid import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    ConnectivityMode,
     DisplayData,
     GainLevel,
     HomeScreenMode,
@@ -109,7 +110,7 @@ def _print_status(s: StatusData) -> None:
     _sep("Status (0xB0)")
     print(f"  Headset battery  : {s.headset_battery_pct:.0f}%")
     print(f"  Dock battery     : {s.dock_battery_pct:.0f}%")
-    print(f"  Connectivity     : {s.connectivity_mode:#04x}")
+    print(f"  Connectivity     : {s.connectivity_mode.name}  (0xB0[4]={s.connectivity_mode.value:#04x})")
     print(f"  BT active        : {s.bt_active}")
     print(f"  BT default       : {'on' if s.bt_default else 'off'}  (0xB0[2])")
     print(f"  BT auto-mute     : {s.bt_auto_mute.name}  (0xB0[3]={s.bt_auto_mute.value:#04x})")
@@ -215,7 +216,7 @@ def cmd_listen(args) -> None:
         h.on("MicVolumeEvent",      lambda e: print(f"[MicVolume]       {e.level}"))
         h.on("OledBrightnessEvent", lambda e: print(f"[OledBrightness]  {e.level}/10"))
         h.on("TransparencyEvent",   lambda e: print(f"[Transparency]    {e.level}/10"))
-        h.on("ConnectivityEvent",   lambda e: print(f"[Connectivity]    mode={e.mode:#04x}  bt={e.bt_active}  wireless={e.wireless}"))
+        h.on("ConnectivityEvent",   lambda e: print(f"[Connectivity]    mode={e.mode.name} ({e.mode.value:#04x})  bt={e.bt_active}  wireless={e.wireless}"))
         h.on("WirelessModeEvent",   lambda e: print(f"[WirelessMode]    {e.mode.name}"))
         h.on("BtDefaultEvent",      lambda e: print(f"[BtDefault]       {'on' if e.enabled else 'off'}"))
         h.on("BtAutoMuteEvent",     lambda e: print(f"[BtAutoMute]      {e.mode.name}"))

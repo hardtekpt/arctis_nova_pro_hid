@@ -9,6 +9,7 @@ from arctis_hid.core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    ConnectivityMode,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
@@ -117,7 +118,7 @@ def test_connectivity_event_type():
 def test_connectivity_event_bt_active_true():
     result = evt(0xB5, 0x04, 0x01, 0x08)
     assert result.bt_active is True
-    assert result.mode == 0x04
+    assert result.mode == ConnectivityMode.WIRELESS_AND_BT
 
 
 def test_connectivity_event_wireless_true():
