@@ -81,7 +81,7 @@ def decode_packet(data: list[int], source: str) -> str | None:
         return f"{tag}  Volume          → {pct}% (raw=0x{raw:02X})"
 
     if cmd == 0xB5 and len(data) > 4:
-        _CONN = {0x01: "2.4GHz", 0x04: "2.4GHz+BT"}
+        _CONN = {0x01: "2.4GHz", 0x02: "BT-pairing", 0x04: "2.4GHz+BT"}
         if source.strip() == "CTRL":
             # Query response: [2]=connectivity mode, [3]=BT device connected (0x01=yes, 0x02=no)
             conn_mode    = _CONN.get(data[2], f"0x{data[2]:02X}")
@@ -213,7 +213,7 @@ def decode_packet(data: list[int], source: str) -> str | None:
     # Battery confirmed at [6]/[7] (0-8 raw = 0-100%).
     # Transparency level at [8], all fields mapped – see HidCommands.md §6.1.
     if cmd == 0xB0 and len(data) > 13:
-        _CONN    = {0x01: "2.4GHz", 0x04: "2.4GHz+BT"}
+        _CONN    = {0x01: "2.4GHz", 0x02: "BT-pairing", 0x04: "2.4GHz+BT"}
         _ANC     = {0x00: "off", 0x01: "transparency", 0x02: "anc"}
         _WMODE   = {0x00: "performance", 0x01: "range"}
         _TIMEOUT = {0: "off", 1: "1min", 2: "5min", 3: "10min", 4: "15min", 5: "30min", 6: "60min"}

@@ -121,7 +121,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 |------|---------|--------|
 | [2] | BT default (auto-connect) | `0x00`=off, `0x01`=on ✅ |
 | [3] | BT auto-mute | `0x00`=off, `0x01`=-12 dB, `0x02`=full ✅ |
-| [4] | Connectivity mode | `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active |
+| [4] | Connectivity mode | `0x01`=2.4 GHz only, `0x02`=BT pairing mode, `0x04`=2.4 GHz + BT active |
 | [5] | BT state | `0x00`=off, `0x01`=active |
 | [6] | Headset battery raw | ÷ 8 × 100 = % |
 | [7] | Dock battery raw | ÷ 8 × 100 = % |
@@ -136,7 +136,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 
 | Byte | Meaning | Values |
 |------|---------|--------|
-| [2] | Connectivity mode | `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT |
+| [2] | Connectivity mode | `0x01`=2.4 GHz only, `0x02`=BT pairing mode, `0x04`=2.4 GHz + BT |
 | [3] | BT device connected | `0x01`=connected, `0x02`=not connected |
 
 ### `0x80` response field map
@@ -195,7 +195,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | Command | Meaning | Key bytes |
 |---------|---------|-----------|
 | `0x25` | Volume | `[2]` raw, inverted: `pct = (0x38 − raw) / 56 × 100` |
-| `0xB5` | Connectivity change | `[2]`=mode, `[3]`=BT state, `[4]`=wireless |
+| `0xB5` | Connectivity change | `[2]`=mode (`0x01`=2.4GHz only, `0x02`=BT pairing, `0x04`=2.4GHz+BT), `[3]`=BT state, `[4]`=wireless |
 | `0xB7` | Battery levels | `[2]`=headset raw, `[3]`=dock raw (÷8×100=%) |
 | `0x85` | OLED brightness | `[2]`=level 1–10 |
 | `0x39` | Sidetone | `[2]`=0–3 |

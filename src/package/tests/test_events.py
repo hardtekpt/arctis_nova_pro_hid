@@ -121,6 +121,11 @@ def test_connectivity_event_bt_active_true():
     assert result.mode == ConnectivityMode.WIRELESS_AND_BT
 
 
+def test_connectivity_event_bt_pairing_mode():
+    result = evt(0xB5, 0x02, 0x00, 0x08)
+    assert result.mode == ConnectivityMode.BT_PAIRING
+
+
 def test_connectivity_event_wireless_true():
     result = evt(0xB5, 0x01, 0x00, 0x08)
     assert result.wireless is True

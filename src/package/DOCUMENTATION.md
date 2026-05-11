@@ -497,7 +497,7 @@ Returned by `get_status()`. Snapshot of headset status.
 class StatusData:
     headset_battery_pct: float          # 0.0–100.0
     dock_battery_pct:    float          # 0.0–100.0
-    connectivity_mode:   ConnectivityMode  # WIRELESS_ONLY or WIRELESS_AND_BT
+    connectivity_mode:   ConnectivityMode  # WIRELESS_ONLY, BT_PAIRING, or WIRELESS_AND_BT
     bt_active:           bool           # True if Bluetooth stream is active
     mic_muted:           bool
     anc_mode:            AncMode
@@ -540,7 +540,7 @@ Returned by `get_connectivity()`. Snapshot of connectivity state from command `0
 ```python
 @dataclass
 class ConnectivityData:
-    connectivity_mode: ConnectivityMode  # 0xB5[3]: WIRELESS_ONLY or WIRELESS_AND_BT
+    connectivity_mode: ConnectivityMode  # 0xB5[3]: WIRELESS_ONLY, BT_PAIRING, or WIRELESS_AND_BT
     bt_connected:      bool              # 0xB5[4]: True if a BT device is connected
 ```
 
@@ -615,6 +615,7 @@ Which radio links are active (returned by `StatusData.connectivity_mode` and `Co
 ```python
 class ConnectivityMode(IntEnum):
     WIRELESS_ONLY   = 0x01   # 2.4 GHz wireless link only
+    BT_PAIRING      = 0x02   # Bluetooth pairing mode active
     WIRELESS_AND_BT = 0x04   # 2.4 GHz wireless + Bluetooth active
 ```
 
