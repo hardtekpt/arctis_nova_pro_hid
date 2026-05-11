@@ -169,9 +169,10 @@ def decode_event(data: list[int]) -> Any | None:
         )
 
     if cmd == 0xB5:
+        mode = ConnectivityMode(data[2])
         return ConnectivityEvent(
-            mode=ConnectivityMode(data[2]),
-            bt_active=data[3] == 0x01,
+            mode=mode,
+            bt_active=mode in (ConnectivityMode.WIRELESS_AND_BT, ConnectivityMode.BT_PAIRING),
             wireless=data[4] == 0x08,
         )
 

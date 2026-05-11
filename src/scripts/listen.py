@@ -92,11 +92,13 @@ def decode_packet(data: list[int], source: str) -> str | None:
             )
         else:
             # Incoming event: [2]=connectivity mode, [3]=BT state, [4]=wireless flag
+            # bt_active derives from mode (data[2]), not data[3]: data[3]=0x02 means
+            # BT paired/transitioning, which still means BT is active.
+            conn_mode = _CONN.get(data[2], f"0x{data[2]:02X}")
             wireless  = data[4] == 8
-            bluetooth = data[3] == 1
-            # data[3]: 0x01=BT active; 0x02=BT transitioning/paired not streaming
+            bluetooth = data[2] in (0x04, 0x02)
             return (
-                f"{tag}  Connectivity    → wireless={wireless} bluetooth={bluetooth}"
+                f"{tag}  Connectivity    → conn_mode={conn_mode} wireless={wireless} bluetooth={bluetooth}"
                 f"  [2]=0x{data[2]:02X} [3]=0x{data[3]:02X}"
             )
 
