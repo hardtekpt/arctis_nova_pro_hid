@@ -58,7 +58,7 @@ _SETTINGS_FIELDS = [
     # ── 0xB0 status ──────────────────────────────────────────────────────────
     (0xB0,  2, "bt_default",         lambda v: {0: "off", 1: "on"}.get(v, f"0x{v:02X}")),
     (0xB0,  3, "bt_auto_mute",       lambda v: {0: "off", 1: "-12 dB", 2: "full"}.get(v, f"0x{v:02X}")),
-    (0xB0,  4, "connectivity",       lambda v: {0x01: "2.4 GHz only", 0x04: "2.4 GHz + BT"}.get(v, f"0x{v:02X}")),
+    (0xB0,  4, "connectivity",       lambda v: {0x01: "2.4 GHz only", 0x02: "BT pairing", 0x04: "2.4 GHz + BT"}.get(v, f"0x{v:02X}")),
     (0xB0,  5, "bt_state",           lambda v: {0: "off", 1: "active"}.get(v, f"0x{v:02X}")),
     (0xB0,  6, "headset_battery",    lambda v: f"{min(100, v / 8 * 100):.0f}%"),
     (0xB0,  7, "dock_battery",       lambda v: f"{min(100, v / 8 * 100):.0f}%"),

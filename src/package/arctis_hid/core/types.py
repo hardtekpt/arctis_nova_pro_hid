@@ -36,6 +36,7 @@ class WirelessMode(IntEnum):
 
 class ConnectivityMode(IntEnum):
     WIRELESS_ONLY   = 0x01   # 2.4 GHz wireless link only
+    BT_PAIRING      = 0x02   # Bluetooth pairing mode active
     WIRELESS_AND_BT = 0x04   # 2.4 GHz wireless + Bluetooth active
 
 

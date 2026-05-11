@@ -106,7 +106,7 @@ Fires on connection-state changes (wireless link established/lost, Bluetooth).
 |---|---|
 | 0 | Report ID |
 | 1 | Command `0xB5` |
-| 2 | Connection mode: `0x01` = 2.4 GHz only; `0x04` = 2.4 GHz + Bluetooth active |
+| 2 | Connection mode: `0x01` = 2.4 GHz only; `0x02` = Bluetooth pairing mode; `0x04` = 2.4 GHz + Bluetooth active |
 | 3 | Bluetooth state: `0x00` = off, `0x01` = BT active, `0x02` = BT transitioning/paired |
 | 4 | Wireless link: `0x08` = 2.4 GHz active, `0x04` = wireless lost / out of range |
 
@@ -120,7 +120,7 @@ if wireless → force anc_mode = "off"
 
 **State fields:** `connected`, `wireless`, `bluetooth`, `anc_mode` (forced `"off"` when wireless)
 
-> data[4] observed values: `0x08` (wireless active), `0x04` (wireless lost). data[2] observed: `0x01` (2.4 GHz only), `0x04` (2.4 GHz + BT active). data[3] observed: `0x00` (no BT), `0x01` (BT streaming), `0x02` (BT paired, not streaming).
+> data[4] observed values: `0x08` (wireless active), `0x04` (wireless lost). data[2] observed: `0x01` (2.4 GHz only), `0x02` (BT pairing mode), `0x04` (2.4 GHz + BT active). data[3] observed: `0x00` (no BT), `0x01` (BT streaming), `0x02` (BT paired, not streaming).
 
 ---
 
@@ -776,7 +776,7 @@ Response: `[0x06, 0xB0, bt_default, bt_auto_mute, conn_mode, bt_state, headset_b
 | 1 | `0xB0` | Command echo |
 | 2 | `0x00` / `0x01` | **BT default** (auto-connect) — `0x00`=off, `0x01`=on. Same encoding as `0xB2` event. Confirmed 2026-05-09 ✅ |
 | 3 | `0x00`–`0x02` | **BT auto-mute** — same encoding as `0xB3` event: `0x00`=off, `0x01`=-12 dB, `0x02`=full. Confirmed 2026-05-09 ✅ |
-| 4 | `0x01` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT active (mirrors `0xB5` data[2]) ✅ |
+| 4 | `0x01` / `0x02` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x02`=BT pairing mode, `0x04`=2.4 GHz + BT active (mirrors `0xB5` data[2]) ✅ |
 | 5 | `0x00` / `0x01` | **BT state** — `0x00`=off, `0x01`=BT active (mirrors `0xB5` data[3]) ✅ |
 | 6 | `0x00`–`0x08` | **Headset battery** raw (÷ 8 × 100 = %) ✅ |
 | 7 | `0x00`–`0x08` | **Dock battery** raw (÷ 8 × 100 = %) ✅ |
@@ -832,7 +832,7 @@ Response: `[0x06, 0xB5, ?, conn_mode, bt_connected, ...]`
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0xB5` | Command echo |
-| 2 | `0x01` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x04`=2.4 GHz + BT (same values as `0xB5` event `[2]` and `0xB0[4]`) ✅ |
+| 2 | `0x01` / `0x02` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x02`=BT pairing mode, `0x04`=2.4 GHz + BT (same values as `0xB5` event `[2]` and `0xB0[4]`) ✅ |
 | 3 | `0x01` / `0x02` | **BT device connected** — `0x01`=BT device currently connected, `0x02`=not connected ✅ |
 
 #### `0x80` — Base-Station Display Settings ✅

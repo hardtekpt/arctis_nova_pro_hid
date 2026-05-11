@@ -326,4 +326,5 @@ class TestEnums:
 
     def test_connectivity_mode_values(self):
         assert ConnectivityMode.WIRELESS_ONLY == 0x01
+        assert ConnectivityMode.BT_PAIRING == 0x02
         assert ConnectivityMode.WIRELESS_AND_BT == 0x04

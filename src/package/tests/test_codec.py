@@ -158,6 +158,11 @@ class TestDecodeStatusPacket:
         result = decode_status_packet(pkt)
         assert result.connectivity_mode == ConnectivityMode.WIRELESS_ONLY
 
+    def test_connectivity_mode_bt_pairing(self):
+        pkt = make_b0_packet(conn=0x02)
+        result = decode_status_packet(pkt)
+        assert result.connectivity_mode == ConnectivityMode.BT_PAIRING
+
     def test_connectivity_mode_bt_active(self):
         pkt = make_b0_packet(conn=0x04)
         result = decode_status_packet(pkt)
@@ -321,6 +326,11 @@ class TestDecodeConnectivityPacket:
         pkt = make_b5_packet(conn=0x01, bt_connected=0x00)
         result = decode_connectivity_packet(pkt)
         assert result.connectivity_mode == ConnectivityMode.WIRELESS_ONLY
+
+    def test_bt_pairing(self):
+        pkt = make_b5_packet(conn=0x02, bt_connected=0x02)
+        result = decode_connectivity_packet(pkt)
+        assert result.connectivity_mode == ConnectivityMode.BT_PAIRING
 
     def test_wireless_and_bt(self):
         pkt = make_b5_packet(conn=0x04, bt_connected=0x01)
