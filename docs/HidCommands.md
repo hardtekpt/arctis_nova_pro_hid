@@ -107,7 +107,7 @@ Fires on connection-state changes (wireless link established/lost, Bluetooth).
 | 0 | Report ID |
 | 1 | Command `0xB5` |
 | 2 | Connection mode: `0x01` = 2.4 GHz only; `0x02` = Bluetooth pairing mode; `0x04` = 2.4 GHz + Bluetooth active |
-| 3 | Bluetooth state: `0x00` = off, `0x01` = BT active, `0x02` = BT transitioning/paired |
+| 3 | BT device connected: `0x01` = BT device connected, `0x02` = no BT device connected |
 | 4 | Wireless link: `0x08` = 2.4 GHz active, `0x04` = wireless lost / out of range |
 
 **Decoding:**
@@ -120,9 +120,9 @@ if wireless → force anc_mode = "off"
 
 **State fields:** `connected`, `wireless`, `bluetooth`, `anc_mode` (forced `"off"` when wireless)
 
-> **Important:** `bt_active` must be derived from `data[2]` (connectivity mode), not `data[3]`. When mode transitions to `0x04` (WIRELESS_AND_BT), `data[3]` may still read `0x02` (BT paired, not yet streaming) before settling to `0x01`. Using `data[3] == 0x01` would incorrectly report `bt_active=False` during this transient window.
+> **Important:** `bt_active` must be derived from `data[2]` (connectivity mode), not `data[3]`. When mode transitions to `0x04` (WIRELESS_AND_BT), `data[3]` may still read `0x02` (no BT device connected) before a device connects. Using `data[3] == 0x01` would incorrectly report `bt_active=False` during this window.
 
-> data[4] observed values: `0x08` (wireless active), `0x04` (wireless lost). data[2] observed: `0x01` (2.4 GHz only), `0x02` (BT pairing mode), `0x04` (2.4 GHz + BT active). data[3] observed: `0x00` (no BT), `0x01` (BT streaming), `0x02` (BT paired, not streaming).
+> data[4] observed values: `0x08` (wireless active), `0x04` (wireless lost). data[2] observed: `0x01` (2.4 GHz only), `0x02` (BT pairing mode), `0x04` (2.4 GHz + BT active). data[3] observed: `0x01` (BT device connected), `0x02` (no BT device connected).
 
 ---
 

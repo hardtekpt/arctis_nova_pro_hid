@@ -190,9 +190,10 @@ class TestEventDataclasses:
         assert e.dock_pct == 50.0
 
     def test_connectivity_event(self):
-        e = ConnectivityEvent(mode=ConnectivityMode.WIRELESS_AND_BT, bt_active=True, wireless=True)
+        e = ConnectivityEvent(mode=ConnectivityMode.WIRELESS_AND_BT, bt_active=True, bt_connected=True, wireless=True)
         assert e.mode == ConnectivityMode.WIRELESS_AND_BT
         assert e.bt_active is True
+        assert e.bt_connected is True
         assert e.wireless is True
 
     def test_anc_mode_event(self):

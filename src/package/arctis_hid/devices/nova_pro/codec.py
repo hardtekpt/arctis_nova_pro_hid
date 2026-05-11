@@ -173,6 +173,7 @@ def decode_event(data: list[int]) -> Any | None:
         return ConnectivityEvent(
             mode=mode,
             bt_active=mode in (ConnectivityMode.WIRELESS_AND_BT, ConnectivityMode.BT_PAIRING),
+            bt_connected=data[3] == 0x01,
             wireless=data[4] == 0x08,
         )
 

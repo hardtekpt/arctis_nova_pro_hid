@@ -570,7 +570,7 @@ Each event is a dataclass. The callback receives a single instance.
 |-------|---------|--------|
 | `VolumeEvent` | Volume wheel turned | `percent: float` (0–100) |
 | `BatteryEvent` | Battery level update | `headset_pct: float`, `dock_pct: float` |
-| `ConnectivityEvent` | Wireless connection changed | `mode: ConnectivityMode`, `bt_active: bool` (True when mode is `WIRELESS_AND_BT` or `BT_PAIRING`), `wireless: bool` |
+| `ConnectivityEvent` | Wireless connection changed | `mode: ConnectivityMode`, `bt_active: bool` (True when mode is `WIRELESS_AND_BT` or `BT_PAIRING`), `bt_connected: bool` (True when a BT device is paired and connected, data[3]==0x01), `wireless: bool` |
 | `AncModeEvent` | ANC button pressed | `mode: AncMode` |
 | `MicMuteEvent` | Mic mute button pressed | `muted: bool` |
 | `ChatMixEvent` | ChatMix dial turned | `game: int` (0–100), `chat: int` (0–100) |

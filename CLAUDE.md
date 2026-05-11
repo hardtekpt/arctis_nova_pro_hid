@@ -195,7 +195,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 | Command | Meaning | Key bytes |
 |---------|---------|-----------|
 | `0x25` | Volume | `[2]` raw, inverted: `pct = (0x38 − raw) / 56 × 100` |
-| `0xB5` | Connectivity change | `[2]`=mode (`0x01`=2.4GHz only, `0x02`=BT pairing, `0x04`=2.4GHz+BT), `[3]`=BT state, `[4]`=wireless |
+| `0xB5` | Connectivity change | `[2]`=mode (`0x01`=2.4GHz only, `0x02`=BT pairing, `0x04`=2.4GHz+BT), `[3]`=BT device connected (`0x01`=connected, `0x02`=not connected), `[4]`=wireless |
 | `0xB7` | Battery levels | `[2]`=headset raw, `[3]`=dock raw (÷8×100=%) |
 | `0x85` | OLED brightness | `[2]`=level 1–10 |
 | `0x39` | Sidetone | `[2]`=0–3 |
@@ -225,7 +225,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 - **Save after writes**: `0x09` is confirmed required on Nova Pro — settings revert on power cycle without it.
 - **`0x27` gain encoding**: `0x01`=low, `0x02`=high — identical for write, incoming event, and `0x20` query. No asymmetry.
 - **`0x10` noise**: device pushes unsolicited firmware version packets on Col01 when headset wirelessly reconnects — filter by checking `data[1] == 0x10`.
-- **`0xB5` event `bt_active`**: derive from `data[2]` (connectivity mode), NOT `data[3]` (BT audio state). When mode transitions to `0x04`, `data[3]` may still be `0x02` (BT paired, not yet streaming) before settling to `0x01`. Reading `data[3] == 0x01` would wrongly report `bt_active=False` during this window.
+- **`0xB5` event `bt_active`**: derive from `data[2]` (connectivity mode), NOT `data[3]`. `data[3]` is the BT device connection state (`0x01`=connected, `0x02`=not connected) — a separate field decoded as `bt_connected`. When mode transitions to `0x04`, `data[3]` may still be `0x02` before a device connects. Reading `data[3] == 0x01` for `bt_active` would wrongly report `False` during this window.
 - **ChatMix**: `0x45` events only fire when ChatMix is enabled (`0x49` param `0x01`).
 - **Volume write**: `0x25` confirmed writable with the same inverted encoding as the event.
 - **EQ bands**: 10 bytes at `0x20[7–16]`, range 0–40, `0x14`=flat. Write via `0x33` with profile `0x00` (2.4 GHz) or `0x01` (BT) — not yet verified on Nova Pro.

@@ -78,9 +78,10 @@ class BatteryEvent:
 
 @dataclass
 class ConnectivityEvent:
-    mode:      ConnectivityMode
-    bt_active: bool
-    wireless:  bool   # True=connected  False=lost
+    mode:         ConnectivityMode
+    bt_active:    bool   # True when mode is WIRELESS_AND_BT or BT_PAIRING
+    bt_connected: bool   # True if a BT device is paired and connected (data[3]==0x01)
+    wireless:     bool   # True=connected  False=lost
 
 
 @dataclass

@@ -122,8 +122,8 @@ def test_connectivity_event_bt_active_true():
 
 
 def test_connectivity_event_bt_active_true_when_data3_is_0x02():
-    # Regression: mode=0x04 with data[3]=0x02 (BT paired, not yet streaming)
-    # bt_active must be True because mode already indicates WIRELESS_AND_BT.
+    # Regression: mode=0x04 with data[3]=0x02 (BT device not connected)
+    # bt_active must still be True because mode already indicates WIRELESS_AND_BT.
     result = evt(0xB5, 0x04, 0x02, 0x08)
     assert result.bt_active is True
     assert result.mode == ConnectivityMode.WIRELESS_AND_BT
@@ -139,6 +139,21 @@ def test_connectivity_event_bt_pairing_mode():
     result = evt(0xB5, 0x02, 0x00, 0x08)
     assert result.mode == ConnectivityMode.BT_PAIRING
     assert result.bt_active is True
+
+
+def test_connectivity_event_bt_connected_true():
+    result = evt(0xB5, 0x04, 0x01, 0x08)   # data[3]=0x01 → BT device connected
+    assert result.bt_connected is True
+
+
+def test_connectivity_event_bt_connected_false():
+    result = evt(0xB5, 0x04, 0x02, 0x08)   # data[3]=0x02 → BT device not connected
+    assert result.bt_connected is False
+
+
+def test_connectivity_event_bt_connected_false_when_wireless_only():
+    result = evt(0xB5, 0x01, 0x00, 0x08)   # data[3]=0x00 → no BT device
+    assert result.bt_connected is False
 
 
 def test_connectivity_event_wireless_true():
