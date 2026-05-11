@@ -113,12 +113,14 @@ Fires on connection-state changes (wireless link established/lost, Bluetooth).
 **Decoding:**
 ```
 wireless  = (data[4] === 8)
-bluetooth = (data[3] === 1)
+bluetooth = (data[2] === 0x04 || data[2] === 0x02)   // derive from mode, NOT data[3]
 connected = wireless
 if wireless → force anc_mode = "off"
 ```
 
 **State fields:** `connected`, `wireless`, `bluetooth`, `anc_mode` (forced `"off"` when wireless)
+
+> **Important:** `bt_active` must be derived from `data[2]` (connectivity mode), not `data[3]`. When mode transitions to `0x04` (WIRELESS_AND_BT), `data[3]` may still read `0x02` (BT paired, not yet streaming) before settling to `0x01`. Using `data[3] == 0x01` would incorrectly report `bt_active=False` during this transient window.
 
 > data[4] observed values: `0x08` (wireless active), `0x04` (wireless lost). data[2] observed: `0x01` (2.4 GHz only), `0x02` (BT pairing mode), `0x04` (2.4 GHz + BT active). data[3] observed: `0x00` (no BT), `0x01` (BT streaming), `0x02` (BT paired, not streaming).
 

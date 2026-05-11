@@ -225,6 +225,7 @@ Save:           [0x06, 0x09, 0x00 × 62]          (always send after writes)
 - **Save after writes**: `0x09` is confirmed required on Nova Pro — settings revert on power cycle without it.
 - **`0x27` gain encoding**: `0x01`=low, `0x02`=high — identical for write, incoming event, and `0x20` query. No asymmetry.
 - **`0x10` noise**: device pushes unsolicited firmware version packets on Col01 when headset wirelessly reconnects — filter by checking `data[1] == 0x10`.
+- **`0xB5` event `bt_active`**: derive from `data[2]` (connectivity mode), NOT `data[3]` (BT audio state). When mode transitions to `0x04`, `data[3]` may still be `0x02` (BT paired, not yet streaming) before settling to `0x01`. Reading `data[3] == 0x01` would wrongly report `bt_active=False` during this window.
 - **ChatMix**: `0x45` events only fire when ChatMix is enabled (`0x49` param `0x01`).
 - **Volume write**: `0x25` confirmed writable with the same inverted encoding as the event.
 - **EQ bands**: 10 bytes at `0x20[7–16]`, range 0–40, `0x14`=flat. Write via `0x33` with profile `0x00` (2.4 GHz) or `0x01` (BT) — not yet verified on Nova Pro.
