@@ -230,7 +230,7 @@ def cmd_listen(args) -> None:
         h.on("MicVolumeEvent",      lambda e: print(f"[MicVolume]       {e.level}"))
         h.on("OledBrightnessEvent", lambda e: print(f"[OledBrightness]  {e.level}/10"))
         h.on("TransparencyEvent",   lambda e: print(f"[Transparency]    {e.level}/10"))
-        h.on("ConnectivityEvent",   lambda e: print(f"[Connectivity]    mode={e.mode.name} ({e.mode.value:#04x})  bt={e.bt_active}  wireless={e.wireless}"))
+        h.on("ConnectivityEvent",   lambda e: print(f"[Connectivity]    mode={e.mode.name} ({e.mode.value:#04x})  bt={e.bt_active}  bt_connected={e.bt_connected}  wireless={e.wireless}"))
         h.on("WirelessModeEvent",   lambda e: print(f"[WirelessMode]    {e.mode.name}"))
         h.on("BtDefaultEvent",      lambda e: print(f"[BtDefault]       {'on' if e.enabled else 'off'}"))
         h.on("BtAutoMuteEvent",     lambda e: print(f"[BtAutoMute]      {e.mode.name}"))
