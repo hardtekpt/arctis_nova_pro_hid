@@ -121,6 +121,7 @@ def decode_display_packet(data: list[int]) -> DisplayData:
         dim_timeout      = TimeoutStep(data[C.B80_DIM_TIMEOUT]),
         oled_brightness  = data[C.B80_OLED_BRIGHT],
         home_screen_mode = HomeScreenMode(data[C.B80_HOME_SCREEN]),
+        sonar_running    = data[C.B80_SONAR] == 0x01,
     )
 
 

@@ -108,13 +108,14 @@ class TestGetDisplay:
 
     def test_returns_display_data(self, mock_headset, mock_transport):
         mock_transport.query.return_value = make_80_packet(
-            dim_timeout=3, oled_bright=7, home_screen=1
+            dim_timeout=3, oled_bright=7, home_screen=1, sonar=0x01
         )
         result = mock_headset.get_display()
         assert isinstance(result, DisplayData)
         assert result.dim_timeout == TimeoutStep.TEN_MIN
         assert result.oled_brightness == 7
         assert result.home_screen_mode == HomeScreenMode.SIMPLE
+        assert result.sonar_running is True
 
 
 # ── Write methods — correct command byte + payload + save ─────────────────────

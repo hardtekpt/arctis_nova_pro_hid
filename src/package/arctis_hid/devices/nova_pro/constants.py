@@ -80,6 +80,7 @@ B0_MODE2G      = 13   # 0x00=performance  0x01=extended range
 B80_DIM_TIMEOUT = 2   # dim screen timeout 0=off 1=1min … 6=60min ✅ confirmed 2026-05-09
 B80_OLED_BRIGHT = 3   # OLED brightness 1–10 ✅ confirmed 2026-05-09
 B80_HOME_SCREEN = 5   # 0x00=detailed  0x01=simple ✅ confirmed 2026-05-09
+B80_SONAR       = 7   # 0x00=GG Sonar not running  0x01=running
 
 # ── 0x20 response byte indices ─────────────────────────────────────────────
 

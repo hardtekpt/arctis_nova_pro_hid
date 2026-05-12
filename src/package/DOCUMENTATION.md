@@ -158,13 +158,14 @@ print(c.bt_connected)        # True
 ```
 
 #### `get_display() → DisplayData`
-Query the base-station display settings: dim screen timeout, OLED brightness, and home screen mode (from command `0x80`).
+Query the base-station display settings: dim screen timeout, OLED brightness, home screen mode, and whether GG Sonar is running (from command `0x80`).
 
 ```python
 d = h.get_display()
 print(d.oled_brightness)    # 7
 print(d.dim_timeout)        # TimeoutStep.THIRTY_MIN
 print(d.home_screen_mode)   # HomeScreenMode.DETAILED
+print(d.sonar_running)      # False
 ```
 
 ---
@@ -556,6 +557,7 @@ class DisplayData:
     dim_timeout:       TimeoutStep    # 0x80[2]: OFF=0 … SIXTY_MIN=6
     oled_brightness:   int            # 0x80[3]: 1–10
     home_screen_mode:  HomeScreenMode # 0x80[5]: DETAILED=0  SIMPLE=1
+    sonar_running:     bool           # 0x80[7]: True if GG Sonar is running
 ```
 
 ---

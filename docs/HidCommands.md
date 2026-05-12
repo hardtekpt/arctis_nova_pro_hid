@@ -851,6 +851,7 @@ Response: `[0x06, 0x80, dim_timeout, oled_brightness, ?, home_screen]`
 | 3 | `0x01`–`0x0A` | **OLED brightness** (1–10; same range as `0x85` event/write) ✅ |
 | 4 | unknown | Not yet decoded |
 | 5 | `0x00` / `0x01` | **Home screen mode** — `0x00`=detailed, `0x01`=simple (mirrors `0x89` event data[2]) ✅ |
+| 7 | `0x00` / `0x01` | **GG Sonar running** — `0x00`=not running, `0x01`=running |
 
 **Key discovery note:** OLED brightness, dim screen timeout, and home screen mode are all base-station display settings and are grouped under this separate query opcode rather than `0xB0`. GG queries `0x80` at startup to populate these settings.
 

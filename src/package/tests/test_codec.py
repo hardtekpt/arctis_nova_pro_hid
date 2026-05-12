@@ -376,3 +376,11 @@ class TestDecodeDisplayPacket:
     def test_home_screen_simple(self):
         pkt = make_80_packet(home_screen=1)
         assert decode_display_packet(pkt).home_screen_mode == HomeScreenMode.SIMPLE
+
+    def test_sonar_running_true(self):
+        pkt = make_80_packet(sonar=0x01)
+        assert decode_display_packet(pkt).sonar_running is True
+
+    def test_sonar_running_false(self):
+        pkt = make_80_packet(sonar=0x00)
+        assert decode_display_packet(pkt).sonar_running is False

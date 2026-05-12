@@ -37,6 +37,7 @@ class DisplayData:
     dim_timeout:       TimeoutStep    # 0x80[2]: OFF=0 … SIXTY_MIN=6
     oled_brightness:   int            # 0x80[3]: 1–10
     home_screen_mode:  HomeScreenMode # 0x80[5]: DETAILED=0  SIMPLE=1
+    sonar_running:     bool           # 0x80[7]: True if GG Sonar is running
 
 
 @dataclass

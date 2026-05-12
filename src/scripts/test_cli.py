@@ -128,6 +128,7 @@ def _print_display(d: DisplayData) -> None:
     print(f"  Dim timeout      : {d.dim_timeout.name}  (0x80[2]={d.dim_timeout.value:#04x})")
     print(f"  OLED brightness  : {d.oled_brightness}/10  (0x80[3]={d.oled_brightness:#04x})")
     print(f"  Home screen      : {d.home_screen_mode.name}  (0x80[5]={d.home_screen_mode.value:#04x})")
+    print(f"  GG Sonar running : {d.sonar_running}  (0x80[7])")
 
 
 def _print_connectivity(c: ConnectivityData) -> None:
