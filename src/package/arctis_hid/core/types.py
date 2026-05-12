@@ -34,6 +34,11 @@ class WirelessMode(IntEnum):
     EXTENDED_RANGE = 1
 
 
+class UsbInput(IntEnum):
+    INPUT_1 = 0
+    INPUT_2 = 1
+
+
 class ConnectivityMode(IntEnum):
     WIRELESS_ONLY   = 0x01   # 2.4 GHz wireless link only
     BT_PAIRING      = 0x02   # Bluetooth pairing mode active

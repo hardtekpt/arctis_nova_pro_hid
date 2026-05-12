@@ -204,6 +204,9 @@ Enable or disable the ChatMix dial feature. `ChatMixEvent` events only fire when
 #### `set_wireless_mode(mode: WirelessMode) → None`
 Set the 2.4 GHz wireless mode (performance vs. extended range). No `Col02` event fires for this command — verify the change via `get_status()`.
 
+#### `set_usb_input(input: UsbInput) → None`
+Select the active USB input. No `Col02` event fires for this command and no query reflects the current value — verify visually.
+
 #### `set_bt_default(enabled: bool) → None`
 Set whether Bluetooth is enabled by default on power-on.
 
@@ -582,6 +585,7 @@ Each event is a dataclass. The callback receives a single instance.
 | `OledBrightnessEvent` | OLED brightness changed | `level: int` (1–10) |
 | `TransparencyEvent` | Transparency level changed | `level: int` (1–10) |
 | `WirelessModeEvent` | 2.4 GHz mode changed | `mode: WirelessMode` |
+| `UsbInputEvent` | USB input changed | `input: UsbInput` |
 | `BtDefaultEvent` | Bluetooth default changed | `enabled: bool` |
 | `BtAutoMuteEvent` | BT auto-mute changed | `mode: BtAutoMute` |
 | `AudioOutputEvent` | Audio output changed | `output: AudioOutput` |
@@ -597,6 +601,7 @@ Each event is a dataclass. The callback receives a single instance.
 - `ChatMixEvent` only fires when ChatMix is enabled (`set_chatmix_enabled(True)`).
 - `EqBandEvent` is **read-only** (event only) — there is no write command for individual bands. Use `set_eq_bands()` to write all 10 at once.
 - `WirelessModeEvent` does **not** fire when changed from GG — it is a silent write. Read the current value via `get_status().wireless_mode`.
+- `UsbInputEvent` does **not** fire when changed from the host — it is a silent write. There is no query to reflect the current value — verify visually.
 
 ---
 
@@ -659,6 +664,14 @@ class HomeScreenMode(IntEnum):
 class WirelessMode(IntEnum):
     PERFORMANCE    = 0   # lower latency
     EXTENDED_RANGE = 1   # longer range, slightly higher latency
+```
+
+### `UsbInput`
+USB input selector for the headset.
+```python
+class UsbInput(IntEnum):
+    INPUT_1 = 0
+    INPUT_2 = 1
 ```
 
 ### `BtAutoMute`

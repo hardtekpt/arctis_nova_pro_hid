@@ -885,6 +885,7 @@ Write packet: `[0x06, CMD, PARAM, 0x00×61]`. Always follow with `0x09` to persi
 | `0x27` | Set gain level | `[2]` | 1–2 | `0x01`=low, `0x02`=high — same encoding as event (§3.9) and `0x20[4]` query ✅ |
 | `0x49` | ChatMix enable/disable | `[2]` | 0–1 | `0x00`=disable, `0x01`=enable; `0x45` dial events only fire when enabled (§4.3) ✅ |
 | `0xC3` | Set 2.4 GHz mode | `[2]` | 0–1 | `0x00`=performance/speed, `0x01`=extended range; `0xB0[13]` reflects current value; also the incoming event byte (§3.16) ✅ |
+| `0x23` | Set USB input | `[2]` | 0–1 | `0x00`=USB Input 1, `0x01`=USB Input 2; silent — no Col02 event fires |
 | `0xB2` | Set Bluetooth default | `[2]` | 0–1 | `0x00`=off, `0x01`=on; also the incoming event byte (§3.20) ✅ |
 | `0xB3` | Set BT auto-mute | `[2]` | 0–2 | `0x00`=off, `0x01`=-12dB, `0x02`=on; also the incoming event byte (§3.17) ✅ |
 | `0x43` | Set audio output | `[2]` | 1–2 | `0x01`=speakers, `0x02`=stream; also the incoming event byte (§3.19) ✅ |

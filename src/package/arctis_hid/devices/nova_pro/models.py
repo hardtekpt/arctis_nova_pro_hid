@@ -11,6 +11,7 @@ from ...core.types import (
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
+    UsbInput,
     WirelessMode,
 )
 
@@ -129,6 +130,11 @@ class TransparencyEvent:
 @dataclass
 class WirelessModeEvent:
     mode: WirelessMode
+
+
+@dataclass
+class UsbInputEvent:
+    input: UsbInput
 
 
 @dataclass

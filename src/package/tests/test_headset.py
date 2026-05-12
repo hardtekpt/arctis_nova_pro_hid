@@ -14,6 +14,7 @@ from arctis_hid.core.types import (
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
+    UsbInput,
     WirelessMode,
 )
 from arctis_hid.devices.nova_pro import constants as C
@@ -250,6 +251,20 @@ class TestSetWirelessMode:
 
     def test_save_called(self, mock_headset, mock_transport):
         mock_headset.set_wireless_mode(WirelessMode.PERFORMANCE)
+        mock_transport.write.assert_called_with(C.CMD_SAVE)
+
+
+class TestSetUsbInput:
+    def test_input_1(self, mock_headset, mock_transport):
+        mock_headset.set_usb_input(UsbInput.INPUT_1)
+        mock_transport.write.assert_any_call(C.CMD_USB_INPUT, [0])
+
+    def test_input_2(self, mock_headset, mock_transport):
+        mock_headset.set_usb_input(UsbInput.INPUT_2)
+        mock_transport.write.assert_any_call(C.CMD_USB_INPUT, [1])
+
+    def test_save_called(self, mock_headset, mock_transport):
+        mock_headset.set_usb_input(UsbInput.INPUT_1)
         mock_transport.write.assert_called_with(C.CMD_SAVE)
 
 

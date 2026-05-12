@@ -13,6 +13,7 @@ from .core.types import (
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
+    UsbInput,
     WirelessMode,
 )
 
@@ -41,6 +42,7 @@ from .devices.nova_pro.models import (
     SidetoneEvent,
     StreamVolumesEvent,
     TransparencyEvent,
+    UsbInputEvent,
     VolumeEvent,
     WirelessModeEvent,
 )
@@ -67,6 +69,7 @@ __all__ = [
     "HomeScreenMode",
     "SidetoneLevel",
     "TimeoutStep",
+    "UsbInput",
     "WirelessMode",
     # query models
     "StatusData",
@@ -85,6 +88,7 @@ __all__ = [
     "SidetoneEvent",
     "OledBrightnessEvent",
     "TransparencyEvent",
+    "UsbInputEvent",
     "WirelessModeEvent",
     "BtDefaultEvent",
     "BtAutoMuteEvent",

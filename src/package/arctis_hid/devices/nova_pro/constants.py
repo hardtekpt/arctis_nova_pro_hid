@@ -33,6 +33,7 @@ CMD_HOME_SCREEN  = 0x89   # home screen mode 0=detailed 1=simple
 CMD_MIC_LED      = 0xBF   # mic LED brightness 1–10
 CMD_AUTO_OFF     = 0xC1   # auto-off timeout step 0–6
 CMD_GAIN         = 0x27   # gain (0x01=low, 0x02=high — same encoding for write/event/query)
+CMD_USB_INPUT    = 0x23   # USB input 0x00=Input1 0x01=Input2 (silent — no Col02 event)
 CMD_CHATMIX_EN   = 0x49   # ChatMix enable 0=off 1=on
 CMD_WIRELESS     = 0xC3   # 2.4 GHz mode 0=performance 1=extended (silent — no Col02 event)
 CMD_BT_DEFAULT   = 0xB2   # BT default 0=off 1=on

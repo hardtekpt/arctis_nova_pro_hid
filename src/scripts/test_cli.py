@@ -29,6 +29,7 @@ Usage examples (all arguments use -- notation):
     python scripts/test_cli.py --verify --command audio-output --output speakers
     python scripts/test_cli.py --verify --command stream-volumes --main 80 --aux 80 --mic 60
     python scripts/test_cli.py --verify --command wireless-mode --mode performance
+    python scripts/test_cli.py --verify --command usb-input --input 1
     python scripts/test_cli.py --verify --command eq-preset --index 0x04
     python scripts/test_cli.py --verify --command eq-bands --bands 20 20 20 20 20 20 20 20 20 20
 
@@ -81,6 +82,7 @@ from arctis_hid import (
     SidetoneLevel,
     StatusData,
     TimeoutStep,
+    UsbInput,
     WirelessMode,
     discover,
 )
@@ -454,6 +456,17 @@ def cmd_wireless_mode(args) -> None:
         if args.verify:
             after = h.get_status()
             _verify_field("0xB0[13] wireless_mode", before.wireless_mode.name, after.wireless_mode.name, mode.name)
+
+
+def cmd_usb_input(args) -> None:
+    input_map = {"1": UsbInput.INPUT_1, "2": UsbInput.INPUT_2}
+    inp = input_map[args.input]
+    print(f"Setting USB input → Input {args.input}…")
+    with discover() as h:
+        h.set_usb_input(inp)
+        print("Done.")
+        if args.verify:
+            _no_verify_field("USB input has no reflected query field")
 
 
 def cmd_bt_default(args) -> None:
@@ -889,6 +902,7 @@ def _isub_connectivity(verify: bool) -> None:
     while True:
         sel = _imenu("Connectivity", [
             "wireless-mode  Set 2.4 GHz wireless mode",
+            "usb-input      Select USB Input 1 or 2",
             "bt-default     Set Bluetooth default on/off",
             "bt-auto-mute   Set Bluetooth auto-mute mode",
         ])
@@ -898,9 +912,12 @@ def _isub_connectivity(verify: bool) -> None:
             c = _iask_choice("Wireless mode", ["performance", "extended"])
             _irun(cmd_wireless_mode, mode=c, verify=verify)
         elif sel == 1:
+            c = _iask_choice("USB input", ["1", "2"])
+            _irun(cmd_usb_input, input=c, verify=verify)
+        elif sel == 2:
             c = _iask_choice("BT default", ["on", "off"])
             _irun(cmd_bt_default, state=c, verify=verify)
-        elif sel == 2:
+        elif sel == 3:
             c = _iask_choice("BT auto-mute", ["off", "-12db", "full"])
             _irun(cmd_bt_auto_mute, mode=c, verify=verify)
 
@@ -1183,7 +1200,7 @@ _ALL_COMMANDS = [
     "volume", "mic-vol", "sidetone", "anc", "transparency", "gain",
     "oled-brightness", "mic-led", "audio-output", "stream-volumes", "chatmix",
     "dim-timeout", "home-screen", "auto-off",
-    "wireless-mode", "bt-default", "bt-auto-mute",
+    "wireless-mode", "usb-input", "bt-default", "bt-auto-mute",
     "eq-preset", "eq-bands",
     "oled-clear", "oled-release", "oled-text", "oled-scroll",
     "oled-img", "oled-anim", "oled-gif",
@@ -1207,6 +1224,7 @@ _REQUIRED: dict[str, list[str]] = {
     "home-screen":       ["mode"],
     "auto-off":          ["step"],
     "wireless-mode":     ["mode"],
+    "usb-input":         ["input"],
     "bt-default":        ["state"],
     "bt-auto-mute":      ["mode"],
     "eq-preset":         ["index"],
@@ -1279,6 +1297,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--output", choices=["speakers", "stream"],
         help="Audio output destination  [audio-output]",
     )
+    p.add_argument(
+        "--input", choices=["1", "2"],
+        help="USB input 1 or 2  [usb-input]",
+    )
     p.add_argument("--main", type=int, metavar="0-100", help="Main stream volume  [stream-volumes]")
     p.add_argument("--aux",  type=int, metavar="0-100", help="Aux stream volume   [stream-volumes]")
     p.add_argument("--mic",  type=int, metavar="0-100", help="Mic stream volume   [stream-volumes]")
@@ -1346,6 +1368,7 @@ _HANDLERS = {
     "auto-off":           cmd_auto_off,
     "chatmix":            cmd_chatmix,
     "wireless-mode":      cmd_wireless_mode,
+    "usb-input":          cmd_usb_input,
     "bt-default":         cmd_bt_default,
     "bt-auto-mute":       cmd_bt_auto_mute,
     "audio-output":       cmd_audio_output,

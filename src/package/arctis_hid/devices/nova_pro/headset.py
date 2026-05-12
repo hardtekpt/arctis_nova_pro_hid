@@ -13,6 +13,7 @@ from ...core.types import (
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
+    UsbInput,
     WirelessMode,
 )
 from ...exceptions import DeviceIOError
@@ -129,6 +130,11 @@ class ArctisNovaProWireless(AbstractHeadset):
     def set_wireless_mode(self, mode: WirelessMode) -> None:
         """Set 2.4 GHz wireless mode. Note: no Col02 event fires — verify via get_status()."""
         self._transport.write(C.CMD_WIRELESS, [int(mode)])
+        self._save()
+
+    def set_usb_input(self, input: UsbInput) -> None:
+        """Select USB input. Note: no Col02 event fires — no query reflects this value."""
+        self._transport.write(C.CMD_USB_INPUT, [int(input)])
         self._save()
 
     def set_bt_default(self, enabled: bool) -> None:
