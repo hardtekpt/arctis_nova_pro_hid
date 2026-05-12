@@ -30,6 +30,7 @@ pip install -e 'src/package/[oled]'   # adds Pillow for OLED drawing
    - [`ConnectivityData`](#connectivitydata)
    - [`DisplayData`](#displaydata)
    - [`VolumeLimiterData`](#volumelimiterdata)
+   - [`BatteryData`](#batterydata)
 7. [Events](#events)
 8. [Enums](#enums)
 9. [Exceptions](#exceptions)
@@ -164,12 +165,19 @@ Query the base-station display settings: dim screen timeout, OLED brightness, ho
 #### `get_volume_limiter() → VolumeLimiterData`
 Query the volume limiter state (from command `0x26`).
 
+#### `get_battery() → BatteryData`
+Query the battery levels: headset and dock (from command `0xB7`).
+
 ```python
 d = h.get_display()
 print(d.oled_brightness)    # 7
 print(d.dim_timeout)        # TimeoutStep.THIRTY_MIN
 print(d.home_screen_mode)   # HomeScreenMode.DETAILED
 print(d.sonar_running)      # False
+
+b = h.get_battery()
+print(b.headset_pct)        # 85.0
+print(b.dock_pct)           # 100.0
 ```
 
 ---
@@ -580,6 +588,19 @@ class VolumeLimiterData:
 ```
 
 **Note:** The encoding is inverted — `0x01` means the limiter is **on**, `0x02` means **off**.
+
+---
+
+### `BatteryData`
+
+Returned by `get_battery()`. Battery levels for headset and dock from command `0xB7`.
+
+```python
+@dataclass
+class BatteryData:
+    headset_pct: float   # 0xB7[2]: raw ÷ 8 × 100 = %
+    dock_pct:    float   # 0xB7[3]: raw ÷ 8 × 100 = %
+```
 
 ---
 

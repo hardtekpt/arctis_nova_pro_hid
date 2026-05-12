@@ -121,6 +121,16 @@ def make_26_packet(limiter: int = 0x02) -> list[int]:
     return pkt
 
 
+def make_b7_packet(hbat: int = 8, dbat: int = 8) -> list[int]:
+    """Build a fake 0xB7 battery query response packet (64 bytes)."""
+    pkt = [0] * 64
+    pkt[0] = C.REPORT_ID
+    pkt[1] = C.CMD_BATTERY
+    pkt[C.B7_HBAT] = hbat
+    pkt[C.B7_DBAT] = dbat
+    return pkt
+
+
 def make_event_packet(opcode: int, *payload: int) -> list[int]:
     """Build a fake Col02 event packet (64 bytes).
 

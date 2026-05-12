@@ -53,6 +53,12 @@ class VolumeLimiterData:
 
 
 @dataclass
+class BatteryData:
+    headset_pct: float   # 0xB7[2]: raw ÷ 8 × 100 = %
+    dock_pct:    float   # 0xB7[3]: raw ÷ 8 × 100 = %
+
+
+@dataclass
 class MicEqData:
     volume_pct:      float
     gain:            GainLevel

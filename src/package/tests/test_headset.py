@@ -18,9 +18,9 @@ from arctis_hid.core.types import (
     WirelessMode,
 )
 from arctis_hid.devices.nova_pro import constants as C
-from arctis_hid.devices.nova_pro.models import ConnectivityData, DisplayData, MicEqData, StatusData, VolumeLimiterData
+from arctis_hid.devices.nova_pro.models import BatteryData, ConnectivityData, DisplayData, MicEqData, StatusData, VolumeLimiterData
 
-from .conftest import make_20_packet, make_26_packet, make_80_packet, make_b0_packet, make_b5_packet
+from .conftest import make_20_packet, make_26_packet, make_80_packet, make_b0_packet, make_b5_packet, make_b7_packet
 
 
 # ── Query methods ──────────────────────────────────────────────────────────────
@@ -135,6 +135,26 @@ class TestGetVolumeLimiter:
         mock_transport.query.return_value = make_26_packet(limiter=0x02)
         result = mock_headset.get_volume_limiter()
         assert result.limiter_on is False
+
+
+class TestGetBattery:
+    def test_sends_correct_opcode(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b7_packet()
+        mock_headset.get_battery()
+        mock_transport.query.assert_called_once_with(C.CMD_BATTERY)
+
+    def test_returns_battery_data(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b7_packet(hbat=8, dbat=4)
+        result = mock_headset.get_battery()
+        assert isinstance(result, BatteryData)
+        assert result.headset_pct == pytest.approx(100.0)
+        assert result.dock_pct == pytest.approx(50.0)
+
+    def test_both_empty(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b7_packet(hbat=0, dbat=0)
+        result = mock_headset.get_battery()
+        assert result.headset_pct == pytest.approx(0.0)
+        assert result.dock_pct == pytest.approx(0.0)
 
 
 # ── Write methods — correct command byte + payload + save ─────────────────────

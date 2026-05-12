@@ -18,6 +18,7 @@ from arctis_hid.devices.nova_pro import constants as C
 from arctis_hid.devices.nova_pro.codec import (
     decode_ascii_response,
     decode_battery,
+    decode_battery_packet,
     decode_connectivity_packet,
     decode_display_packet,
     decode_gain_event,
@@ -30,7 +31,7 @@ from arctis_hid.devices.nova_pro.codec import (
     encode_volume,
 )
 
-from .conftest import make_20_packet, make_26_packet, make_80_packet, make_b0_packet, make_b5_packet
+from .conftest import make_20_packet, make_26_packet, make_80_packet, make_b0_packet, make_b5_packet, make_b7_packet
 
 
 # ── Volume encoding ────────────────────────────────────────────────────────────
@@ -358,6 +359,33 @@ class TestDecodeVolLimiterPacket:
     def test_limiter_off(self):
         pkt = make_26_packet(limiter=0x02)
         assert decode_vol_limiter_packet(pkt).limiter_on is False
+
+
+# ── 0xB7 battery query packet decoding ────────────────────────────────────
+
+
+class TestDecodeBatteryPacket:
+    def test_headset_battery_full(self):
+        pkt = make_b7_packet(hbat=8)
+        assert decode_battery_packet(pkt).headset_pct == pytest.approx(100.0)
+
+    def test_headset_battery_half(self):
+        pkt = make_b7_packet(hbat=4)
+        assert decode_battery_packet(pkt).headset_pct == pytest.approx(50.0)
+
+    def test_dock_battery_full(self):
+        pkt = make_b7_packet(dbat=8)
+        assert decode_battery_packet(pkt).dock_pct == pytest.approx(100.0)
+
+    def test_dock_battery_half(self):
+        pkt = make_b7_packet(dbat=4)
+        assert decode_battery_packet(pkt).dock_pct == pytest.approx(50.0)
+
+    def test_both_batteries(self):
+        pkt = make_b7_packet(hbat=8, dbat=2)
+        result = decode_battery_packet(pkt)
+        assert result.headset_pct == pytest.approx(100.0)
+        assert result.dock_pct == pytest.approx(25.0)
 
 
 # ── 0x80 display settings packet decoding ─────────────────────────────────────
