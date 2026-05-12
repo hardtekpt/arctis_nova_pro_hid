@@ -20,7 +20,7 @@ from ...exceptions import DeviceIOError
 from ..base import AbstractHeadset, AbstractOled
 from . import constants as C
 from . import codec
-from .models import ConnectivityData, DisplayData, MicEqData, StatusData
+from .models import ConnectivityData, DisplayData, MicEqData, StatusData, VolumeLimiterData
 
 
 class ArctisNovaProWireless(AbstractHeadset):
@@ -82,6 +82,10 @@ class ArctisNovaProWireless(AbstractHeadset):
     def get_display(self) -> DisplayData:
         data = self._transport.query(C.CMD_DISPLAY)
         return codec.decode_display_packet(data)
+
+    def get_volume_limiter(self) -> VolumeLimiterData:
+        data = self._transport.query(C.CMD_VOL_LIMITER)
+        return codec.decode_vol_limiter_packet(data)
 
     # ── writes ─────────────────────────────────────────────────────────────
 

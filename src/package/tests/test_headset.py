@@ -18,9 +18,9 @@ from arctis_hid.core.types import (
     WirelessMode,
 )
 from arctis_hid.devices.nova_pro import constants as C
-from arctis_hid.devices.nova_pro.models import ConnectivityData, DisplayData, MicEqData, StatusData
+from arctis_hid.devices.nova_pro.models import ConnectivityData, DisplayData, MicEqData, StatusData, VolumeLimiterData
 
-from .conftest import make_20_packet, make_80_packet, make_b0_packet, make_b5_packet
+from .conftest import make_20_packet, make_26_packet, make_80_packet, make_b0_packet, make_b5_packet
 
 
 # ── Query methods ──────────────────────────────────────────────────────────────
@@ -117,6 +117,24 @@ class TestGetDisplay:
         assert result.oled_brightness == 7
         assert result.home_screen_mode == HomeScreenMode.SIMPLE
         assert result.sonar_running is True
+
+
+class TestGetVolumeLimiter:
+    def test_sends_correct_opcode(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_26_packet()
+        mock_headset.get_volume_limiter()
+        mock_transport.query.assert_called_once_with(C.CMD_VOL_LIMITER)
+
+    def test_limiter_on(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_26_packet(limiter=0x01)
+        result = mock_headset.get_volume_limiter()
+        assert isinstance(result, VolumeLimiterData)
+        assert result.limiter_on is True
+
+    def test_limiter_off(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_26_packet(limiter=0x02)
+        result = mock_headset.get_volume_limiter()
+        assert result.limiter_on is False
 
 
 # ── Write methods — correct command byte + payload + save ─────────────────────

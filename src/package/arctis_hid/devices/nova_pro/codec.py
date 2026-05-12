@@ -44,6 +44,7 @@ from .models import (
     StatusData,
     StreamVolumesEvent,
     TransparencyEvent,
+    VolumeLimiterData,
     VolumeEvent,
     WirelessModeEvent,
 )
@@ -111,6 +112,14 @@ def decode_connectivity_packet(data: list[int]) -> ConnectivityData:
     return ConnectivityData(
         connectivity_mode = ConnectivityMode(data[C.B5_CONN]),
         bt_connected      = data[C.B5_BT_CONNECTED] == 0x01,
+    )
+
+
+# ── 0x26 volume limiter packet ────────────────────────────────────────────
+
+def decode_vol_limiter_packet(data: list[int]) -> VolumeLimiterData:
+    return VolumeLimiterData(
+        limiter_on = data[C.B26_LIMITER] == 0x01,
     )
 
 

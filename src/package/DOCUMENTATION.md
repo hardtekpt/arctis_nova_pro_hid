@@ -29,6 +29,7 @@ pip install -e 'src/package/[oled]'   # adds Pillow for OLED drawing
    - [`MicEqData`](#miceqdata)
    - [`ConnectivityData`](#connectivitydata)
    - [`DisplayData`](#displaydata)
+   - [`VolumeLimiterData`](#volumelimiterdata)
 7. [Events](#events)
 8. [Enums](#enums)
 9. [Exceptions](#exceptions)
@@ -159,6 +160,9 @@ print(c.bt_connected)        # True
 
 #### `get_display() → DisplayData`
 Query the base-station display settings: dim screen timeout, OLED brightness, home screen mode, and whether GG Sonar is running (from command `0x80`).
+
+#### `get_volume_limiter() → VolumeLimiterData`
+Query the volume limiter state (from command `0x26`).
 
 ```python
 d = h.get_display()
@@ -562,6 +566,20 @@ class DisplayData:
     home_screen_mode:  HomeScreenMode # 0x80[5]: DETAILED=0  SIMPLE=1
     sonar_running:     bool           # 0x80[7]: True if GG Sonar is running
 ```
+
+---
+
+### `VolumeLimiterData`
+
+Returned by `get_volume_limiter()`. Volume limiter state from command `0x26`.
+
+```python
+@dataclass
+class VolumeLimiterData:
+    limiter_on: bool   # 0x26[2]: True=on (0x01)  False=off (0x02)
+```
+
+**Note:** The encoding is inverted — `0x01` means the limiter is **on**, `0x02` means **off**.
 
 ---
 

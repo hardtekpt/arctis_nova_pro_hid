@@ -48,6 +48,11 @@ class ConnectivityData:
 
 
 @dataclass
+class VolumeLimiterData:
+    limiter_on: bool   # 0x26[2]: True=on (0x01)  False=off (0x02)
+
+
+@dataclass
 class MicEqData:
     volume_pct:      float
     gain:            GainLevel

@@ -149,6 +149,7 @@ class TestDisplayData:
             dim_timeout=TimeoutStep.OFF,
             oled_brightness=5,
             home_screen_mode=HomeScreenMode.DETAILED,
+            sonar_running=False,
         )
         return DisplayData(**{**defaults, **kwargs})
 

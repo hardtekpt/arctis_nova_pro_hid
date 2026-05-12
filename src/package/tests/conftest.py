@@ -112,6 +112,15 @@ def make_b5_packet(
     return pkt
 
 
+def make_26_packet(limiter: int = 0x02) -> list[int]:
+    """Build a fake 0x26 volume limiter response packet (64 bytes)."""
+    pkt = [0] * 64
+    pkt[0] = C.REPORT_ID
+    pkt[1] = C.CMD_VOL_LIMITER
+    pkt[C.B26_LIMITER] = limiter
+    return pkt
+
+
 def make_event_packet(opcode: int, *payload: int) -> list[int]:
     """Build a fake Col02 event packet (64 bytes).
 

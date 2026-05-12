@@ -837,6 +837,16 @@ Response: `[0x06, 0xB5, ?, conn_mode, bt_connected, ...]`
 | 2 | `0x01` / `0x02` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x02`=BT pairing mode, `0x04`=2.4 GHz + BT (same values as `0xB5` event `[2]` and `0xB0[4]`) ✅ |
 | 3 | `0x01` / `0x02` | **BT device connected** — `0x01`=BT device currently connected, `0x02`=not connected ✅ |
 
+#### `0x26` — Volume Limiter
+
+Response: `[0x06, 0x26, ?, limiter_state, ...]`
+
+| Byte | Value observed | Meaning |
+|---|---|---|
+| 0 | `0x06` | Report ID |
+| 1 | `0x26` | Command echo |
+| 2 | `0x01` / `0x02` | **Limiter state** — `0x01`=limiter on, `0x02`=limiter off (inverted encoding) |
+
 #### `0x80` — Base-Station Display Settings ✅
 
 Confirmed `2026-05-09`. Returns dim screen timeout, OLED brightness, and home screen mode — the three settings displayed in GG that were not present in `0xB0` or `0x20`.

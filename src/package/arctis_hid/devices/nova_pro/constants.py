@@ -19,6 +19,7 @@ CMD_FIRMWARE     = 0x10   # ASCII firmware version (also pushed unsolicited on r
 CMD_SERIAL       = 0x12   # ASCII serial number
 CMD_DISPLAY      = 0x80   # base-station display: dim timeout, OLED brightness, home screen
 CMD_CONNECTIVITY = 0xB5   # connectivity mode + BT connected state
+CMD_VOL_LIMITER  = 0x26   # volume limiter state
 
 # ── Write command bytes ────────────────────────────────────────────────────
 
@@ -61,6 +62,10 @@ OLED_HEIGHT            = 64     # confirmed via ggoled source (ggoled SCREEN_HEI
 
 B5_CONN         = 2   # 0x01=2.4GHz only  0x04=2.4GHz+BT (ConnectivityMode)
 B5_BT_CONNECTED = 3   # 0x01=BT device connected  0x02=not connected
+
+# ── 0x26 response byte indices ─────────────────────────────────────────────
+
+B26_LIMITER = 2   # 0x01=limiter on  0x02=limiter off
 
 # ── 0xB0 response byte indices ─────────────────────────────────────────────
 

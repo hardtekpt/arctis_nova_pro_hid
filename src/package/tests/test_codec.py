@@ -24,12 +24,13 @@ from arctis_hid.devices.nova_pro.codec import (
     decode_gain_query,
     decode_mic_eq_packet,
     decode_status_packet,
+    decode_vol_limiter_packet,
     decode_volume,
     encode_gain,
     encode_volume,
 )
 
-from .conftest import make_20_packet, make_80_packet, make_b0_packet, make_b5_packet
+from .conftest import make_20_packet, make_26_packet, make_80_packet, make_b0_packet, make_b5_packet
 
 
 # ── Volume encoding ────────────────────────────────────────────────────────────
@@ -344,6 +345,19 @@ class TestDecodeConnectivityPacket:
     def test_bt_connected_false(self):
         pkt = make_b5_packet(bt_connected=0x02)
         assert decode_connectivity_packet(pkt).bt_connected is False
+
+
+# ── 0x26 volume limiter packet decoding ───────────────────────────────────
+
+
+class TestDecodeVolLimiterPacket:
+    def test_limiter_on(self):
+        pkt = make_26_packet(limiter=0x01)
+        assert decode_vol_limiter_packet(pkt).limiter_on is True
+
+    def test_limiter_off(self):
+        pkt = make_26_packet(limiter=0x02)
+        assert decode_vol_limiter_packet(pkt).limiter_on is False
 
 
 # ── 0x80 display settings packet decoding ─────────────────────────────────────
