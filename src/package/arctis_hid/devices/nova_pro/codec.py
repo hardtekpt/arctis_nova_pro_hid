@@ -23,6 +23,7 @@ from .models import (
     AncModeEvent,
     AudioOutputEvent,
     AutoOffEvent,
+    BatteryData,
     BatteryEvent,
     BtAutoMuteEvent,
     BtDefaultEvent,
@@ -120,6 +121,15 @@ def decode_connectivity_packet(data: list[int]) -> ConnectivityData:
 def decode_vol_limiter_packet(data: list[int]) -> VolumeLimiterData:
     return VolumeLimiterData(
         limiter_on = data[C.B26_LIMITER] == 0x01,
+    )
+
+
+# ── 0xB7 battery query packet ─────────────────────────────────────────────
+
+def decode_battery_packet(data: list[int]) -> BatteryData:
+    return BatteryData(
+        headset_pct = decode_battery(data[C.B7_HBAT]),
+        dock_pct    = decode_battery(data[C.B7_DBAT]),
     )
 
 

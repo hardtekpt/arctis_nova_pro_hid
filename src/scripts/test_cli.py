@@ -72,6 +72,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "package"))
 from arctis_hid import (
     AncMode,
     AudioOutput,
+    BatteryData,
     BtAutoMute,
     ConnectivityData,
     ConnectivityMode,
@@ -145,6 +146,12 @@ def _print_vol_limiter(vl: VolumeLimiterData) -> None:
     print(f"  Limiter on       : {vl.limiter_on}  (0x26[2]={'0x01' if vl.limiter_on else '0x02'})")
 
 
+def _print_battery(b: BatteryData) -> None:
+    _sep("Battery (0xB7)")
+    print(f"  Headset battery  : {b.headset_pct:.0f}%  (0xB7[2])")
+    print(f"  Dock battery     : {b.dock_pct:.0f}%  (0xB7[3])")
+
+
 def _print_miceq(m: MicEqData) -> None:
     _sep("Mic / EQ (0x20)")
     print(f"  Volume           : {m.volume_pct:.1f}%  (0x20[3])")
@@ -200,6 +207,7 @@ def cmd_query(args) -> None:
         _print_display(h.get_display())
         _print_connectivity(h.get_connectivity())
         _print_vol_limiter(h.get_volume_limiter())
+        _print_battery(h.get_battery())
         _sep("Device info")
         print(f"  Firmware         : {h.get_firmware_version()}")
         print(f"  Serial number    : {h.get_serial_number()}")
@@ -228,6 +236,11 @@ def cmd_connectivity(args) -> None:
 def cmd_vol_limiter(args) -> None:
     with discover() as h:
         _print_vol_limiter(h.get_volume_limiter())
+
+
+def cmd_battery(args) -> None:
+    with discover() as h:
+        _print_battery(h.get_battery())
 
 
 # ── Listen handler — TestChecklist §1 ─────────────────────────────────────
@@ -811,16 +824,17 @@ def _irun(handler, **kwargs) -> None:
 def _isub_query(verify: bool) -> None:
     while True:
         sel = _imenu("Query commands", [
-            "All queries  (status + miceq + display + connectivity + vol-limiter + firmware + serial)",
+            "All queries  (status + miceq + display + connectivity + vol-limiter + battery + firmware + serial)",
             "Status only  (0xB0)",
             "Mic/EQ only  (0x20)",
             "Display only (0x80)",
             "Connectivity (0xB5)",
             "Volume limiter (0x26)",
+            "Battery levels (0xB7)",
         ])
         if sel is None:
             return
-        _irun([cmd_query, cmd_status, cmd_miceq, cmd_display, cmd_connectivity, cmd_vol_limiter][sel], verify=verify)
+        _irun([cmd_query, cmd_status, cmd_miceq, cmd_display, cmd_connectivity, cmd_vol_limiter, cmd_battery][sel], verify=verify)
 
 
 def _isub_listen(_verify: bool) -> None:
@@ -1209,7 +1223,7 @@ def _interactive_mode() -> None:
 # ── Argument parser ────────────────────────────────────────────────────────
 
 _ALL_COMMANDS = [
-    "query", "status", "miceq", "display", "connectivity", "vol-limiter", "listen",
+    "query", "status", "miceq", "display", "connectivity", "vol-limiter", "battery", "listen",
     "volume", "mic-vol", "sidetone", "anc", "transparency", "gain",
     "oled-brightness", "mic-led", "audio-output", "stream-volumes", "chatmix",
     "dim-timeout", "home-screen", "auto-off",
@@ -1368,6 +1382,7 @@ _HANDLERS = {
     "display":            cmd_display,
     "connectivity":       cmd_connectivity,
     "vol-limiter":        cmd_vol_limiter,
+    "battery":            cmd_battery,
     "listen":             cmd_listen,
     "volume":             cmd_volume,
     "mic-vol":            cmd_mic_vol,
