@@ -6,9 +6,10 @@ which ones return a non-trivial response. Discovers undiscovered query commands.
 
 Usage:
   python scripts/probe_query_scan.py
-  python scripts/probe_query_scan.py --delay 0.15         # slower, more reliable
-  python scripts/probe_query_scan.py --start 0x80         # scan from a specific opcode
-  python scripts/probe_query_scan.py --check-settings     # detect per-opcode mutations
+  python scripts/probe_query_scan.py --delay 0.15              # slower, more reliable
+  python scripts/probe_query_scan.py --start 0x80              # scan from a specific opcode
+  python scripts/probe_query_scan.py --check-settings          # detect per-opcode mutations
+  python scripts/probe_query_scan.py --query-after 0xB0        # query 0xB0 1s after each write
 
 Expected hits: 0xB0, 0x20, 0x10, 0x12, 0x80 (already confirmed). Any NEW hit
 is an undiscovered query command — use probe_full_diff.py to decode its fields.
@@ -22,6 +23,11 @@ Settings tracking (--check-settings): after every probe the script queries
 that silently mutate a setting without returning data are labelled MUTATING.
 A full per-command settings-change table is printed at the end.
 Adds ~0.3 s overhead per opcode (~77 s extra over a full 256-opcode scan).
+
+Query-after (--query-after ADDR): 1 second after each write probe, send a second
+query to ADDR and log the raw response alongside the probe result. Useful for
+spotting which write opcodes affect a specific address (e.g. 0xB0) without a full
+settings snapshot. Adds ~1.15 s overhead per opcode.
 
 Total scan time: ~31 s at default 120 ms delay (plus reconnect/snapshot pauses).
 """
@@ -220,6 +226,17 @@ def main() -> None:
             "that change settings are labelled MUTATING. Adds ~0.3 s per opcode."
         ),
     )
+    parser.add_argument(
+        "--query-after",
+        type=lambda x: int(x, 0),
+        default=None,
+        metavar="ADDR",
+        help=(
+            "After each write probe, wait 1 s then query ADDR and log the raw "
+            "response. Useful for spotting which opcodes affect a specific address "
+            "(e.g. 0xB0) without a full settings snapshot. Adds ~1.15 s per opcode."
+        ),
+    )
     args = parser.parse_args()
 
     ctrl_path, _, device_name = find_handles()
@@ -228,11 +245,15 @@ def main() -> None:
         sys.exit(1)
 
     total = args.end - args.start + 1
-    est_s = total * (args.delay + (3 * SNAPSHOT_DELAY_S if args.check_settings else 0))
+    query_after_overhead = 1.0 + SNAPSHOT_DELAY_S if args.query_after is not None else 0.0
+    est_s = total * (args.delay + (3 * SNAPSHOT_DELAY_S if args.check_settings else 0) + query_after_overhead)
     print(f"Device : {device_name}")
     print(f"Scanning opcodes 0x{args.start:02X}–0x{args.end:02X}  ({total} opcodes, ~{est_s:.0f}s)")
+    if args.query_after is not None:
+        print(f"Query-after: 0x{args.query_after:02X} (1 s after each write probe)")
     print("KNOWN    = already confirmed query  |  RESPONSIVE = new hit")
     print("MUTATING = silently changed a setting (no response data)")
+    print("QA-ONLY  = no probe response but query-after returned data")
     print("RESET    = caused a disconnect       |  .          = no response, no change\n")
 
     ctrl = hid.device()
@@ -330,6 +351,24 @@ def main() -> None:
                 print(f"    Resuming from 0x{cmd + 1:02X}...", flush=True)
                 continue
 
+            # ── query-after ──────────────────────────────────────────────────
+            query_after_response: list[int] | None = None
+            if args.query_after is not None and not disconnected:
+                time.sleep(1.0)
+                qa_pkt = bytearray(PACKET_SIZE)
+                qa_pkt[0] = REPORT_ID
+                qa_pkt[1] = args.query_after
+                try:
+                    ctrl.write(list(qa_pkt))
+                    time.sleep(SNAPSHOT_DELAY_S)
+                    for _ in range(4):
+                        data = ctrl.read(PACKET_SIZE, 50)
+                        if data and list(data)[1] == args.query_after:
+                            query_after_response = list(data)
+                            break
+                except OSError:
+                    pass
+
             # ── settings snapshot ────────────────────────────────────────────
             changes: list[tuple[str, str, str]] = []
             if args.check_settings:
@@ -341,23 +380,31 @@ def main() -> None:
 
             # ── classify and print ───────────────────────────────────────────
             change_tag = f"  ← {len(changes)} setting(s) changed" if changes else ""
+            qa_tag = (
+                f"  → 0x{args.query_after:02X}: [{_hex_dump(query_after_response[:20])} ...]"
+                if query_after_response else ""
+            )
 
             if cmd in KNOWN_QUERY_CMDS:
                 _nl()
                 line = f"KNOWN:      0x{cmd:02X}"
                 if response:
                     line += f"  [{_hex_dump(response[:20])} ...]"
-                print(line + change_tag)
+                print(line + change_tag + qa_tag)
 
             elif response:
                 _nl()
-                print(f"RESPONSIVE: 0x{cmd:02X}  [{_hex_dump(response)}]" + change_tag)
+                print(f"RESPONSIVE: 0x{cmd:02X}  [{_hex_dump(response)}]" + change_tag + qa_tag)
                 responsive.append((cmd, response))
 
             elif changes:
                 _nl()
-                print(f"MUTATING:   0x{cmd:02X}" + change_tag)
+                print(f"MUTATING:   0x{cmd:02X}" + change_tag + qa_tag)
                 mutating_cmds.append(cmd)
+
+            elif query_after_response:
+                _nl()
+                print(f"QA-ONLY:    0x{cmd:02X}" + qa_tag)
 
             else:
                 print(".", end="", flush=True)
