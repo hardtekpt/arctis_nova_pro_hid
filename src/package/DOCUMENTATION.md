@@ -522,6 +522,7 @@ class StatusData:
     bt_default:          bool           # 0xB0[2]: True=on (BT auto-connect enabled)
     bt_auto_mute:        BtAutoMute     # 0xB0[3]: OFF / DB_MINUS_12 / FULL
     auto_off_timeout:    TimeoutStep    # 0xB0[12]: OFF=0 … SIXTY_MIN=6
+    headset_powered:     bool           # 0xB0[15]: True=on, False=off/removed
 ```
 
 ---
@@ -537,6 +538,7 @@ class MicEqData:
     gain:            GainLevel
     eq_preset_index: int            # 0x04=custom; 0x00-0x03, 0x05-0x18=named presets
     eq_bands:        list[int]      # 10 values, each 0–40; 20=flat/0 dB
+    usb_input:       int            # 0=Input1, 1=Input2
     mic_volume:      int            # 1–10
     sidetone:        SidetoneLevel
     audio_output:    AudioOutput
@@ -600,6 +602,7 @@ Returned by `get_battery()`. Battery levels for headset and dock from command `0
 class BatteryData:
     headset_pct: float   # 0xB7[2]: raw ÷ 8 × 100 = %
     dock_pct:    float   # 0xB7[3]: raw ÷ 8 × 100 = %
+    headset_powered: bool   # 0xB7[4]: True=on, False=off/removed
 ```
 
 ---
@@ -613,7 +616,8 @@ Each event is a dataclass. The callback receives a single instance.
 | Class | Trigger | Fields |
 |-------|---------|--------|
 | `VolumeEvent` | Volume wheel turned | `percent: float` (0–100) |
-| `BatteryEvent` | Battery level update | `headset_pct: float`, `dock_pct: float` |
+| `BatteryEvent` | Battery level update | `headset_pct: float`, `dock_pct: float`, `headset_powered: bool` |
+| `HeadsetPoweredEvent` | Headset powered on/removed | `powered: bool` |
 | `ConnectivityEvent` | Wireless connection changed | `mode: ConnectivityMode`, `bt_active: bool` (True when mode is `WIRELESS_AND_BT` or `BT_PAIRING`), `bt_connected: bool` (True when a BT device is paired and connected, data[3]==0x01), `wireless: bool` |
 | `AncModeEvent` | ANC button pressed | `mode: AncMode` |
 | `MicMuteEvent` | Mic mute button pressed | `muted: bool` |

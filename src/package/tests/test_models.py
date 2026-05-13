@@ -30,6 +30,7 @@ from arctis_hid.devices.nova_pro.models import (
     EqBandEvent,
     EqPresetEvent,
     GainEvent,
+    HeadsetPoweredEvent,
     HomeScreenEvent,
     MicEqData,
     MicLedEvent,
@@ -62,6 +63,7 @@ class TestStatusData:
             bt_default=False,
             bt_auto_mute=BtAutoMute.OFF,
             auto_off_timeout=TimeoutStep.OFF,
+            headset_powered=True,
         )
         return StatusData(**{**defaults, **kwargs})
 
@@ -186,9 +188,10 @@ class TestEventDataclasses:
         assert isinstance(e.percent, float)
 
     def test_battery_event(self):
-        e = BatteryEvent(headset_pct=100.0, dock_pct=50.0)
+        e = BatteryEvent(headset_pct=100.0, dock_pct=50.0, headset_powered=True)
         assert e.headset_pct == 100.0
         assert e.dock_pct == 50.0
+        assert e.headset_powered is True
 
     def test_connectivity_event(self):
         e = ConnectivityEvent(mode=ConnectivityMode.WIRELESS_AND_BT, bt_active=True, bt_connected=True, wireless=True)
@@ -263,6 +266,10 @@ class TestEventDataclasses:
     def test_auto_off_event(self):
         assert AutoOffEvent(step=TimeoutStep.SIXTY_MIN).step == TimeoutStep.SIXTY_MIN
 
+    def test_headset_powered_event(self):
+        assert HeadsetPoweredEvent(powered=True).powered is True
+        assert HeadsetPoweredEvent(powered=False).powered is False
+
 
 # ── All event dataclasses are regular (mutable) dataclasses ───────────────────
 
@@ -272,7 +279,7 @@ _ALL_EVENT_CLASSES = [
     ChatMixEvent, GainEvent, MicVolumeEvent, SidetoneEvent, OledBrightnessEvent,
     TransparencyEvent, WirelessModeEvent, BtDefaultEvent, BtAutoMuteEvent,
     AudioOutputEvent, StreamVolumesEvent, EqPresetEvent, EqBandEvent,
-    DimTimeoutEvent, HomeScreenEvent, MicLedEvent, AutoOffEvent,
+    DimTimeoutEvent, HomeScreenEvent, MicLedEvent, AutoOffEvent, HeadsetPoweredEvent,
 ]
 
 

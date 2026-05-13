@@ -31,6 +31,7 @@ class StatusData:
     bt_default:          bool         # 0xB0[2]: True=on (BT auto-connect enabled)
     bt_auto_mute:        BtAutoMute   # 0xB0[3]: OFF / DB_MINUS_12 / FULL
     auto_off_timeout:    TimeoutStep  # 0xB0[12]: OFF=0 … SIXTY_MIN=6
+    headset_powered:     bool         # 0xB0[15]: True=on (0x08), False=off/removed (0x01)
 
 
 @dataclass
@@ -56,6 +57,7 @@ class VolumeLimiterData:
 class BatteryData:
     headset_pct: float   # 0xB7[2]: raw ÷ 8 × 100 = %
     dock_pct:    float   # 0xB7[3]: raw ÷ 8 × 100 = %
+    headset_powered: bool   # 0xB7[4]: True=on (0x08), False=off/removed (0x01)
 
 
 @dataclass
@@ -64,6 +66,7 @@ class MicEqData:
     gain:            GainLevel
     eq_preset_index: int
     eq_bands:        list[int] = field(default_factory=list)  # 10 values 0–40; 20=flat
+    usb_input:       int = 0           # 0x00=Input1, 0x01=Input2
     mic_volume:      int = 0           # 1–10
     sidetone:        SidetoneLevel = SidetoneLevel.OFF
     audio_output:    AudioOutput   = AudioOutput.SPEAKERS
@@ -87,6 +90,7 @@ class VolumeEvent:
 class BatteryEvent:
     headset_pct: float
     dock_pct:    float
+    headset_powered: bool   # True when 0x08, False when 0x01
 
 
 @dataclass
@@ -145,7 +149,7 @@ class WirelessModeEvent:
 
 @dataclass
 class UsbInputEvent:
-    input: UsbInput
+    input_num: int   # 0=Input1, 1=Input2
 
 
 @dataclass
@@ -199,3 +203,8 @@ class MicLedEvent:
 @dataclass
 class AutoOffEvent:
     step: TimeoutStep
+
+
+@dataclass
+class HeadsetPoweredEvent:
+    powered: bool   # True=on (0x08), False=off/removed (0x01)

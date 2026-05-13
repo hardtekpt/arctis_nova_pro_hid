@@ -729,6 +729,7 @@ Enables or disables the ChatMix feature on the base station.
 | Field | Source command | Type |
 |---|---|---|
 | `headset_battery_percent` | `0xB7`, `0xB0`[6] | `number \| null` (0–100) |
+| `headset_powered` | `0xB7[4]`, `0xB0[15]` | `boolean \| null` |
 | `base_battery_percent` | `0xB7`, `0xB0`[7] | `number \| null` (0–100) |
 | `base_station_connected` | device presence | `boolean \| null` |
 | `headset_volume_percent` | `0x25`, `0x20`[3] | `number \| null` (0–100) |
@@ -753,6 +754,7 @@ Enables or disables the ChatMix feature on the base station.
 | `wireless_2ghz_mode` | `0xC3`, `0xB0`[13] | `"performance" \| "range" \| null` |
 | `bt_auto_mute` | `0xB3`, `0xB0`[3] | `"off" \| "-12dB" \| "on" \| null` |
 | `bt_default` | `0xB2`, `0xB0`[2] | `"off" \| "on" \| null` |
+| `usb_input` | `0x20[2]` | `number \| null` (0=Input1, 1=Input2) |
 | `stream_main` | `0x47` | `number \| null` (0–100) |
 | `stream_aux` | `0x47` | `number \| null` (0–100) |
 | `stream_mic` | `0x47` | `number \| null` (0–100) |
@@ -770,7 +772,7 @@ All queries use: `[0x06, cmdByte, 0x00, ..., 0x00]` (64 bytes). Confirmed in ses
 
 #### `0xB0` — Status ✅
 
-Response: `[0x06, 0xB0, bt_default, bt_auto_mute, conn_mode, bt_state, headset_bat, dock_bat, transparency, mic_mute, anc, mic_led, auto_off, wireless_mode, 0x08, 0x08]`
+Response: `[0x06, 0xB0, bt_default, bt_auto_mute, conn_mode, bt_state, headset_bat, dock_bat, transparency, mic_mute, anc, mic_led, auto_off, wireless_mode, 0x08, powered]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
@@ -788,17 +790,18 @@ Response: `[0x06, 0xB0, bt_default, bt_auto_mute, conn_mode, bt_state, headset_b
 | 11 | `0x01`–`0x0A` | **Mic LED brightness** (1–10; `0x0A`=10=max) ✅ |
 | 12 | `0x00`–`0x06` | **Auto off timeout** — same encoding as `0xC1` event: 0=off, 1=1 min, 2=5 min, 3=10 min, 4=15 min, 5=30 min, 6=60 min. Confirmed 2026-05-09. ✅ |
 | 13 | `0x00` / `0x01` | **2.4 GHz mode** — `0x00`=performance/speed, `0x01`=extended range ✅ |
-| 14–15 | `0x08 0x08` | Constant |
+| 14 | `0x08` | Constant |
+| 15 | `0x08` / `0x01` | **Headset powered on/in dock** — `0x08`=on, `0x01`=off/removed (same as `0xB7[4]`) ✅ |
 
 #### `0x20` — Mic / EQ Params ✅
 
-Response: `[0x06, 0x20, 0x01, vol_raw, gain, 0x00, eq_preset, eq_b1..b10, mic_vol, sidetone, audio_out, game, chat, stream_main, 0x00, stream_aux, stream_mic]`
+Response: `[0x06, 0x20, usb_in, vol_raw, gain, 0x00, eq_preset, eq_b1..b10, mic_vol, sidetone, audio_out, game, chat, stream_main, 0x00, stream_aux, stream_mic]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
 | 0 | `0x06` | Report ID |
 | 1 | `0x20` | Command echo |
-| 2 | `0x01` | Unknown (constant across all sessions) |
+| 2 | `0x00` / `0x01` | **USB input** — `0x00`=Input 1, `0x01`=Input 2 ✅ |
 | 3 | `0x00`–`0x38` | **Headset volume raw** — same encoding as `0x25` event: `0x38`=0%, `0x00`=100% ✅ |
 | 4 | `0x01` / `0x02` | **Gain level** — `0x01`=low, `0x02`=high ✅ |
 | 5 | `0x00` | Padding/unknown |
@@ -841,7 +844,7 @@ Response: `[0x06, 0xB5, ?, conn_mode, bt_connected, ...]`
 
 Confirmed `2026-05-12`. Returns the current battery levels for headset and dock.
 
-Response: `[0x06, 0xB7, headset_bat, dock_bat, ?, ...]`
+Response: `[0x06, 0xB7, headset_bat, dock_bat, powered, ...]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
@@ -849,7 +852,7 @@ Response: `[0x06, 0xB7, headset_bat, dock_bat, ?, ...]`
 | 1 | `0xB7` | Command echo |
 | 2 | `0x00`–`0x08` | **Headset battery** raw (÷ 8 × 100 = %) ✅ |
 | 3 | `0x00`–`0x08` | **Dock battery** raw (÷ 8 × 100 = %) ✅ |
-| 4 | unknown | Unknown (not yet decoded) |
+| 4 | `0x08` / `0x01` | **Headset powered on/in dock** — `0x08`=on, `0x01`=off/removed ✅ |
 
 #### `0x26` — Volume Limiter
 
