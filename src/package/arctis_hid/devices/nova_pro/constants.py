@@ -86,8 +86,9 @@ B0_MUTE        = 9    # 0x00=unmuted  0x01=muted
 B0_ANC         = 10   # 0x00=off  0x01=transparency  0x02=ANC
 B0_MIC_LED     = 11   # mic LED brightness 1–10
 B0_AUTO_OFF    = 12   # auto-off timeout 0=off 1=1min … 6=60min ✅ confirmed 2026-05-09
-B0_MODE2G      = 13   # 0x00=performance  0x01=extended range
-B0_PWR         = 15   # headset powered on/in dock: 0x08=on, 0x01=off/removed (same as 0xB7[4])
+B0_MODE2G           = 13   # 0x00=performance  0x01=extended range
+B0_WIRELESS_LINK    = 14   # 0x02=absent  0x04=searching  0x08=active (same semantic as 0xB5 event[4])
+B0_PWR              = 15   # headset powered on/in dock: 0x08=on, 0x01=off/removed (same as 0xB7[4])
 
 # ── 0x80 response byte indices ─────────────────────────────────────────────
 

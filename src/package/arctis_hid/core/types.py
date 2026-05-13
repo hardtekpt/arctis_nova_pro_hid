@@ -45,6 +45,12 @@ class ConnectivityMode(IntEnum):
     WIRELESS_AND_BT = 0x04   # 2.4 GHz wireless + Bluetooth active
 
 
+class WirelessLinkState(IntEnum):
+    ABSENT   = 0x02   # headset completely absent or powered off (seen in B0[14] only)
+    SEARCHING = 0x04  # base station searching / pairing in progress
+    ACTIVE   = 0x08   # 2.4 GHz wireless link established
+
+
 class BtAutoMute(IntEnum):
     OFF        = 0
     DB_MINUS_12 = 1

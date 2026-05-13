@@ -14,6 +14,7 @@ from .core.types import (
     SidetoneLevel,
     TimeoutStep,
     UsbInput,
+    WirelessLinkState,
     WirelessMode,
 )
 
@@ -70,6 +71,7 @@ __all__ = [
     "SidetoneLevel",
     "TimeoutStep",
     "UsbInput",
+    "WirelessLinkState",
     "WirelessMode",
     # query models
     "StatusData",

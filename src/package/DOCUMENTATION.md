@@ -519,10 +519,11 @@ class StatusData:
     anc_mode:            AncMode
     mic_led_brightness:  int            # 1–10  (0xB0[11])
     wireless_mode:       WirelessMode
-    bt_default:          bool           # 0xB0[2]: True=on (BT auto-connect enabled)
-    bt_auto_mute:        BtAutoMute     # 0xB0[3]: OFF / DB_MINUS_12 / FULL
-    auto_off_timeout:    TimeoutStep    # 0xB0[12]: OFF=0 … SIXTY_MIN=6
-    headset_powered:     bool           # 0xB0[15]: True=on, False=off/removed
+    bt_default:          bool              # 0xB0[2]: True=on (BT auto-connect enabled)
+    bt_auto_mute:        BtAutoMute        # 0xB0[3]: OFF / DB_MINUS_12 / FULL
+    auto_off_timeout:    TimeoutStep       # 0xB0[12]: OFF=0 … SIXTY_MIN=6
+    wireless_link_state: WirelessLinkState # 0xB0[14]: ABSENT / SEARCHING / ACTIVE
+    headset_powered:     bool              # 0xB0[15]: True=on, False=off/removed
 ```
 
 ---
@@ -618,7 +619,7 @@ Each event is a dataclass. The callback receives a single instance.
 | `VolumeEvent` | Volume wheel turned | `percent: float` (0–100) |
 | `BatteryEvent` | Battery level update | `headset_pct: float`, `dock_pct: float`, `headset_powered: bool` |
 | `HeadsetPoweredEvent` | Headset powered on/removed | `powered: bool` |
-| `ConnectivityEvent` | Wireless connection changed | `mode: ConnectivityMode`, `bt_active: bool` (True when mode is `WIRELESS_AND_BT` or `BT_PAIRING`), `bt_connected: bool` (True when a BT device is paired and connected, data[3]==0x01), `wireless: bool` |
+| `ConnectivityEvent` | Wireless connection changed | `mode: ConnectivityMode`, `bt_active: bool` (True when mode is `WIRELESS_AND_BT` or `BT_PAIRING`), `bt_connected: bool` (True when a BT device is paired and connected, data[3]==0x01), `wireless: bool` (True only when link is ACTIVE), `wireless_link_state: WirelessLinkState` (SEARCHING=0x04 or ACTIVE=0x08) |
 | `AncModeEvent` | ANC button pressed | `mode: AncMode` |
 | `MicMuteEvent` | Mic mute button pressed | `muted: bool` |
 | `ChatMixEvent` | ChatMix dial turned | `game: int` (0–100), `chat: int` (0–100) |
@@ -700,6 +701,15 @@ class AudioOutput(IntEnum):
 class HomeScreenMode(IntEnum):
     DETAILED = 0
     SIMPLE   = 1
+```
+
+### `WirelessLinkState`
+State of the 2.4 GHz wireless link, decoded from `0xB0[14]` (query snapshot) and `0xB5` event `[4]` (live update).
+```python
+class WirelessLinkState(IntEnum):
+    ABSENT   = 0x02   # headset completely absent or powered off (B0[14] only)
+    SEARCHING = 0x04  # base station searching / pairing in progress
+    ACTIVE   = 0x08   # 2.4 GHz wireless link established
 ```
 
 ### `WirelessMode`

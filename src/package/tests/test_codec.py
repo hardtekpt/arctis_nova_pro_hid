@@ -12,6 +12,7 @@ from arctis_hid.core.types import (
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
+    WirelessLinkState,
     WirelessMode,
 )
 from arctis_hid.devices.nova_pro import constants as C
@@ -21,6 +22,7 @@ from arctis_hid.devices.nova_pro.codec import (
     decode_battery_packet,
     decode_connectivity_packet,
     decode_display_packet,
+    decode_event,
     decode_gain_event,
     decode_gain_query,
     decode_mic_eq_packet,
@@ -262,6 +264,18 @@ class TestDecodeStatusPacket:
             pkt = make_b0_packet(auto_off=raw)
             assert decode_status_packet(pkt).auto_off_timeout == step
 
+    def test_wireless_link_state_active(self):
+        pkt = make_b0_packet(wireless_link=0x08)
+        assert decode_status_packet(pkt).wireless_link_state == WirelessLinkState.ACTIVE
+
+    def test_wireless_link_state_searching(self):
+        pkt = make_b0_packet(wireless_link=0x04)
+        assert decode_status_packet(pkt).wireless_link_state == WirelessLinkState.SEARCHING
+
+    def test_wireless_link_state_absent(self):
+        pkt = make_b0_packet(wireless_link=0x02)
+        assert decode_status_packet(pkt).wireless_link_state == WirelessLinkState.ABSENT
+
 
 # ── 0x20 mic/EQ packet decoding ────────────────────────────────────────────────
 
@@ -426,3 +440,36 @@ class TestDecodeDisplayPacket:
     def test_sonar_running_false(self):
         pkt = make_80_packet(sonar=0x00)
         assert decode_display_packet(pkt).sonar_running is False
+
+
+# ── 0xB5 event decoding ────────────────────────────────────────────────────────
+
+
+def _make_b5_event(*payload: int) -> list[int]:
+    pkt = [0] * 64
+    pkt[0] = 0x07
+    pkt[1] = 0xB5
+    for i, v in enumerate(payload):
+        pkt[2 + i] = v
+    return pkt
+
+
+class TestDecodeB5Event:
+    def test_wireless_link_state_active(self):
+        # data[2]=conn, data[3]=bt_connected, data[4]=0x08 → ACTIVE
+        pkt = _make_b5_event(0x01, 0x00, 0x08)
+        evt = decode_event(pkt)
+        assert evt.wireless_link_state == WirelessLinkState.ACTIVE
+        assert evt.wireless is True
+
+    def test_wireless_link_state_searching(self):
+        # data[4] = 0x04 → SEARCHING
+        pkt = _make_b5_event(0x01, 0x00, 0x04)
+        evt = decode_event(pkt)
+        assert evt.wireless_link_state == WirelessLinkState.SEARCHING
+        assert evt.wireless is False
+
+    def test_wireless_link_state_derived_from_data4(self):
+        for raw, expected in ((0x08, WirelessLinkState.ACTIVE), (0x04, WirelessLinkState.SEARCHING)):
+            pkt = _make_b5_event(0x01, 0x00, raw)
+            assert decode_event(pkt).wireless_link_state == expected

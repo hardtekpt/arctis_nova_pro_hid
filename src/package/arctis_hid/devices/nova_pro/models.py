@@ -12,6 +12,7 @@ from ...core.types import (
     SidetoneLevel,
     TimeoutStep,
     UsbInput,
+    WirelessLinkState,
     WirelessMode,
 )
 
@@ -28,10 +29,11 @@ class StatusData:
     anc_mode:            AncMode
     mic_led_brightness:  int          # 1–10
     wireless_mode:       WirelessMode
-    bt_default:          bool         # 0xB0[2]: True=on (BT auto-connect enabled)
-    bt_auto_mute:        BtAutoMute   # 0xB0[3]: OFF / DB_MINUS_12 / FULL
-    auto_off_timeout:    TimeoutStep  # 0xB0[12]: OFF=0 … SIXTY_MIN=6
-    headset_powered:     bool         # 0xB0[15]: True=on (0x08), False=off/removed (0x01)
+    bt_default:          bool             # 0xB0[2]: True=on (BT auto-connect enabled)
+    bt_auto_mute:        BtAutoMute       # 0xB0[3]: OFF / DB_MINUS_12 / FULL
+    auto_off_timeout:    TimeoutStep      # 0xB0[12]: OFF=0 … SIXTY_MIN=6
+    wireless_link_state: WirelessLinkState  # 0xB0[14]: ABSENT/SEARCHING/ACTIVE
+    headset_powered:     bool             # 0xB0[15]: True=on (0x08), False=off/removed (0x01)
 
 
 @dataclass
@@ -95,10 +97,11 @@ class BatteryEvent:
 
 @dataclass
 class ConnectivityEvent:
-    mode:         ConnectivityMode
-    bt_active:    bool   # True when mode is WIRELESS_AND_BT or BT_PAIRING
-    bt_connected: bool   # True if a BT device is paired and connected (data[3]==0x01)
-    wireless:     bool   # True=connected  False=lost
+    mode:                ConnectivityMode
+    bt_active:           bool             # True when mode is WIRELESS_AND_BT or BT_PAIRING
+    bt_connected:        bool             # True if a BT device is paired and connected (data[3]==0x01)
+    wireless:            bool             # True=link active  False=searching or absent
+    wireless_link_state: WirelessLinkState  # 0xB5 event[4]: SEARCHING=0x04, ACTIVE=0x08
 
 
 @dataclass

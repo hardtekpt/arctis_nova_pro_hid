@@ -14,6 +14,7 @@ from arctis_hid.core.types import (
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
+    WirelessLinkState,
     WirelessMode,
 )
 from arctis_hid.devices.nova_pro.models import (
@@ -63,6 +64,7 @@ class TestStatusData:
             bt_default=False,
             bt_auto_mute=BtAutoMute.OFF,
             auto_off_timeout=TimeoutStep.OFF,
+            wireless_link_state=WirelessLinkState.ACTIVE,
             headset_powered=True,
         )
         return StatusData(**{**defaults, **kwargs})
@@ -194,11 +196,18 @@ class TestEventDataclasses:
         assert e.headset_powered is True
 
     def test_connectivity_event(self):
-        e = ConnectivityEvent(mode=ConnectivityMode.WIRELESS_AND_BT, bt_active=True, bt_connected=True, wireless=True)
+        e = ConnectivityEvent(
+            mode=ConnectivityMode.WIRELESS_AND_BT,
+            bt_active=True,
+            bt_connected=True,
+            wireless=True,
+            wireless_link_state=WirelessLinkState.ACTIVE,
+        )
         assert e.mode == ConnectivityMode.WIRELESS_AND_BT
         assert e.bt_active is True
         assert e.bt_connected is True
         assert e.wireless is True
+        assert e.wireless_link_state == WirelessLinkState.ACTIVE
 
     def test_anc_mode_event(self):
         e = AncModeEvent(mode=AncMode.ANC)
