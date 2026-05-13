@@ -16,6 +16,7 @@ from ...core.types import (
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
+    WirelessLinkState,
     WirelessMode,
 )
 from . import constants as C
@@ -105,6 +106,7 @@ def decode_status_packet(data: list[int]) -> StatusData:
         bt_default          = data[C.B0_BT_DEFAULT] == 0x01,
         bt_auto_mute        = BtAutoMute(data[C.B0_BT_AUTOMUTE]),
         auto_off_timeout    = TimeoutStep(data[C.B0_AUTO_OFF]),
+        wireless_link_state = WirelessLinkState(data[C.B0_WIRELESS_LINK]),
         headset_powered     = data[C.B0_PWR] == 0x08,
     )
 
@@ -195,11 +197,13 @@ def decode_event(data: list[int]) -> Any | None:
 
     if cmd == 0xB5:
         mode = ConnectivityMode(data[2])
+        link = WirelessLinkState(data[4])
         return ConnectivityEvent(
             mode=mode,
             bt_active=mode in (ConnectivityMode.WIRELESS_AND_BT, ConnectivityMode.BT_PAIRING),
             bt_connected=data[3] == 0x01,
-            wireless=data[4] == 0x08,
+            wireless=link == WirelessLinkState.ACTIVE,
+            wireless_link_state=link,
         )
 
     if cmd == 0x85:

@@ -25,6 +25,7 @@ def make_b0_packet(
     bt_default: int = 0x00,
     bt_automute: int = 0x00,
     auto_off: int = 0x00,
+    wireless_link: int = 0x08,
     powered: int = 0x08,
 ) -> list[int]:
     """Build a fake 0xB0 status response packet (64 bytes)."""
@@ -43,8 +44,8 @@ def make_b0_packet(
     pkt[C.B0_MIC_LED]     = mic_led
     pkt[C.B0_AUTO_OFF]    = auto_off
     pkt[C.B0_MODE2G]      = mode2g
-    pkt[14]               = 0x08        # constant byte
-    pkt[C.B0_PWR]         = powered
+    pkt[C.B0_WIRELESS_LINK] = wireless_link
+    pkt[C.B0_PWR]           = powered
     return pkt
 
 

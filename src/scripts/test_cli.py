@@ -125,6 +125,7 @@ def _print_status(s: StatusData) -> None:
     print(f"  Mic LED brightness: {s.mic_led_brightness}/10  (0xB0[11]={s.mic_led_brightness:#04x})")
     print(f"  Auto-off timeout : {s.auto_off_timeout.name}  (0xB0[12]={s.auto_off_timeout.value:#04x})")
     print(f"  Wireless mode    : {s.wireless_mode.name}  (0xB0[13]={s.wireless_mode.value:#04x})")
+    print(f"  Wireless link    : {s.wireless_link_state.name}  (0xB0[14]={s.wireless_link_state.value:#04x})")
     print(f"  Headset powered  : {s.headset_powered}  (0xB0[15]={'0x08' if s.headset_powered else '0x01'})")
 
 

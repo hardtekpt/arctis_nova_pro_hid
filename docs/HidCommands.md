@@ -773,7 +773,7 @@ All queries use: `[0x06, cmdByte, 0x00, ..., 0x00]` (64 bytes). Confirmed in ses
 
 #### `0xB0` — Status ✅
 
-Response: `[0x06, 0xB0, bt_default, bt_auto_mute, conn_mode, bt_state, headset_bat, dock_bat, transparency, mic_mute, anc, mic_led, auto_off, wireless_mode, 0x08, powered]`
+Response: `[0x06, 0xB0, bt_default, bt_auto_mute, conn_mode, bt_state, headset_bat, dock_bat, transparency, mic_mute, anc, mic_led, auto_off, wireless_mode, wireless_link, powered]`
 
 | Byte | Value observed | Meaning |
 |---|---|---|
@@ -791,7 +791,7 @@ Response: `[0x06, 0xB0, bt_default, bt_auto_mute, conn_mode, bt_state, headset_b
 | 11 | `0x01`–`0x0A` | **Mic LED brightness** (1–10; `0x0A`=10=max) ✅ |
 | 12 | `0x00`–`0x06` | **Auto off timeout** — same encoding as `0xC1` event: 0=off, 1=1 min, 2=5 min, 3=10 min, 4=15 min, 5=30 min, 6=60 min. Confirmed 2026-05-09. ✅ |
 | 13 | `0x00` / `0x01` | **2.4 GHz mode** — `0x00`=performance/speed, `0x01`=extended range ✅ |
-| 14 | `0x08` | Constant |
+| 14 | `0x02` / `0x04` / `0x08` | **Wireless link state** — `0x02`=headset absent/off, `0x04`=base searching/pairing, `0x08`=link active. Same semantic as `0xB5` event `[4]`; B0[14] adds `0x02` for the "completely absent" state never emitted as an event. ✅ |
 | 15 | `0x08` / `0x01` | **Headset powered on/in dock** — `0x08`=on, `0x01`=off/removed (same as `0xB7[4]`) ✅ |
 
 #### `0x20` — Mic / EQ Params ✅

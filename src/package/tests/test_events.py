@@ -162,7 +162,7 @@ def test_connectivity_event_wireless_true():
 
 
 def test_connectivity_event_wireless_false():
-    result = evt(0xB5, 0x01, 0x00, 0x01)   # 0x01 != 0x08
+    result = evt(0xB5, 0x01, 0x00, 0x04)   # SEARCHING (0x04) → wireless=False
     assert result.wireless is False
 
 
