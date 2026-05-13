@@ -108,11 +108,11 @@ Fires on connection-state changes (wireless link established/lost, Bluetooth).
 | 1 | Command `0xB5` |
 | 2 | Connection mode: `0x01` = 2.4 GHz only; `0x02` = Bluetooth pairing mode; `0x04` = 2.4 GHz + Bluetooth active |
 | 3 | BT device connected: `0x01` = BT device connected, `0x02` = no BT device connected |
-| 4 | Wireless link: `0x08` = 2.4 GHz active, `0x04` = wireless lost / out of range |
+| 4 | Wireless link state: `0x00` = idle (no link, no search); `0x04` = searching / pairing in progress (base searching, headset not yet linked); `0x08` = 2.4 GHz link active |
 
 **Decoding:**
 ```
-wireless  = (data[4] === 8)
+wireless  = (data[4] === 0x08)
 bluetooth = (data[2] === 0x04 || data[2] === 0x02)   // derive from mode, NOT data[3]
 connected = wireless
 if wireless → force anc_mode = "off"
@@ -122,7 +122,7 @@ if wireless → force anc_mode = "off"
 
 > **Important:** `bt_active` must be derived from `data[2]` (connectivity mode), not `data[3]`. When mode transitions to `0x04` (WIRELESS_AND_BT), `data[3]` may still read `0x02` (no BT device connected) before a device connects. Using `data[3] == 0x01` would incorrectly report `bt_active=False` during this window.
 
-> data[4] observed values: `0x08` (wireless active), `0x04` (wireless lost). data[2] observed: `0x01` (2.4 GHz only), `0x02` (BT pairing mode), `0x04` (2.4 GHz + BT active). data[3] observed: `0x01` (BT device connected), `0x02` (no BT device connected).
+> data[4] observed values: `0x00` (idle/link absent), `0x04` (base searching during 2.4 GHz pairing — fires ~1 s before link is established), `0x08` (wireless link active). data[2] observed: `0x01` (2.4 GHz only), `0x02` (BT pairing mode), `0x04` (2.4 GHz + BT active). data[3] observed: `0x00` (BT feature disabled/unavailable), `0x01` (BT device connected), `0x02` (no BT device connected).
 
 ---
 
@@ -131,7 +131,7 @@ if wireless → force anc_mode = "off"
 Fires on battery-level updates for both the headset and the charging dock.
 
 ```
-[reportId, 0xB7, headsetLevel, dockLevel, unknown, ...]
+[reportId, 0xB7, headsetLevel, dockLevel, powered, ...]
 ```
 
 | Byte | Meaning |
@@ -140,16 +140,17 @@ Fires on battery-level updates for both the headset and the charging dock.
 | 1 | Command `0xB7` |
 | 2 | Headset battery level (0–8 raw) |
 | 3 | Dock/base battery level (0–8 raw) |
-| 4 | Dock presence: `0x08` = headset physically in dock; `0x01` = headset removed (battery reads 0%) |
+| 4 | Headset powered on/in dock: `0x08` = on (headset active or charging in dock); `0x01` = off/removed ✅ |
 
 **Decoding:**
 ```
 BATTERY_MAX = 8
 headset_battery_percent = round(clamp(data[2] / 8 × 100, 0, 100))
 base_battery_percent    = round(clamp(data[3] / 8 × 100, 0, 100))
+headset_powered         = (data[4] === 0x08)
 ```
 
-**State fields:** `headset_battery_percent`, `base_battery_percent` (both 0–100)
+**State fields:** `headset_battery_percent`, `base_battery_percent` (both 0–100), `headset_powered` (boolean)
 
 ---
 
@@ -838,7 +839,7 @@ Response: `[0x06, 0xB5, ?, conn_mode, bt_connected, ...]`
 | 0 | `0x06` | Report ID |
 | 1 | `0xB5` | Command echo |
 | 2 | `0x01` / `0x02` / `0x04` | **Connectivity mode** — `0x01`=2.4 GHz only, `0x02`=BT pairing mode, `0x04`=2.4 GHz + BT (same values as `0xB5` event `[2]` and `0xB0[4]`) ✅ |
-| 3 | `0x01` / `0x02` | **BT device connected** — `0x01`=BT device currently connected, `0x02`=not connected ✅ |
+| 3 | `0x00` / `0x01` / `0x02` | **BT device connected** — `0x00`=BT feature disabled/unavailable (2.4 GHz-only mode), `0x01`=BT device currently connected, `0x02`=BT capable but no device connected ✅ |
 
 #### `0xB7` — Battery Levels
 
