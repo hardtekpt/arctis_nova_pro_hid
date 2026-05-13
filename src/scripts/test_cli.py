@@ -125,6 +125,7 @@ def _print_status(s: StatusData) -> None:
     print(f"  Mic LED brightness: {s.mic_led_brightness}/10  (0xB0[11]={s.mic_led_brightness:#04x})")
     print(f"  Auto-off timeout : {s.auto_off_timeout.name}  (0xB0[12]={s.auto_off_timeout.value:#04x})")
     print(f"  Wireless mode    : {s.wireless_mode.name}  (0xB0[13]={s.wireless_mode.value:#04x})")
+    print(f"  Headset powered  : {s.headset_powered}  (0xB0[15]={'0x08' if s.headset_powered else '0x01'})")
 
 
 def _print_display(d: DisplayData) -> None:
@@ -150,10 +151,12 @@ def _print_battery(b: BatteryData) -> None:
     _sep("Battery (0xB7)")
     print(f"  Headset battery  : {b.headset_pct:.0f}%  (0xB7[2])")
     print(f"  Dock battery     : {b.dock_pct:.0f}%  (0xB7[3])")
+    print(f"  Headset powered  : {b.headset_powered}  (0xB7[4]={'0x08' if b.headset_powered else '0x01'})")
 
 
 def _print_miceq(m: MicEqData) -> None:
     _sep("Mic / EQ (0x20)")
+    print(f"  USB input        : Input {m.usb_input + 1}  (0x20[2]={'0x00' if m.usb_input == 0 else '0x01'})")
     print(f"  Volume           : {m.volume_pct:.1f}%  (0x20[3])")
     print(f"  Gain             : {m.gain.name}  (0x20[4]={m.gain.value:#04x})")
     print(f"  EQ preset index  : {m.eq_preset_index:#04x}  (0x20[6])")

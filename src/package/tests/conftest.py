@@ -25,6 +25,7 @@ def make_b0_packet(
     bt_default: int = 0x00,
     bt_automute: int = 0x00,
     auto_off: int = 0x00,
+    powered: int = 0x08,
 ) -> list[int]:
     """Build a fake 0xB0 status response packet (64 bytes)."""
     pkt = [0] * 64
@@ -42,10 +43,13 @@ def make_b0_packet(
     pkt[C.B0_MIC_LED]     = mic_led
     pkt[C.B0_AUTO_OFF]    = auto_off
     pkt[C.B0_MODE2G]      = mode2g
+    pkt[14]               = 0x08        # constant byte
+    pkt[C.B0_PWR]         = powered
     return pkt
 
 
 def make_20_packet(
+    usb: int = 0x00,
     vol: int = 0x38,
     gain: int = 0x01,
     eq_preset: int = 0x00,
@@ -63,7 +67,7 @@ def make_20_packet(
     pkt = [0] * 64
     pkt[0] = C.REPORT_ID
     pkt[1] = C.CMD_MIC_EQ
-    pkt[2] = 0x01                       # constant protocol byte
+    pkt[C.M20_USB]       = usb
     pkt[C.M20_VOL]       = vol
     pkt[C.M20_GAIN]      = gain
     pkt[C.M20_EQ_PRESET] = eq_preset
@@ -121,13 +125,14 @@ def make_26_packet(limiter: int = 0x02) -> list[int]:
     return pkt
 
 
-def make_b7_packet(hbat: int = 8, dbat: int = 8) -> list[int]:
+def make_b7_packet(hbat: int = 8, dbat: int = 8, powered: int = 0x08) -> list[int]:
     """Build a fake 0xB7 battery query response packet (64 bytes)."""
     pkt = [0] * 64
     pkt[0] = C.REPORT_ID
     pkt[1] = C.CMD_BATTERY
     pkt[C.B7_HBAT] = hbat
     pkt[C.B7_DBAT] = dbat
+    pkt[C.B7_PWR] = powered
     return pkt
 
 

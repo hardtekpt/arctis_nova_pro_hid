@@ -72,7 +72,7 @@ B26_LIMITER = 2   # 0x01=limiter on  0x02=limiter off
 
 B7_HBAT = 2   # headset battery raw (÷8×100=%)
 B7_DBAT = 3   # dock battery raw   (÷8×100=%)
-B7_UNKNOWN = 4   # unknown
+B7_PWR = 4   # headset powered on/in dock: 0x08=on, 0x01=off/removed
 
 # ── 0xB0 response byte indices ─────────────────────────────────────────────
 
@@ -87,6 +87,7 @@ B0_ANC         = 10   # 0x00=off  0x01=transparency  0x02=ANC
 B0_MIC_LED     = 11   # mic LED brightness 1–10
 B0_AUTO_OFF    = 12   # auto-off timeout 0=off 1=1min … 6=60min ✅ confirmed 2026-05-09
 B0_MODE2G      = 13   # 0x00=performance  0x01=extended range
+B0_PWR         = 15   # headset powered on/in dock: 0x08=on, 0x01=off/removed (same as 0xB7[4])
 
 # ── 0x80 response byte indices ─────────────────────────────────────────────
 
@@ -97,6 +98,7 @@ B80_SONAR       = 7   # 0x00=GG Sonar not running  0x01=running
 
 # ── 0x20 response byte indices ─────────────────────────────────────────────
 
+M20_USB       = 2               # USB input 0x00=Input1  0x01=Input2
 M20_VOL       = 3               # headset volume raw (inverted)
 M20_GAIN      = 4               # 0x01=low  0x02=high
 M20_EQ_PRESET = 6               # EQ preset index

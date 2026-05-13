@@ -35,6 +35,7 @@ from .models import (
     EqBandEvent,
     EqPresetEvent,
     GainEvent,
+    HeadsetPoweredEvent,
     HomeScreenEvent,
     MicEqData,
     MicLedEvent,
@@ -104,6 +105,7 @@ def decode_status_packet(data: list[int]) -> StatusData:
         bt_default          = data[C.B0_BT_DEFAULT] == 0x01,
         bt_auto_mute        = BtAutoMute(data[C.B0_BT_AUTOMUTE]),
         auto_off_timeout    = TimeoutStep(data[C.B0_AUTO_OFF]),
+        headset_powered     = data[C.B0_PWR] == 0x08,
     )
 
 
@@ -130,6 +132,7 @@ def decode_battery_packet(data: list[int]) -> BatteryData:
     return BatteryData(
         headset_pct = decode_battery(data[C.B7_HBAT]),
         dock_pct    = decode_battery(data[C.B7_DBAT]),
+        headset_powered = data[C.B7_PWR] == 0x08,
     )
 
 
@@ -152,6 +155,7 @@ def decode_mic_eq_packet(data: list[int]) -> MicEqData:
         gain            = decode_gain_query(data[C.M20_GAIN]),
         eq_preset_index = data[C.M20_EQ_PRESET],
         eq_bands        = list(data[C.M20_EQ]),
+        usb_input       = data[C.M20_USB],
         mic_volume      = data[C.M20_MICVOL],
         sidetone        = SidetoneLevel(data[C.M20_SIDETONE]),
         audio_output    = AudioOutput(data[C.M20_AUDIO]),
@@ -186,6 +190,7 @@ def decode_event(data: list[int]) -> Any | None:
         return BatteryEvent(
             headset_pct=decode_battery(data[2]),
             dock_pct=decode_battery(data[3]),
+            headset_powered=data[4] == 0x08,
         )
 
     if cmd == 0xB5:
