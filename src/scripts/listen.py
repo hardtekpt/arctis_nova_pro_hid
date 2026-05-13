@@ -42,19 +42,23 @@ POLL_TIMEOUT = 50      # ms per handle per loop tick
 
 # ── Query commands ────────────────────────────────────────────────────────────
 # All confirmed on Nova Pro:
-#   0xB0: status (battery, connectivity, ANC, BT, mic mute, mic LED, wireless mode)
-#   0x20: mic / EQ (gain, sidetone, audio output, ChatMix, EQ bands)
+#   0xB0: status (battery, connectivity, ANC, BT, mic mute, mic LED, wireless mode, headset_powered)
+#   0x20: mic / EQ (usb_input, volume, gain, sidetone, audio output, ChatMix, EQ bands, stream vols)
 #   0x10: firmware version (ASCII string)
 #   0x12: serial number (ASCII string)
-#   0x80: base-station display (dim screen timeout, OLED brightness, home screen mode)
-#   0xB5: connectivity (connectivity mode [3], BT device connected [4])
+#   0x80: base-station display (dim screen timeout, OLED brightness, home screen mode, sonar running)
+#   0xB5: connectivity (connectivity mode, BT device connected)
+#   0xB7: battery levels (headset raw, dock raw, headset powered)
+#   0x26: volume limiter (limiter state)
 QUERY_COMMANDS = [
-    (0xB0, "status        (battery, connectivity, ANC, BT, mic mute, mic LED, wireless mode)"),
-    (0x20, "mic / EQ      (gain level, sidetone raw, 10 EQ band values)"),
+    (0xB0, "status        (battery, connectivity, ANC, BT, mic mute, mic LED, wireless mode, headset_powered)"),
+    (0x20, "mic / EQ      (usb_input, volume, gain, sidetone, audio output, ChatMix, EQ bands, stream vols)"),
     (0x10, "firmware ver  (ASCII string)"),
     (0x12, "serial number (ASCII string)"),
-    (0x80, "display       (dim screen timeout, OLED brightness, home screen mode)"),
-    (0xB5, "connectivity  (connectivity mode [3], BT device connected [4])"),
+    (0x80, "display       (dim screen timeout, OLED brightness, home screen mode, sonar running)"),
+    (0xB5, "connectivity  (connectivity mode, BT device connected)"),
+    (0xB7, "battery       (headset raw, dock raw, headset powered)"),
+    (0x26, "vol limiter   (limiter state: 0x01=on, 0x02=off)"),
 ]
 
 # ── Known incoming event decoders (confirmed on Nova Pro) ────────────────────
@@ -91,25 +95,30 @@ def decode_packet(data: list[int], source: str) -> str | None:
                 f"  [2]=0x{data[2]:02X} [3]=0x{data[3]:02X}"
             )
         else:
-            # Incoming event: [2]=connectivity mode, [3]=BT device connected, [4]=wireless flag
+            # Incoming event: [2]=connectivity mode, [3]=BT device connected, [4]=wireless_link_state
             # bt_active derives from mode (data[2]), not data[3].
             # data[3]: 0x01=BT device connected, 0x02=not connected
+            # data[4]: 0x04=searching/pairing, 0x08=link active (ABSENT not emitted as event)
+            _LINK        = {0x04: "searching", 0x08: "active"}
             conn_mode    = _CONN.get(data[2], f"0x{data[2]:02X}")
-            wireless     = data[4] == 8
+            link         = _LINK.get(data[4], f"0x{data[4]:02X}")
+            wireless     = data[4] == 0x08
             bluetooth    = data[2] in (0x04, 0x02)
             bt_connected = data[3] == 0x01
             return (
-                f"{tag}  Connectivity    → conn_mode={conn_mode} wireless={wireless}"
-                f" bluetooth={bluetooth} bt_connected={bt_connected}"
-                f"  [2]=0x{data[2]:02X} [3]=0x{data[3]:02X}"
+                f"{tag}  Connectivity    → conn_mode={conn_mode} wireless_link={link}"
+                f" wireless={wireless} bluetooth={bluetooth} bt_connected={bt_connected}"
+                f"  [2]=0x{data[2]:02X} [3]=0x{data[3]:02X} [4]=0x{data[4]:02X}"
             )
 
     if cmd == 0xB7 and len(data) > 3:
         h = round(min(100, data[2] / 8 * 100))
         d = round(min(100, data[3] / 8 * 100))
-        # data[4]: 0x08 = headset in dock; 0x01 = headset removed (bat reads 0%)
-        extra = f"  [4]=0x{data[4]:02X}" if len(data) > 4 and data[4] != 0 else ""
-        return f"{tag}  Battery         → headset={h}% dock={d}%{extra}"
+        powered_str = ""
+        if len(data) > 4:
+            _POWERED = {0x08: "on", 0x01: "off/removed"}
+            powered_str = f"  headset_powered={_POWERED.get(data[4], f'0x{data[4]:02X}')}"
+        return f"{tag}  Battery         → headset={h}% dock={d}%{powered_str}"
 
     if cmd == 0x85 and len(data) > 2:
         lvl = data[2]
@@ -214,14 +223,14 @@ def decode_packet(data: list[int], source: str) -> str | None:
     # ── Confirmed query responses ─────────────────────────────────────────────
     # Offsets: data[0]=reportId  data[1]=cmd  data[2+]=payload
 
-    # Battery confirmed at [6]/[7] (0-8 raw = 0-100%).
-    # Transparency level at [8], all fields mapped – see HidCommands.md §6.1.
+    # All fields mapped per HidCommands.md §6.1.
     if cmd == 0xB0 and len(data) > 13:
         _CONN    = {0x01: "2.4GHz", 0x02: "BT-pairing", 0x04: "2.4GHz+BT"}
         _ANC     = {0x00: "off", 0x01: "transparency", 0x02: "anc"}
         _WMODE   = {0x00: "performance", 0x01: "range"}
         _TIMEOUT = {0: "off", 1: "1min", 2: "5min", 3: "10min", 4: "15min", 5: "30min", 6: "60min"}
         _BTMUTE  = {0: "off", 1: "-12dB", 2: "full"}
+        _POWERED = {0x08: "on", 0x01: "off/removed"}
         h_bat    = round(min(100, data[6] / 8 * 100))
         d_bat    = round(min(100, data[7] / 8 * 100))
         conn     = _CONN.get(data[4], f"0x{data[4]:02X}")
@@ -229,25 +238,34 @@ def decode_packet(data: list[int], source: str) -> str | None:
         muted    = "muted" if data[9] == 1 else "unmuted"
         anc      = _ANC.get(data[10], f"0x{data[10]:02X}")
         bt       = "on" if data[5] == 1 else "off"
-        wmode    = _WMODE.get(data[13], f"0x{data[13]:02X}") if len(data) > 13 else "?"
-        auto_off = _TIMEOUT.get(data[12], f"?({data[12]})") if len(data) > 12 else "?"
+        wmode    = _WMODE.get(data[13], f"0x{data[13]:02X}")
+        auto_off = _TIMEOUT.get(data[12], f"?({data[12]})")
         bt_mute  = _BTMUTE.get(data[3], f"?({data[3]})")
         bt_def   = "on" if data[2] == 1 else "off"
+        # [14]=wireless_link_state (0x02=absent, 0x04=searching, 0x08=active)
+        # [15]=headset_powered (0x08=on, 0x01=off/removed)
+        _LINK    = {0x02: "absent", 0x04: "searching", 0x08: "active"}
+        link     = _LINK.get(data[14], f"0x{data[14]:02X}") if len(data) > 14 else "?"
+        powered  = _POWERED.get(data[15], f"0x{data[15]:02X}") if len(data) > 15 else "?"
         return (
             f"{tag}  Status          → "
             f"headset_bat={h_bat}%  dock_bat={d_bat}%  "
             f"conn={conn}  mic_mute={muted}  anc={anc}  trans_level={trans}  "
             f"bt={bt}  bt_default={bt_def}  bt_auto_mute={bt_mute}  "
-            f"mic_led_brightness={data[11]}  auto_off={auto_off}  2.4ghz_mode={wmode}"
+            f"mic_led_brightness={data[11]}  auto_off={auto_off}  2.4ghz_mode={wmode}  "
+            f"wireless_link={link}  headset_powered={powered}"
         )
 
-    # 0x20 layout confirmed: [7-16] = 10 EQ bands (0-40, 0x14=center).
-    # [19] = audio output, [22-25] = stream output volumes – see HidCommands.md §6.1.
+    # All fields mapped per HidCommands.md §6.1.
     if cmd == 0x20 and len(data) > 25:
         _GAIN  = {1: "low", 2: "high"}
         _SIDE  = {0: "off", 1: "low", 2: "medium", 3: "high"}
         _AUDIO = {1: "speaker", 2: "stream"}
+        _USB   = {0: "Input1", 1: "Input2"}
+        usb_in       = _USB.get(data[2], f"0x{data[2]:02X}")
         gain         = _GAIN.get(data[4], f"?({data[4]})")
+        # [5]=padding (should be 0x00 — show if unexpected)
+        pad5         = f"  [5]=0x{data[5]:02X}" if data[5] != 0x00 else ""
         sidetone     = _SIDE.get(data[18], f"?({data[18]})")
         audio        = _AUDIO.get(data[19], f"?({data[19]})")
         vol_pct      = round(max(0, min(100, (0x38 - data[3]) / 56 * 100)))
@@ -255,30 +273,46 @@ def decode_packet(data: list[int], source: str) -> str | None:
         eq_preset_str = "custom" if eq_preset == 0x04 else f"preset_{eq_preset}"
         eq_bands     = _raw(data[7:17])
         stream_main  = data[22]
+        # [23]=constant 0x00
+        pad23        = f"  [23]=0x{data[23]:02X}" if data[23] != 0x00 else ""
         stream_aux   = data[24]
         stream_mic   = data[25]
         return (
             f"{tag}  Mic/EQ          → "
-            f"gain={gain}  mic_vol={data[17]}  sidetone={sidetone}  vol={vol_pct}%  "
+            f"usb_input={usb_in}  vol={vol_pct}%  gain={gain}  mic_vol={data[17]}  sidetone={sidetone}  "
             f"audio_output={audio}  chatmix_game={data[20]}  chatmix_chat={data[21]}  "
             f"stream_main={stream_main}  stream_aux={stream_aux}  stream_mic={stream_mic}  "
             f"eq_preset={eq_preset_str}(0x{eq_preset:02X})  eq_bands=[{eq_bands}]"
+            f"{pad5}{pad23}"
         )
 
     if cmd == 0x80 and len(data) > 5:
         _DIM = {0: "off", 1: "1min", 2: "5min", 3: "10min", 4: "15min", 5: "30min", 6: "60min"}
         dim   = _DIM.get(data[2], f"?({data[2]})")
         oled  = data[3]
+        # [4]=unknown — show raw
+        unk4  = f"  [4]=0x{data[4]:02X}" if len(data) > 4 else ""
         home  = {0: "detailed", 1: "simple"}.get(data[5], f"?({data[5]})")
+        # [7]=GG Sonar running (0x00=no, 0x01=yes)
+        sonar_str = ""
+        if len(data) > 7:
+            sonar_str = f"  sonar_running={'yes' if data[7] == 0x01 else 'no'}(0x{data[7]:02X})"
         return (
             f"{tag}  Display         → "
             f"dim_timeout={dim}  oled_brightness={oled}/10  home_screen={home}"
+            f"{unk4}{sonar_str}"
         )
 
     if cmd in (0x10, 0x12) and len(data) > 2:
         label = "Firmware" if cmd == 0x10 else "Serial"
         text = bytes(data[2:]).split(b"\x00")[0].decode("ascii", errors="replace").strip()
         return f"{tag}  {label:<14}  → {text!r}"
+
+    # 0x26: volume limiter query response (inverted encoding: 0x01=on, 0x02=off)
+    if cmd == 0x26 and len(data) > 2:
+        _LIM = {0x01: "on", 0x02: "off"}
+        state = _LIM.get(data[2], f"0x{data[2]:02X}")
+        return f"{tag}  Vol Limiter     → {state} (raw=0x{data[2]:02X})"
 
     return None  # unknown — caller will print a note alongside the raw line
 
@@ -382,7 +416,7 @@ def main() -> None:
         # Send candidate query commands at startup
         if ctrl and not args.no_query:
             log(log_f, "")
-            log(log_f, "[INFO ] Sending candidate query commands (Nova 7X origin, verifying on Nova Pro)…")
+            log(log_f, "[INFO ] Sending confirmed query commands…")
             for cmd_byte, desc in QUERY_COMMANDS:
                 pkt = build_query(cmd_byte)
                 log(log_f, f"[QUERY] TX  0x{cmd_byte:02X}  {desc}")
