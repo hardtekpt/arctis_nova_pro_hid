@@ -120,6 +120,7 @@ def _print_status(s: StatusData) -> None:
     print(f"  BT active        : {s.bt_active}")
     print(f"  BT default       : {'on' if s.bt_default else 'off'}  (0xB0[2])")
     print(f"  BT auto-mute     : {s.bt_auto_mute.name}  (0xB0[3]={s.bt_auto_mute.value:#04x})")
+    print(f"  Transparency     : {s.transparency_level}/10  (0xB0[8])")
     print(f"  Mic muted        : {s.mic_muted}  (0xB0[9])")
     print(f"  ANC mode         : {s.anc_mode.name}  (0xB0[10]={s.anc_mode.value:#04x})")
     print(f"  Mic LED brightness: {s.mic_led_brightness}/10  (0xB0[11]={s.mic_led_brightness:#04x})")
@@ -377,7 +378,12 @@ def cmd_transparency(args) -> None:
                 after.anc_mode.name,
                 AncMode.TRANSPARENCY.name,
             )
-            _no_verify_field("transparency level has no reflected query field")
+            _verify_field(
+                "0xB0[8] transparency_level",
+                before.transparency_level,
+                after.transparency_level,
+                level,
+            )
 
 
 def cmd_gain(args) -> None:

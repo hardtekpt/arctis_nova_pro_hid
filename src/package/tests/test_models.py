@@ -57,6 +57,7 @@ class TestStatusData:
             dock_battery_pct=50.0,
             connectivity_mode=ConnectivityMode.WIRELESS_ONLY,
             bt_active=False,
+            transparency_level=5,
             mic_muted=False,
             anc_mode=AncMode.OFF,
             mic_led_brightness=5,

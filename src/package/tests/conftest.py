@@ -38,7 +38,7 @@ def make_b0_packet(
     pkt[C.B0_BT]          = bt
     pkt[C.B0_HBAT]        = hbat
     pkt[C.B0_DBAT]        = dbat
-    pkt[8]                = transp      # transparency level byte (not in C constants)
+    pkt[C.B0_TRANSP_LEVEL] = transp
     pkt[C.B0_MUTE]        = mute
     pkt[C.B0_ANC]         = anc
     pkt[C.B0_MIC_LED]     = mic_led

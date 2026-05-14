@@ -515,6 +515,7 @@ class StatusData:
     dock_battery_pct:    float          # 0.0–100.0
     connectivity_mode:   ConnectivityMode  # WIRELESS_ONLY, BT_PAIRING, or WIRELESS_AND_BT
     bt_active:           bool           # True if Bluetooth stream is active
+    transparency_level:  int            # 1–10  (0xB0[8]; meaningful in TRANSPARENCY mode)
     mic_muted:           bool
     anc_mode:            AncMode
     mic_led_brightness:  int            # 1–10  (0xB0[11])
