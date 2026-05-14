@@ -276,6 +276,11 @@ class TestDecodeStatusPacket:
         pkt = make_b0_packet(wireless_link=0x02)
         assert decode_status_packet(pkt).wireless_link_state == WirelessLinkState.ABSENT
 
+    def test_transparency_level_passthrough(self):
+        for level in (1, 5, 10):
+            pkt = make_b0_packet(transp=level)
+            assert decode_status_packet(pkt).transparency_level == level
+
 
 # ── 0x20 mic/EQ packet decoding ────────────────────────────────────────────────
 

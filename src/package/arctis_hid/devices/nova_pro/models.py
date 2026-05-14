@@ -25,6 +25,7 @@ class StatusData:
     dock_battery_pct:    float
     connectivity_mode:   ConnectivityMode
     bt_active:           bool
+    transparency_level:  int             # 0xB0[8]: 1–10 (meaningful in TRANSPARENCY mode)
     mic_muted:           bool
     anc_mode:            AncMode
     mic_led_brightness:  int          # 1–10

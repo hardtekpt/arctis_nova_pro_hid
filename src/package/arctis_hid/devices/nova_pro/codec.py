@@ -99,6 +99,7 @@ def decode_status_packet(data: list[int]) -> StatusData:
         dock_battery_pct    = decode_battery(data[C.B0_DBAT]),
         connectivity_mode   = ConnectivityMode(data[C.B0_CONN]),
         bt_active           = data[C.B0_BT] == 0x01,
+        transparency_level  = data[C.B0_TRANSP_LEVEL],
         mic_muted           = data[C.B0_MUTE] == 0x01,
         anc_mode            = AncMode(data[C.B0_ANC]),
         mic_led_brightness  = data[C.B0_MIC_LED],

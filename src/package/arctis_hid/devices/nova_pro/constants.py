@@ -82,6 +82,7 @@ B0_CONN        = 4    # 0x01=2.4GHz only  0x04=2.4GHz+BT
 B0_BT          = 5    # 0x00=off  0x01=active
 B0_HBAT        = 6    # headset battery raw (÷8×100=%)
 B0_DBAT        = 7    # dock battery raw   (÷8×100=%)
+B0_TRANSP_LEVEL = 8   # transparency level 1–10  (only meaningful in TRANSPARENCY mode)
 B0_MUTE        = 9    # 0x00=unmuted  0x01=muted
 B0_ANC         = 10   # 0x00=off  0x01=transparency  0x02=ANC
 B0_MIC_LED     = 11   # mic LED brightness 1–10
