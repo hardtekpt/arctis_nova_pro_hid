@@ -330,6 +330,60 @@ python src/scripts/test_cli.py --command edge-mic-vol-oob  --value 0x00
 
 ---
 
+## map_gg_sonar_api.py
+
+**Purpose:** Systematically map the full SteelSeries GG Sonar local REST API. Enumerates ~170 candidate endpoints covering every target feature area, logs results to `logs/sonar_api_*.json`, and provides an analysis mode that parses logs and prints a structured endpoint/schema report.
+
+Three modes:
+
+**`probe`** — enumerate all candidate paths with GET (and optionally PUT/POST) and save a JSON log:
+```bash
+python src/scripts/map_gg_sonar_api.py probe
+python src/scripts/map_gg_sonar_api.py probe --write-probes   # also echo-back PUT probes
+python src/scripts/map_gg_sonar_api.py probe --prefixes       # also try /api/, /v1/, /sonar/ variants
+python src/scripts/map_gg_sonar_api.py probe --sonar https://127.0.0.1:PORT  # skip auto-discovery
+```
+
+**`analyze`** — parse one or all log files and print a grouped endpoint map with response schemas:
+```bash
+python src/scripts/map_gg_sonar_api.py analyze
+python src/scripts/map_gg_sonar_api.py analyze --file logs/sonar_api_2026-05-14_100000.json
+```
+
+**`watch`** — connect to WebSocket paths and log incoming events (requires `pip install websocket-client`):
+```bash
+python src/scripts/map_gg_sonar_api.py watch
+python src/scripts/map_gg_sonar_api.py watch --duration 30
+```
+
+**Coverage:**
+
+| Feature area | Example paths probed |
+|---|---|
+| State & Mode | `/status`, `/mode`, `/config`, `/settings` |
+| Volume & Channels | `/volumeSettings/classic`, `/volumeSettings/classic/{channel}`, `/volumeSettings/streamer/…` |
+| Presets (EQ) | `/configs`, `/configs/selected`, `/configs/favorites`, `/eq/configs` |
+| Spatial Audio | `/spatial`, `/spatial/configs`, `/spatialAudio/{channel}` |
+| Volume Boost | `/volumeBoost`, `/volumeBoost/{channel}` |
+| Smart Volume | `/smartVolume`, `/smartVolume/{channel}` |
+| App Routing | `/routing/classic`, `/routing/classic/{channel}`, `/classicRouting` |
+| Devices | `/devices`, `/devices/output/{channel}` |
+| ChatMix | `/chatMix`, `/chatmix` |
+
+Channels probed: `master`, `game`, `chat`, `media`, `aux`, `micro` (classic); adds `stream`, `monitoring`, `broadcast` for streamer.
+
+**`--write-probes`**: for each confirmed-GET write endpoint, reads the current value and writes it back unchanged (no-op). Safe: does not modify any real setting.
+
+**`--prefixes`**: duplicates every path with `/api`, `/v1`, and `/sonar` prefixes (adds ~510 extra requests).
+
+**`watch` mode**: tries WebSocket paths `/ws`, `/websocket`, `/events`, `/sonar/ws`, `/sonar/events`, `/notifications`, `/realtime`, `/stream`. Logs all received JSON messages for the specified duration.
+
+**Output:** `logs/sonar_api_TIMESTAMP.json` — structured log with session metadata, full response bodies, inferred schemas, and allowed methods from OPTIONS probes. Re-parseable by `analyze` mode at any time.
+
+**Requirements:** SteelSeries GG must be running; `coreProps.json` at `C:\ProgramData\SteelSeries\SteelSeries Engine 3\coreProps.json`. Uses Python stdlib only (no `requests`). WebSocket watch mode requires `pip install websocket-client`.
+
+---
+
 ## probe_sonar_api.py
 
 **Purpose:** Query the SteelSeries GG Sonar local REST API to discover EQ preset names and audio configuration data. Reads `coreProps.json` to find the Sonar HTTPS address, then queries the `/configs` and `/configs/selected` endpoints.
