@@ -274,7 +274,9 @@ def cmd_listen(args) -> None:
         h.on("DimTimeoutEvent",     lambda e: print(f"[DimTimeout]      {e.step.name}"))
         h.on("HomeScreenEvent",     lambda e: print(f"[HomeScreen]      {e.mode.name}"))
         h.on("MicLedEvent",         lambda e: print(f"[MicLed]          {e.level}/10"))
-        h.on("AutoOffEvent",        lambda e: print(f"[AutoOff]         {e.step.name}"))
+        h.on("AutoOffEvent",           lambda e: print(f"[AutoOff]         {e.step.name}"))
+        h.on("DeviceDisconnectedEvent", lambda _: print("[Disconnected]    USB HID connection lost — waiting for reconnect…"))
+        h.on("DeviceReconnectedEvent",  lambda _: print("[Reconnected]     USB HID connection restored"))
 
         h.start()
         try:
