@@ -31,6 +31,8 @@ from .devices.nova_pro.models import (
     BtDefaultEvent,
     ChatMixEvent,
     ConnectivityEvent,
+    DeviceDisconnectedEvent,
+    DeviceReconnectedEvent,
     DimTimeoutEvent,
     EqBandEvent,
     EqPresetEvent,
@@ -81,6 +83,8 @@ __all__ = [
     "VolumeLimiterData",
     "BatteryData",
     # events
+    "DeviceDisconnectedEvent",
+    "DeviceReconnectedEvent",
     "VolumeEvent",
     "BatteryEvent",
     "ConnectivityEvent",

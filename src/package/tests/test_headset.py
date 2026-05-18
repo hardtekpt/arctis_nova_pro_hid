@@ -1,7 +1,9 @@
 """Tests for ArctisNovaProWireless set_*/get_* — verifies correct bytes over transport."""
 from __future__ import annotations
 
-from unittest.mock import MagicMock, call
+import threading
+import time
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
@@ -17,8 +19,18 @@ from arctis_hid.core.types import (
     UsbInput,
     WirelessMode,
 )
+from arctis_hid.exceptions import DeviceIOError
 from arctis_hid.devices.nova_pro import constants as C
-from arctis_hid.devices.nova_pro.models import BatteryData, ConnectivityData, DisplayData, MicEqData, StatusData, VolumeLimiterData
+from arctis_hid.devices.nova_pro.models import (
+    BatteryData,
+    ConnectivityData,
+    DeviceDisconnectedEvent,
+    DeviceReconnectedEvent,
+    DisplayData,
+    MicEqData,
+    StatusData,
+    VolumeLimiterData,
+)
 
 from .conftest import make_20_packet, make_26_packet, make_80_packet, make_b0_packet, make_b5_packet, make_b7_packet
 
@@ -464,3 +476,112 @@ class TestFactoryReset:
     def test_exactly_one_write(self, mock_headset, mock_transport):
         mock_headset.factory_reset()
         assert mock_transport.write.call_count == 1
+
+
+# ── Disconnect / reconnect behaviour ──────────────────────────────────────────
+
+
+class TestPollLoopDisconnect:
+    """Poll loop should emit DeviceDisconnectedEvent on OSError and stop cleanly."""
+
+    def test_disconnect_event_emitted_on_io_error(self, mock_headset, mock_transport):
+        received = []
+        mock_headset.on("DeviceDisconnectedEvent", received.append)
+
+        # poll raises immediately, then stop_event is set so reconnect loop exits
+        mock_transport.poll.side_effect = DeviceIOError("read error")
+
+        stop = threading.Event()
+        mock_headset._stop_event = stop
+
+        with patch.object(mock_headset, "_reconnect_until_found", return_value=False):
+            mock_headset._poll_loop(stop)
+
+        assert len(received) == 1
+        assert isinstance(received[0], DeviceDisconnectedEvent)
+
+    def test_poll_loop_exits_when_reconnect_returns_false(self, mock_headset, mock_transport):
+        mock_transport.poll.side_effect = DeviceIOError("read error")
+        stop = threading.Event()
+        mock_headset._stop_event = stop
+
+        with patch.object(mock_headset, "_reconnect_until_found", return_value=False):
+            mock_headset._poll_loop(stop)  # must return, not hang
+
+
+class TestReconnectUntilFound:
+    """_reconnect_until_found retries until the device reappears or stop is set."""
+
+    def test_returns_true_when_device_found(self, mock_headset, mock_transport):
+        stop = threading.Event()
+        with patch.object(mock_headset, "_find_device_paths", return_value=(b"/ctrl", b"/evt")):
+            result = mock_headset._reconnect_until_found(stop)
+        assert result is True
+
+    def test_opens_transport_on_success(self, mock_headset, mock_transport):
+        stop = threading.Event()
+        with patch.object(mock_headset, "_find_device_paths", return_value=(b"/ctrl", b"/evt")):
+            mock_headset._reconnect_until_found(stop)
+        mock_transport.open.assert_called_once_with(b"/ctrl", b"/evt")
+
+    def test_updates_stored_paths_on_success(self, mock_headset, mock_transport):
+        stop = threading.Event()
+        with patch.object(mock_headset, "_find_device_paths", return_value=(b"/new_ctrl", b"/new_evt")):
+            mock_headset._reconnect_until_found(stop)
+        assert mock_headset._ctrl_path == b"/new_ctrl"
+        assert mock_headset._evt_path == b"/new_evt"
+
+    def test_returns_false_when_stop_set_before_device_found(self, mock_headset, mock_transport):
+        stop = threading.Event()
+        stop.set()
+        with patch.object(mock_headset, "_find_device_paths", side_effect=DeviceIOError("not found")):
+            result = mock_headset._reconnect_until_found(stop)
+        assert result is False
+
+    def test_retries_after_find_failure(self, mock_headset, mock_transport):
+        stop = threading.Event()
+        call_count = 0
+
+        def find_paths_side_effect():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise DeviceIOError("not found")
+            stop.set()
+            raise DeviceIOError("not found")
+
+        with patch.object(mock_headset, "_find_device_paths", side_effect=find_paths_side_effect):
+            result = mock_headset._reconnect_until_found(stop)
+
+        assert call_count == 3
+        assert result is False
+
+
+class TestReconnectEventFlow:
+    """Full disconnect→reconnect flow emits both events in order."""
+
+    def test_reconnect_event_emitted_after_successful_reconnect(self, mock_headset, mock_transport):
+        events = []
+        mock_headset.on("DeviceDisconnectedEvent", events.append)
+        mock_headset.on("DeviceReconnectedEvent", events.append)
+
+        stop = threading.Event()
+        poll_calls = 0
+
+        def poll_side_effect(*args, **kwargs):
+            nonlocal poll_calls
+            poll_calls += 1
+            if poll_calls == 1:
+                raise DeviceIOError("disconnected")
+            stop.set()
+            return []
+
+        mock_transport.poll.side_effect = poll_side_effect
+        mock_headset._stop_event = stop
+
+        with patch.object(mock_headset, "_reconnect_until_found", return_value=True):
+            mock_headset._poll_loop(stop)
+
+        assert len(events) == 2
+        assert isinstance(events[0], DeviceDisconnectedEvent)
+        assert isinstance(events[1], DeviceReconnectedEvent)

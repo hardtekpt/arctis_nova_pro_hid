@@ -54,7 +54,10 @@ class HidTransport:
             if 2 + i >= PACKET_SIZE:
                 break
             pkt[2 + i] = b
-        ret = self._ctrl.write(list(pkt))
+        try:
+            ret = self._ctrl.write(list(pkt))
+        except OSError as exc:
+            raise DeviceIOError(f"write failed (cmd=0x{cmd:02X}): {exc}") from exc
         if ret < 0:
             raise DeviceIOError(f"write failed (cmd=0x{cmd:02X})")
 
@@ -65,10 +68,13 @@ class HidTransport:
         self.write(cmd)
         time.sleep(QUERY_DELAY_S)
         deadline = time.monotonic() + timeout_ms / 1000
-        while time.monotonic() < deadline:
-            data = self._ctrl.read(PACKET_SIZE, POLL_TIMEOUT_MS)
-            if data and data[1] == cmd:
-                return list(data)
+        try:
+            while time.monotonic() < deadline:
+                data = self._ctrl.read(PACKET_SIZE, POLL_TIMEOUT_MS)
+                if data and data[1] == cmd:
+                    return list(data)
+        except OSError as exc:
+            raise DeviceIOError(f"query failed (cmd=0x{cmd:02X}): {exc}") from exc
         raise DeviceIOError(f"no response for cmd=0x{cmd:02X}")
 
     def poll(self, timeout_ms: int = POLL_TIMEOUT_MS) -> list[tuple[str, list[int]]]:
@@ -77,7 +83,10 @@ class HidTransport:
         for dev, label in ((self._ctrl, "CTRL"), (self._evt, "EVT")):
             if dev is None:
                 continue
-            data = dev.read(PACKET_SIZE, timeout_ms)
+            try:
+                data = dev.read(PACKET_SIZE, timeout_ms)
+            except OSError as exc:
+                raise DeviceIOError(f"poll read error on {label}: {exc}") from exc
             if data:
                 results.append((label, list(data)))
         return results
@@ -87,6 +96,9 @@ class HidTransport:
         if self._ctrl is None:
             raise DeviceIOError("transport not open")
         payload = bytes([report_id]) + data
-        ret = self._ctrl.send_feature_report(list(payload))
+        try:
+            ret = self._ctrl.send_feature_report(list(payload))
+        except OSError as exc:
+            raise DeviceIOError(f"feature report write failed (report_id=0x{report_id:02X}): {exc}") from exc
         if ret < 0:
             raise DeviceIOError(f"feature report write failed (report_id=0x{report_id:02X})")
