@@ -641,12 +641,15 @@ Each event is a dataclass. The callback receives a single instance.
 | `HomeScreenEvent` | Home screen mode changed | `mode: HomeScreenMode` |
 | `MicLedEvent` | Mic LED brightness changed | `level: int` (1–10) |
 | `AutoOffEvent` | Auto-off timeout changed | `step: TimeoutStep` |
+| `DeviceDisconnectedEvent` | USB HID connection lost (cable unplugged, USB input switched) | *(no fields)* |
+| `DeviceReconnectedEvent` | USB HID connection restored after a disconnection | *(no fields)* |
 
 **Notes:**
 - `ChatMixEvent` only fires when ChatMix is enabled (`set_chatmix_enabled(True)`).
 - `EqBandEvent` is **read-only** (event only) — there is no write command for individual bands. Use `set_eq_bands()` to write all 10 at once.
 - `WirelessModeEvent` does **not** fire when changed from GG — it is a silent write. Read the current value via `get_status().wireless_mode`.
 - `UsbInputEvent` does **not** fire when changed from the host — it is a silent write. There is no query to reflect the current value — verify visually.
+- `DeviceDisconnectedEvent` / `DeviceReconnectedEvent` are synthesised by the poll loop, not received from the device. When the USB connection drops, the loop closes the transport, emits `DeviceDisconnectedEvent`, then retries `hid.enumerate()` every 2 seconds. Once the device reappears it re-opens both handles and emits `DeviceReconnectedEvent`.
 
 ---
 

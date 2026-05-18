@@ -212,3 +212,13 @@ class AutoOffEvent:
 @dataclass
 class HeadsetPoweredEvent:
     powered: bool   # True=on (0x08), False=off/removed (0x01)
+
+
+@dataclass
+class DeviceDisconnectedEvent:
+    """Fired when the USB HID connection is lost (e.g. cable unplugged, USB input switched)."""
+
+
+@dataclass
+class DeviceReconnectedEvent:
+    """Fired when the USB HID connection is restored after a disconnection."""

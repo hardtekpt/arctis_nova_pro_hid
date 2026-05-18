@@ -3,6 +3,10 @@ from __future__ import annotations
 import threading
 from typing import Callable
 
+import hid
+
+_RECONNECT_INTERVAL_S = 2.0
+
 from ...core.dispatcher import EventDispatcher
 from ...core.transport import HidTransport
 from ...core.types import (
@@ -20,7 +24,7 @@ from ...exceptions import DeviceIOError
 from ..base import AbstractHeadset, AbstractOled
 from . import constants as C
 from . import codec
-from .models import BatteryData, ConnectivityData, DisplayData, MicEqData, StatusData, VolumeLimiterData
+from .models import BatteryData, ConnectivityData, DeviceDisconnectedEvent, DeviceReconnectedEvent, DisplayData, MicEqData, StatusData, VolumeLimiterData
 
 
 class ArctisNovaProWireless(AbstractHeadset):
@@ -253,9 +257,51 @@ class ArctisNovaProWireless(AbstractHeadset):
             try:
                 packets = self._transport.poll(C.POLL_TIMEOUT_MS)
             except DeviceIOError:
-                break
+                self._transport.close()
+                self._dispatcher.emit_typed(DeviceDisconnectedEvent())
+                if not self._reconnect_until_found(stop_event):
+                    break
+                self._dispatcher.emit_typed(DeviceReconnectedEvent())
+                continue
             for source, data in packets:
                 self._process_packet(source, data)
+
+    def _reconnect_until_found(self, stop_event: threading.Event) -> bool:
+        """Retry opening the HID device until it reappears or stop is requested.
+
+        Returns True when reconnected, False if stop was requested.
+        """
+        while not stop_event.is_set():
+            try:
+                ctrl_path, evt_path = self._find_device_paths()
+                self._ctrl_path = ctrl_path
+                self._evt_path  = evt_path
+                self._transport.open(ctrl_path, evt_path)
+                return True
+            except Exception:
+                stop_event.wait(_RECONNECT_INTERVAL_S)
+        return False
+
+    def _find_device_paths(self) -> tuple[bytes, bytes | None]:
+        """Enumerate HID devices to locate the ctrl and evt paths."""
+        ctrl_path: bytes | None = None
+        evt_path:  bytes | None = None
+        for info in hid.enumerate():
+            if info["vendor_id"] != C.VID:
+                continue
+            if info["product_id"] not in C.PIDS:
+                continue
+            if info["interface_number"] != C.INTERFACE:
+                continue
+            usage = info.get("usage_page", 0)
+            path  = info["path"]
+            if usage == C.USAGE_CONTROL and ctrl_path is None:
+                ctrl_path = path
+            elif usage == C.USAGE_EVENTS and evt_path is None:
+                evt_path = path
+        if ctrl_path is None:
+            raise DeviceIOError("device not found during reconnection scan")
+        return ctrl_path, evt_path
 
     def _process_packet(self, source: str, data: list[int]) -> None:
         if len(data) < 2:
