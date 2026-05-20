@@ -178,6 +178,7 @@ print(d.sonar_running)      # False
 b = h.get_battery()
 print(b.headset_pct)        # 85.0
 print(b.dock_pct)           # 100.0
+print(b.headset_powered)    # True
 ```
 
 #### `connectivity → ConnectivityStatus`  *(property)*
@@ -575,7 +576,8 @@ Returned by `get_connectivity()` and exposed as the `headset.connectivity` prope
 class ConnectivityStatus:
     usb:           bool            # True from instance creation; False while USB HID is disconnected
     headset_power: bool | None     # True/False = on or off; None = not yet received (no 0xB0/0xB7 yet)
-    wireless:      bool            # True if the 2.4 GHz wireless link is active (wireless_raw == 0x08)
+    wireless:      bool            # True if 2.4 GHz link is active; derived from wireless_raw (0x08=T,
+                                   #   0x04=F) or from mode_raw when wireless_raw is 0x00 (fallback)
     bt:            BtStatus        # Derived BT state: OFF / ON / PAIRING / CONNECTED
 ```
 
@@ -660,7 +662,7 @@ Each event is a dataclass. The callback receives a single instance.
 |-------|---------|--------|
 | `VolumeEvent` | Volume wheel turned | `percent: float` (0–100) |
 | `BatteryEvent` | Battery level update | `headset_pct: float`, `dock_pct: float`, `headset_powered: bool` |
-| `ConnectivityEvent` | Wireless connection changed or battery event with power state change | `connectivity: ConnectivityStatus` — the full live state at the moment of the event |
+| `ConnectivityEvent` | Wireless/BT state changed (`0xB5`), battery packet received (`0xB7`), or USB connect/disconnect | `connectivity: ConnectivityStatus` — the full live state at the moment of the event |
 | `AncModeEvent` | ANC button pressed | `mode: AncMode` |
 | `MicMuteEvent` | Mic mute button pressed | `muted: bool` |
 | `ChatMixEvent` | ChatMix dial turned | `game: int` (0–100), `chat: int` (0–100) |
@@ -670,7 +672,7 @@ Each event is a dataclass. The callback receives a single instance.
 | `OledBrightnessEvent` | OLED brightness changed | `level: int` (1–10) |
 | `TransparencyEvent` | Transparency level changed | `level: int` (1–10) |
 | `WirelessModeEvent` | 2.4 GHz mode changed | `mode: WirelessMode` |
-| `UsbInputEvent` | USB input changed | `input: UsbInput` |
+| `UsbInputEvent` | USB input changed | `input_num: int` (0=Input1, 1=Input2) |
 | `BtDefaultEvent` | Bluetooth default changed | `enabled: bool` |
 | `BtAutoMuteEvent` | BT auto-mute changed | `mode: BtAutoMute` |
 | `AudioOutputEvent` | Audio output changed | `output: AudioOutput` |
@@ -689,7 +691,7 @@ Each event is a dataclass. The callback receives a single instance.
 - `EqBandEvent` is **read-only** (event only) — there is no write command for individual bands. Use `set_eq_bands()` to write all 10 at once.
 - `WirelessModeEvent` does **not** fire when changed from GG — it is a silent write. Read the current value via `get_status().wireless_mode`.
 - `UsbInputEvent` does **not** fire when changed from the host — it is a silent write. There is no query to reflect the current value — verify visually.
-- `DeviceDisconnectedEvent` / `DeviceReconnectedEvent` are synthesised by the poll loop, not received from the device. When the USB connection drops, the loop closes the transport, emits `DeviceDisconnectedEvent`, then retries `hid.enumerate()` every 2 seconds. Once the device reappears it re-opens both handles and emits `DeviceReconnectedEvent`.
+- `DeviceDisconnectedEvent` / `DeviceReconnectedEvent` are synthesised by the poll loop, not received from the device. When the USB connection drops, the loop closes the transport, emits `DeviceDisconnectedEvent`, then retries `hid.enumerate()` every 2 seconds. Once the device reappears it re-opens both handles and emits `DeviceReconnectedEvent`. In both cases a `ConnectivityEvent` is also emitted immediately after, with `connectivity.usb=False` on disconnect and `connectivity.usb=True` on reconnect.
 
 ---
 
