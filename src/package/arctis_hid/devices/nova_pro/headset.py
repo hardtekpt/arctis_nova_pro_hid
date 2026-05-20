@@ -337,10 +337,12 @@ class ArctisNovaProWireless(AbstractHeadset):
                 self._transport.close()
                 self._cs_usb = False
                 self._dispatcher.emit_typed(DeviceDisconnectedEvent())
+                self._dispatcher.emit_typed(ConnectivityEvent(connectivity=self.connectivity))
                 if not self._reconnect_until_found(stop_event):
                     break
                 self._cs_usb = True
                 self._dispatcher.emit_typed(DeviceReconnectedEvent())
+                self._dispatcher.emit_typed(ConnectivityEvent(connectivity=self.connectivity))
                 continue
             for source, data in packets:
                 self._process_packet(source, data)
