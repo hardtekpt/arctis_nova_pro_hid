@@ -517,7 +517,7 @@ with discover() as h:
 
 ### `StatusData`
 
-Returned by `get_status()`. Snapshot of headset status. Calling `get_status()` also updates `headset.connectivity` for the fields available in the `0xB0` response.
+Returned by `get_status()`. Snapshot of headset status including connectivity fields available in the `0xB0` packet. Also updates `headset.connectivity`.
 
 ```python
 @dataclass
@@ -532,9 +532,13 @@ class StatusData:
     bt_default:          bool        # 0xB0[2]: True=on (BT auto-connect enabled)
     bt_auto_mute:        BtAutoMute  # 0xB0[3]: OFF / DB_MINUS_12 / FULL
     auto_off_timeout:    TimeoutStep # 0xB0[12]: OFF=0 … SIXTY_MIN=6
+    # Connectivity snapshot (also updates headset.connectivity)
+    headset_power:       bool        # 0xB0[15]: True=headset on/in dock
+    wireless:            bool        # 0xB0[14]: True=2.4 GHz link active
+    bt:                  BtStatus    # derived from 0xB0[4,5]; max ON (CONNECTED requires 0xB5)
 ```
 
-For connectivity and power state use the `headset.connectivity` property (a `ConnectivityStatus` object), which is updated by every query and event.
+**Note:** `StatusData.bt` is derived from the mode and bt_active fields in `0xB0` only. It can be `OFF`, `ON`, or `PAIRING` but never `CONNECTED` (bt_connected is not available in that packet). For a complete `bt` status including `CONNECTED`, read `headset.connectivity.bt` after calling `get_connectivity()` as well.
 
 ---
 
@@ -634,13 +638,14 @@ class VolumeLimiterData:
 
 ### `BatteryData`
 
-Returned by `get_battery()`. Battery levels for headset and dock from command `0xB7`. Calling `get_battery()` also updates `headset.connectivity.headset_power`.
+Returned by `get_battery()`. Battery levels for headset and dock from command `0xB7`. Also updates `headset.connectivity.headset_power`.
 
 ```python
 @dataclass
 class BatteryData:
-    headset_pct: float   # 0xB7[2]: raw ÷ 8 × 100 = %
-    dock_pct:    float   # 0xB7[3]: raw ÷ 8 × 100 = %
+    headset_pct:     float   # 0xB7[2]: raw ÷ 8 × 100 = %
+    dock_pct:        float   # 0xB7[3]: raw ÷ 8 × 100 = %
+    headset_powered: bool    # 0xB7[4]: True=headset on/in dock
 ```
 
 ---

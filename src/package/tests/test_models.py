@@ -118,6 +118,9 @@ class TestStatusData:
             bt_default=False,
             bt_auto_mute=BtAutoMute.OFF,
             auto_off_timeout=TimeoutStep.OFF,
+            headset_power=True,
+            wireless=True,
+            bt=BtStatus.OFF,
         )
         return StatusData(**{**defaults, **kwargs})
 
@@ -147,12 +150,25 @@ class TestStatusData:
         assert sd.mic_muted is True
         assert sd.anc_mode == AncMode.ANC
 
-    def test_no_connectivity_fields(self):
+    def test_headset_power_is_bool(self):
+        assert isinstance(self._make(headset_power=True).headset_power, bool)
+
+    def test_wireless_is_bool(self):
+        assert isinstance(self._make(wireless=False).wireless, bool)
+
+    def test_bt_is_bt_status(self):
+        assert isinstance(self._make(bt=BtStatus.ON).bt, BtStatus)
+
+    def test_bt_not_connected_in_status(self):
+        # CONNECTED requires bt_connected from 0xB5; StatusData.bt is at most ON
+        sd = self._make(bt=BtStatus.ON)
+        assert sd.bt != BtStatus.CONNECTED
+
+    def test_old_connectivity_fields_absent(self):
         sd = self._make()
         assert not hasattr(sd, "connectivity_mode")
         assert not hasattr(sd, "bt_active")
         assert not hasattr(sd, "wireless_link_state")
-        assert not hasattr(sd, "headset_powered")
 
 
 # ── MicEqData ──────────────────────────────────────────────────────────────────

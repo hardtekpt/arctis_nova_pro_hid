@@ -87,19 +87,15 @@ class ArctisNovaProWireless(AbstractHeadset):
 
     @property
     def connectivity(self) -> ConnectivityStatus:
-        """Current connectivity state, updated by queries and events."""
-        if self._cs_wireless_raw == 0x08:
-            wireless = True
-        elif self._cs_wireless_raw == 0x04:
-            wireless = False
-        else:
-            # wireless_raw == 0x00 (unknown): infer from mode_raw
-            # WIRELESS_ONLY (0x01) or WIRELESS_AND_BT (0x04) imply wireless is up
-            wireless = self._cs_mode_raw in (0x01, 0x04)
+        """Live connectivity state, derived from all query and event sources."""
+        return self._build_connectivity()
+
+    def _build_connectivity(self) -> ConnectivityStatus:
+        """Build a ConnectivityStatus from the current internal scalars."""
         return ConnectivityStatus(
             usb           = self._cs_usb,
             headset_power = self._cs_headset_power,
-            wireless      = wireless,
+            wireless      = codec._derive_wireless(self._cs_wireless_raw, self._cs_mode_raw),
             bt            = codec._derive_bt_status(
                                 self._cs_mode_raw,
                                 self._cs_bt_active,
