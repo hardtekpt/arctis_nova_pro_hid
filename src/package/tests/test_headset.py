@@ -276,6 +276,35 @@ class TestConnectivityStateManagement:
         mock_headset._process_packet("evt", _make_b5_event(wireless=0x00))
         assert mock_headset.connectivity.wireless is True  # preserved
 
+    # ── wireless fallback via mode_raw when wireless_raw == 0x00 ──────────────
+
+    def test_wireless_fallback_mode_wireless_only(self, mock_headset, mock_transport):
+        mock_headset._cs_wireless_raw = 0x00
+        mock_headset._cs_mode_raw = 0x01  # WIRELESS_ONLY
+        assert mock_headset.connectivity.wireless is True
+
+    def test_wireless_fallback_mode_wireless_and_bt(self, mock_headset, mock_transport):
+        mock_headset._cs_wireless_raw = 0x00
+        mock_headset._cs_mode_raw = 0x04  # WIRELESS_AND_BT
+        assert mock_headset.connectivity.wireless is True
+
+    def test_wireless_fallback_mode_bt_pairing(self, mock_headset, mock_transport):
+        mock_headset._cs_wireless_raw = 0x00
+        mock_headset._cs_mode_raw = 0x02  # BT_PAIRING — wireless not active
+        assert mock_headset.connectivity.wireless is False
+
+    def test_wireless_raw_0x08_takes_precedence_over_mode(self, mock_headset, mock_transport):
+        # Even in BT_PAIRING mode, if wireless_raw says active, it wins
+        mock_headset._cs_wireless_raw = 0x08
+        mock_headset._cs_mode_raw = 0x02
+        assert mock_headset.connectivity.wireless is True
+
+    def test_wireless_raw_0x04_takes_precedence_over_mode(self, mock_headset, mock_transport):
+        # Even in WIRELESS_ONLY mode, if wireless_raw says searching, it wins
+        mock_headset._cs_wireless_raw = 0x04
+        mock_headset._cs_mode_raw = 0x01
+        assert mock_headset.connectivity.wireless is False
+
     def test_b7_event_emits_battery_and_connectivity_events(self, mock_headset, mock_transport):
         battery_events = []
         conn_events = []
