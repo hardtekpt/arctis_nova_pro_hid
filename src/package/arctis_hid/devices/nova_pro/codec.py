@@ -5,12 +5,13 @@ works with clean Python types and never touches raw byte values.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, NamedTuple
 
 from ...core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    BtStatus,
     ConnectivityMode,
     GainLevel,
     HomeScreenMode,
@@ -29,14 +30,11 @@ from .models import (
     BtAutoMuteEvent,
     BtDefaultEvent,
     ChatMixEvent,
-    ConnectivityData,
-    ConnectivityEvent,
     DimTimeoutEvent,
     DisplayData,
     EqBandEvent,
     EqPresetEvent,
     GainEvent,
-    HeadsetPoweredEvent,
     HomeScreenEvent,
     MicEqData,
     MicLedEvent,
@@ -51,6 +49,54 @@ from .models import (
     VolumeEvent,
     WirelessModeEvent,
 )
+
+# ── Private intermediate types ─────────────────────────────────────────────
+# Used internally between codec and headset to carry raw connectivity bytes.
+# Not part of the public API.
+
+class _B0ConnRaw(NamedTuple):
+    """Connectivity/power fields extracted from a 0xB0 status packet."""
+    mode_raw:      int    # B0[4]: 0x01=wireless-only, 0x02=BT-pairing, 0x04=wireless+BT
+    bt_active:     bool   # B0[5]: 0x01=True
+    wireless_raw:  int    # B0[14]: 0x00=ignore, 0x04=searching, 0x08=active
+    headset_power: bool   # B0[15]: 0x08=True
+
+
+class _B5QueryRaw(NamedTuple):
+    """Connectivity fields extracted from a 0xB5 query response."""
+    mode_raw:     int    # B5[2]: 0x01/0x02/0x04
+    bt_connected: bool   # B5[3]: 0x01=True
+
+
+class _B5EventRaw(NamedTuple):
+    """Connectivity fields from a 0xB5 Col02 event packet."""
+    mode_raw:     int    # data[2]
+    bt_connected: bool   # data[3]: 0x01=True
+    wireless_raw: int    # data[4]: 0x00=ignore, 0x04=searching, 0x08=active
+
+
+class _B7EventRaw(NamedTuple):
+    """Battery + power fields from a 0xB7 Col02 event packet."""
+    headset_pct:   float
+    dock_pct:      float
+    headset_power: bool   # data[4]: 0x08=True
+
+
+# ── BtStatus derivation ────────────────────────────────────────────────────
+
+def _derive_bt_status(mode_raw: int, bt_active: bool, bt_connected: bool) -> BtStatus:
+    """Derive BtStatus from the three raw connectivity scalars.
+
+    Priority: CONNECTED > PAIRING > ON > OFF.
+    """
+    if bt_connected:
+        return BtStatus.CONNECTED
+    if mode_raw == 0x02:
+        return BtStatus.PAIRING
+    if mode_raw == 0x04 or bt_active:
+        return BtStatus.ON
+    return BtStatus.OFF
+
 
 # ── Volume ─────────────────────────────────────────────────────────────────
 # Inverted: 0x38 (56) = 0%,  0x00 = 100%
@@ -91,14 +137,24 @@ def decode_ascii_response(data: list[int]) -> str:
     return payload.split(b"\x00")[0].decode("ascii", errors="replace")
 
 
+# ── 0xB0 connectivity/power extraction ────────────────────────────────────
+
+def decode_b0_conn(data: list[int]) -> _B0ConnRaw:
+    """Extract connectivity and power fields from a 0xB0 status packet."""
+    return _B0ConnRaw(
+        mode_raw      = data[C.B0_CONN],
+        bt_active     = data[C.B0_BT] == 0x01,
+        wireless_raw  = data[C.B0_WIRELESS_LINK],
+        headset_power = data[C.B0_PWR] == 0x08,
+    )
+
+
 # ── 0xB0 status packet ─────────────────────────────────────────────────────
 
 def decode_status_packet(data: list[int]) -> StatusData:
     return StatusData(
         headset_battery_pct = decode_battery(data[C.B0_HBAT]),
         dock_battery_pct    = decode_battery(data[C.B0_DBAT]),
-        connectivity_mode   = ConnectivityMode(data[C.B0_CONN]),
-        bt_active           = data[C.B0_BT] == 0x01,
         transparency_level  = data[C.B0_TRANSP_LEVEL],
         mic_muted           = data[C.B0_MUTE] == 0x01,
         anc_mode            = AncMode(data[C.B0_ANC]),
@@ -107,17 +163,16 @@ def decode_status_packet(data: list[int]) -> StatusData:
         bt_default          = data[C.B0_BT_DEFAULT] == 0x01,
         bt_auto_mute        = BtAutoMute(data[C.B0_BT_AUTOMUTE]),
         auto_off_timeout    = TimeoutStep(data[C.B0_AUTO_OFF]),
-        wireless_link_state = WirelessLinkState(data[C.B0_WIRELESS_LINK]),
-        headset_powered     = data[C.B0_PWR] == 0x08,
     )
 
 
-# ── 0xB5 connectivity query packet ────────────────────────────────────────
+# ── 0xB5 connectivity query extraction ────────────────────────────────────
 
-def decode_connectivity_packet(data: list[int]) -> ConnectivityData:
-    return ConnectivityData(
-        connectivity_mode = ConnectivityMode(data[C.B5_CONN]),
-        bt_connected      = data[C.B5_BT_CONNECTED] == 0x01,
+def decode_b5_query(data: list[int]) -> _B5QueryRaw:
+    """Extract connectivity fields from a 0xB5 query response."""
+    return _B5QueryRaw(
+        mode_raw     = data[C.B5_CONN],
+        bt_connected = data[C.B5_BT_CONNECTED] == 0x01,
     )
 
 
@@ -135,7 +190,6 @@ def decode_battery_packet(data: list[int]) -> BatteryData:
     return BatteryData(
         headset_pct = decode_battery(data[C.B7_HBAT]),
         dock_pct    = decode_battery(data[C.B7_DBAT]),
-        headset_powered = data[C.B7_PWR] == 0x08,
     )
 
 
@@ -171,12 +225,12 @@ def decode_mic_eq_packet(data: list[int]) -> MicEqData:
 
 
 # ── Event decoder ──────────────────────────────────────────────────────────
-# Maps opcode (data[1]) → typed event dataclass, or None for unknown/noise.
-
-_EVT_CMD = {
-    0x10: None,  # unsolicited firmware version noise on Col01 — filter out
-}
-
+# Maps opcode (data[1]) → typed event dataclass or private raw container,
+# or None for unknown/noise.
+#
+# 0xB5 and 0xB7 return private _B5EventRaw / _B7EventRaw NamedTuples.
+# headset._process_packet handles these specially to update ConnectivityStatus
+# before emitting the public ConnectivityEvent / BatteryEvent.
 
 def decode_event(data: list[int]) -> Any | None:
     if len(data) < 4:
@@ -190,21 +244,17 @@ def decode_event(data: list[int]) -> Any | None:
         return VolumeEvent(percent=decode_volume(data[2]))
 
     if cmd == 0xB7:
-        return BatteryEvent(
-            headset_pct=decode_battery(data[2]),
-            dock_pct=decode_battery(data[3]),
-            headset_powered=data[4] == 0x08,
+        return _B7EventRaw(
+            headset_pct   = decode_battery(data[2]),
+            dock_pct      = decode_battery(data[3]),
+            headset_power = data[4] == 0x08,
         )
 
     if cmd == 0xB5:
-        mode = ConnectivityMode(data[2])
-        link = WirelessLinkState(data[4])
-        return ConnectivityEvent(
-            mode=mode,
-            bt_active=mode in (ConnectivityMode.WIRELESS_AND_BT, ConnectivityMode.BT_PAIRING),
-            bt_connected=data[3] == 0x01,
-            wireless=link == WirelessLinkState.ACTIVE,
-            wireless_link_state=link,
+        return _B5EventRaw(
+            mode_raw     = data[2],
+            bt_connected = data[3] == 0x01,
+            wireless_raw = data[C.B5_WIRELESS_LINK],
         )
 
     if cmd == 0x85:

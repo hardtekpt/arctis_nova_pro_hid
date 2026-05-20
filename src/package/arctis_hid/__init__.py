@@ -8,18 +8,24 @@ from .core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
-    ConnectivityMode,
+    BtStatus,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
     UsbInput,
-    WirelessLinkState,
     WirelessMode,
 )
 
 # Query response models
-from .devices.nova_pro.models import BatteryData, ConnectivityData, DisplayData, MicEqData, StatusData, VolumeLimiterData
+from .devices.nova_pro.models import (
+    BatteryData,
+    ConnectivityStatus,
+    DisplayData,
+    MicEqData,
+    StatusData,
+    VolumeLimiterData,
+)
 
 # Event dataclasses
 from .devices.nova_pro.models import (
@@ -67,19 +73,18 @@ __all__ = [
     "AncMode",
     "AudioOutput",
     "BtAutoMute",
-    "ConnectivityMode",
+    "BtStatus",
     "GainLevel",
     "HomeScreenMode",
     "SidetoneLevel",
     "TimeoutStep",
     "UsbInput",
-    "WirelessLinkState",
     "WirelessMode",
     # query models
     "StatusData",
     "MicEqData",
     "DisplayData",
-    "ConnectivityData",
+    "ConnectivityStatus",
     "VolumeLimiterData",
     "BatteryData",
     # events

@@ -1,4 +1,11 @@
-from enum import IntEnum
+from enum import IntEnum, Enum
+
+
+class BtStatus(str, Enum):
+    OFF       = "OFF"
+    ON        = "ON"
+    PAIRING   = "PAIRING"
+    CONNECTED = "CONNECTED"
 
 
 class AncMode(IntEnum):
@@ -46,6 +53,7 @@ class ConnectivityMode(IntEnum):
 
 
 class WirelessLinkState(IntEnum):
+    UNKNOWN  = 0x00   # not applicable / field unpopulated (seen in 0xB5 events when 2.4 GHz is inactive)
     ABSENT   = 0x02   # headset completely absent or powered off (seen in B0[14] only)
     SEARCHING = 0x04  # base station searching / pairing in progress
     ACTIVE   = 0x08   # 2.4 GHz wireless link established

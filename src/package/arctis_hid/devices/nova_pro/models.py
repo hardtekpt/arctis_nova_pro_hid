@@ -6,15 +6,24 @@ from ...core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
-    ConnectivityMode,
+    BtStatus,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
     UsbInput,
-    WirelessLinkState,
     WirelessMode,
 )
+
+
+# ── Connectivity ───────────────────────────────────────────────────────────
+
+@dataclass
+class ConnectivityStatus:
+    usb:           bool       # True = USB HID connection present
+    headset_power: bool       # True = headset is on / in dock (0x08); False = off/removed (0x01)
+    wireless:      bool       # True = 2.4 GHz link active (0x08); False = searching/absent
+    bt:            BtStatus   # derived from mode_raw, bt_active, bt_connected
 
 
 # ── Query response models ──────────────────────────────────────────────────
@@ -23,8 +32,6 @@ from ...core.types import (
 class StatusData:
     headset_battery_pct: float
     dock_battery_pct:    float
-    connectivity_mode:   ConnectivityMode
-    bt_active:           bool
     transparency_level:  int             # 0xB0[8]: 1–10 (meaningful in TRANSPARENCY mode)
     mic_muted:           bool
     anc_mode:            AncMode
@@ -33,8 +40,6 @@ class StatusData:
     bt_default:          bool             # 0xB0[2]: True=on (BT auto-connect enabled)
     bt_auto_mute:        BtAutoMute       # 0xB0[3]: OFF / DB_MINUS_12 / FULL
     auto_off_timeout:    TimeoutStep      # 0xB0[12]: OFF=0 … SIXTY_MIN=6
-    wireless_link_state: WirelessLinkState  # 0xB0[14]: ABSENT/SEARCHING/ACTIVE
-    headset_powered:     bool             # 0xB0[15]: True=on (0x08), False=off/removed (0x01)
 
 
 @dataclass
@@ -46,12 +51,6 @@ class DisplayData:
 
 
 @dataclass
-class ConnectivityData:
-    connectivity_mode: ConnectivityMode
-    bt_connected:      bool   # True if a BT device is currently connected
-
-
-@dataclass
 class VolumeLimiterData:
     limiter_on: bool   # 0x26[2]: True=on (0x01)  False=off (0x02)
 
@@ -60,7 +59,6 @@ class VolumeLimiterData:
 class BatteryData:
     headset_pct: float   # 0xB7[2]: raw ÷ 8 × 100 = %
     dock_pct:    float   # 0xB7[3]: raw ÷ 8 × 100 = %
-    headset_powered: bool   # 0xB7[4]: True=on (0x08), False=off/removed (0x01)
 
 
 @dataclass
@@ -93,16 +91,11 @@ class VolumeEvent:
 class BatteryEvent:
     headset_pct: float
     dock_pct:    float
-    headset_powered: bool   # True when 0x08, False when 0x01
 
 
 @dataclass
 class ConnectivityEvent:
-    mode:                ConnectivityMode
-    bt_active:           bool             # True when mode is WIRELESS_AND_BT or BT_PAIRING
-    bt_connected:        bool             # True if a BT device is paired and connected (data[3]==0x01)
-    wireless:            bool             # True=link active  False=searching or absent
-    wireless_link_state: WirelessLinkState  # 0xB5 event[4]: SEARCHING=0x04, ACTIVE=0x08
+    connectivity: ConnectivityStatus
 
 
 @dataclass
@@ -207,11 +200,6 @@ class MicLedEvent:
 @dataclass
 class AutoOffEvent:
     step: TimeoutStep
-
-
-@dataclass
-class HeadsetPoweredEvent:
-    powered: bool   # True=on (0x08), False=off/removed (0x01)
 
 
 @dataclass
