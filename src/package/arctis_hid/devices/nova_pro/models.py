@@ -35,11 +35,15 @@ class StatusData:
     transparency_level:  int             # 0xB0[8]: 1–10 (meaningful in TRANSPARENCY mode)
     mic_muted:           bool
     anc_mode:            AncMode
-    mic_led_brightness:  int          # 1–10
+    mic_led_brightness:  int             # 1–10
     wireless_mode:       WirelessMode
-    bt_default:          bool             # 0xB0[2]: True=on (BT auto-connect enabled)
-    bt_auto_mute:        BtAutoMute       # 0xB0[3]: OFF / DB_MINUS_12 / FULL
-    auto_off_timeout:    TimeoutStep      # 0xB0[12]: OFF=0 … SIXTY_MIN=6
+    bt_default:          bool            # 0xB0[2]: True=on (BT auto-connect enabled)
+    bt_auto_mute:        BtAutoMute      # 0xB0[3]: OFF / DB_MINUS_12 / FULL
+    auto_off_timeout:    TimeoutStep     # 0xB0[12]: OFF=0 … SIXTY_MIN=6
+    # Connectivity snapshot from this packet (also updates headset.connectivity)
+    headset_power:       bool            # 0xB0[15]: True=headset on/in dock
+    wireless:            bool            # 0xB0[14]: True=2.4 GHz link active
+    bt:                  BtStatus        # derived from 0xB0[4,5]; CONNECTED not available here
 
 
 @dataclass
@@ -57,8 +61,9 @@ class VolumeLimiterData:
 
 @dataclass
 class BatteryData:
-    headset_pct: float   # 0xB7[2]: raw ÷ 8 × 100 = %
-    dock_pct:    float   # 0xB7[3]: raw ÷ 8 × 100 = %
+    headset_pct:     float   # 0xB7[2]: raw ÷ 8 × 100 = %
+    dock_pct:        float   # 0xB7[3]: raw ÷ 8 × 100 = %
+    headset_powered: bool    # 0xB7[4]: True=headset on/in dock (also updates headset.connectivity)
 
 
 @dataclass

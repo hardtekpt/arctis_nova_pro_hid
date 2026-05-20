@@ -21,6 +21,7 @@ from arctis_hid.devices.nova_pro.codec import (
     _B5QueryRaw,
     _B7EventRaw,
     _derive_bt_status,
+    _derive_wireless,
     decode_ascii_response,
     decode_b0_conn,
     decode_b5_query,
@@ -249,14 +250,39 @@ class TestDecodeStatusPacket:
             pkt = make_b0_packet(transp=level)
             assert decode_status_packet(pkt).transparency_level == level
 
-    def test_no_connectivity_fields(self):
-        # connectivity fields are no longer in StatusData — verify via decode_b0_conn
-        pkt = make_b0_packet()
-        result = decode_status_packet(pkt)
-        assert not hasattr(result, "connectivity_mode")
-        assert not hasattr(result, "bt_active")
-        assert not hasattr(result, "wireless_link_state")
-        assert not hasattr(result, "headset_powered")
+    def test_headset_power_on(self):
+        assert decode_status_packet(make_b0_packet(powered=0x08)).headset_power is True
+
+    def test_headset_power_off(self):
+        assert decode_status_packet(make_b0_packet(powered=0x01)).headset_power is False
+
+    def test_wireless_active(self):
+        assert decode_status_packet(make_b0_packet(wireless_link=0x08)).wireless is True
+
+    def test_wireless_searching(self):
+        assert decode_status_packet(make_b0_packet(wireless_link=0x04)).wireless is False
+
+    def test_wireless_fallback_via_mode(self):
+        # wireless_raw=0x00 → fall back to mode_raw=0x01 (WIRELESS_ONLY) → True
+        pkt = make_b0_packet(wireless_link=0x00, conn=0x01)
+        assert decode_status_packet(pkt).wireless is True
+
+    def test_bt_off_in_status(self):
+        pkt = make_b0_packet(conn=0x01, bt=0x00)
+        assert decode_status_packet(pkt).bt == BtStatus.OFF
+
+    def test_bt_on_in_status(self):
+        pkt = make_b0_packet(conn=0x04, bt=0x01)
+        assert decode_status_packet(pkt).bt == BtStatus.ON
+
+    def test_bt_pairing_in_status(self):
+        pkt = make_b0_packet(conn=0x02, bt=0x00)
+        assert decode_status_packet(pkt).bt == BtStatus.PAIRING
+
+    def test_bt_not_connected_in_status(self):
+        # bt_connected not available in 0xB0 — CONNECTED never appears in StatusData.bt
+        pkt = make_b0_packet(conn=0x04, bt=0x01)
+        assert decode_status_packet(pkt).bt != BtStatus.CONNECTED
 
 
 # ── 0xB0 connectivity extraction ──────────────────────────────────────────────
@@ -376,10 +402,11 @@ class TestDecodeBatteryPacket:
         assert result.headset_pct == pytest.approx(100.0)
         assert result.dock_pct == pytest.approx(25.0)
 
-    def test_no_headset_powered_field(self):
-        pkt = make_b7_packet()
-        result = decode_battery_packet(pkt)
-        assert not hasattr(result, "headset_powered")
+    def test_headset_powered_true(self):
+        assert decode_battery_packet(make_b7_packet(powered=0x08)).headset_powered is True
+
+    def test_headset_powered_false(self):
+        assert decode_battery_packet(make_b7_packet(powered=0x01)).headset_powered is False
 
 
 # ── 0x80 display settings packet decoding ─────────────────────────────────────

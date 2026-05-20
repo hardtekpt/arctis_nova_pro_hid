@@ -82,12 +82,13 @@ class _B7EventRaw(NamedTuple):
     headset_power: bool   # data[4]: 0x08=True
 
 
-# ── BtStatus derivation ────────────────────────────────────────────────────
+# ── Connectivity derivation helpers ───────────────────────────────────────
 
 def _derive_bt_status(mode_raw: int, bt_active: bool, bt_connected: bool) -> BtStatus:
     """Derive BtStatus from the three raw connectivity scalars.
 
     Priority: CONNECTED > PAIRING > ON > OFF.
+    bt_connected is False when derived from 0xB0 alone (not available in that packet).
     """
     if bt_connected:
         return BtStatus.CONNECTED
@@ -96,6 +97,19 @@ def _derive_bt_status(mode_raw: int, bt_active: bool, bt_connected: bool) -> BtS
     if mode_raw == 0x04 or bt_active:
         return BtStatus.ON
     return BtStatus.OFF
+
+
+def _derive_wireless(wireless_raw: int, mode_raw: int) -> bool:
+    """Derive wireless active state from wireless_raw with mode_raw fallback.
+
+    wireless_raw 0x08 = active, 0x04 = searching (off), 0x00 = unknown.
+    When unknown, mode_raw 0x01 (WIRELESS_ONLY) or 0x04 (WIRELESS_AND_BT) imply wireless is up.
+    """
+    if wireless_raw == 0x08:
+        return True
+    if wireless_raw == 0x04:
+        return False
+    return mode_raw in (0x01, 0x04)
 
 
 # ── Volume ─────────────────────────────────────────────────────────────────
@@ -152,6 +166,9 @@ def decode_b0_conn(data: list[int]) -> _B0ConnRaw:
 # ── 0xB0 status packet ─────────────────────────────────────────────────────
 
 def decode_status_packet(data: list[int]) -> StatusData:
+    mode_raw    = data[C.B0_CONN]
+    bt_active   = data[C.B0_BT] == 0x01
+    wireless_raw = data[C.B0_WIRELESS_LINK]
     return StatusData(
         headset_battery_pct = decode_battery(data[C.B0_HBAT]),
         dock_battery_pct    = decode_battery(data[C.B0_DBAT]),
@@ -163,6 +180,9 @@ def decode_status_packet(data: list[int]) -> StatusData:
         bt_default          = data[C.B0_BT_DEFAULT] == 0x01,
         bt_auto_mute        = BtAutoMute(data[C.B0_BT_AUTOMUTE]),
         auto_off_timeout    = TimeoutStep(data[C.B0_AUTO_OFF]),
+        headset_power       = data[C.B0_PWR] == 0x08,
+        wireless            = _derive_wireless(wireless_raw, mode_raw),
+        bt                  = _derive_bt_status(mode_raw, bt_active, bt_connected=False),
     )
 
 
@@ -188,8 +208,9 @@ def decode_vol_limiter_packet(data: list[int]) -> VolumeLimiterData:
 
 def decode_battery_packet(data: list[int]) -> BatteryData:
     return BatteryData(
-        headset_pct = decode_battery(data[C.B7_HBAT]),
-        dock_pct    = decode_battery(data[C.B7_DBAT]),
+        headset_pct    = decode_battery(data[C.B7_HBAT]),
+        dock_pct       = decode_battery(data[C.B7_DBAT]),
+        headset_powered = data[C.B7_PWR] == 0x08,
     )
 
 

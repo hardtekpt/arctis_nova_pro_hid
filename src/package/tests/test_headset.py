@@ -198,10 +198,13 @@ class TestGetBattery:
         assert result.headset_pct == pytest.approx(0.0)
         assert result.dock_pct == pytest.approx(0.0)
 
-    def test_no_headset_powered_field(self, mock_headset, mock_transport):
-        mock_transport.query.return_value = make_b7_packet()
-        result = mock_headset.get_battery()
-        assert not hasattr(result, "headset_powered")
+    def test_headset_powered_true(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b7_packet(powered=0x08)
+        assert mock_headset.get_battery().headset_powered is True
+
+    def test_headset_powered_false(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b7_packet(powered=0x01)
+        assert mock_headset.get_battery().headset_powered is False
 
     def test_updates_headset_power(self, mock_headset, mock_transport):
         mock_transport.query.return_value = make_b7_packet(powered=0x08)
