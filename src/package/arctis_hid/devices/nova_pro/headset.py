@@ -68,7 +68,7 @@ class ArctisNovaProWireless(AbstractHeadset):
         # ── internal connectivity state ────────────────────────────────────
         # Updated incrementally by queries and events; never exposed directly.
         self._cs_usb:           bool = True   # True from the moment the instance is created
-        self._cs_headset_power: bool = False  # unknown until first query
+        self._cs_headset_power: bool | None = None  # unknown until first 0xB0 or 0xB7 packet
         self._cs_wireless_raw:  int  = 0x00  # 0x00=unknown, 0x04=searching, 0x08=active
         self._cs_mode_raw:      int  = 0x01  # default: WIRELESS_ONLY
         self._cs_bt_active:     bool = False
@@ -398,6 +398,7 @@ class ArctisNovaProWireless(AbstractHeadset):
             self._dispatcher.emit_typed(BatteryEvent(
                 headset_pct=event.headset_pct,
                 dock_pct=event.dock_pct,
+                headset_powered=event.headset_power,
             ))
             self._dispatcher.emit_typed(ConnectivityEvent(connectivity=self.connectivity))
         else:

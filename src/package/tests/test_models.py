@@ -52,7 +52,7 @@ from arctis_hid.devices.nova_pro.models import (
 
 class TestConnectivityStatus:
     def _make(self, **kwargs) -> ConnectivityStatus:
-        defaults = dict(usb=True, headset_power=True, wireless=True, bt=BtStatus.OFF)
+        defaults = dict(usb=True, headset_power=None, wireless=True, bt=BtStatus.OFF)
         return ConnectivityStatus(**{**defaults, **kwargs})
 
     def test_is_dataclass(self):
@@ -61,8 +61,11 @@ class TestConnectivityStatus:
     def test_usb_is_bool(self):
         assert isinstance(self._make(usb=True).usb, bool)
 
-    def test_headset_power_is_bool(self):
+    def test_headset_power_is_bool_when_set(self):
         assert isinstance(self._make(headset_power=False).headset_power, bool)
+
+    def test_headset_power_can_be_none(self):
+        assert self._make(headset_power=None).headset_power is None
 
     def test_wireless_is_bool(self):
         assert isinstance(self._make(wireless=True).wireless, bool)
@@ -262,10 +265,10 @@ class TestEventDataclasses:
         assert isinstance(e.percent, float)
 
     def test_battery_event(self):
-        e = BatteryEvent(headset_pct=100.0, dock_pct=50.0)
+        e = BatteryEvent(headset_pct=100.0, dock_pct=50.0, headset_powered=True)
         assert e.headset_pct == 100.0
         assert e.dock_pct == 50.0
-        assert not hasattr(e, "headset_powered")
+        assert e.headset_powered is True
 
     def test_connectivity_event(self):
         cs = ConnectivityStatus(usb=True, headset_power=True, wireless=True, bt=BtStatus.CONNECTED)

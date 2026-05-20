@@ -20,10 +20,10 @@ from ...core.types import (
 
 @dataclass
 class ConnectivityStatus:
-    usb:           bool       # True = USB HID connection present
-    headset_power: bool       # True = headset is on / in dock (0x08); False = off/removed (0x01)
-    wireless:      bool       # True = 2.4 GHz link active (0x08); False = searching/absent
-    bt:            BtStatus   # derived from mode_raw, bt_active, bt_connected
+    usb:           bool            # True = USB HID connection present
+    headset_power: bool | None     # True/False = on or off; None = not yet received
+    wireless:      bool            # True = 2.4 GHz link active (0x08); False = searching/absent
+    bt:            BtStatus        # derived from mode_raw, bt_active, bt_connected
 
 
 # ── Query response models ──────────────────────────────────────────────────
@@ -94,8 +94,9 @@ class VolumeEvent:
 
 @dataclass
 class BatteryEvent:
-    headset_pct: float
-    dock_pct:    float
+    headset_pct:     float
+    dock_pct:        float
+    headset_powered: bool
 
 
 @dataclass

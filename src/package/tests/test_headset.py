@@ -326,11 +326,20 @@ class TestConnectivityStateManagement:
         mock_headset._process_packet("evt", _make_b7_event(powered=0x01))
         assert mock_headset.connectivity.headset_power is False
 
-    def test_b7_event_no_headset_powered_field_in_battery_event(self, mock_headset, mock_transport):
+    def test_b7_event_battery_event_has_headset_powered(self, mock_headset, mock_transport):
         received = []
         mock_headset.on("BatteryEvent", received.append)
-        mock_headset._process_packet("evt", _make_b7_event())
-        assert not hasattr(received[0], "headset_powered")
+        mock_headset._process_packet("evt", _make_b7_event(powered=0x08))
+        assert received[0].headset_powered is True
+
+    def test_b7_event_battery_event_headset_powered_false(self, mock_headset, mock_transport):
+        received = []
+        mock_headset.on("BatteryEvent", received.append)
+        mock_headset._process_packet("evt", _make_b7_event(powered=0x01))
+        assert received[0].headset_powered is False
+
+    def test_initial_headset_power_is_none(self, mock_headset, mock_transport):
+        assert mock_headset.connectivity.headset_power is None
 
     def test_usb_disconnects_sets_false(self, mock_headset, mock_transport):
         mock_transport.poll.side_effect = DeviceIOError("read error")
