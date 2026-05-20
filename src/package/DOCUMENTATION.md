@@ -186,7 +186,7 @@ Return the live connectivity state. Derived from six internal scalars updated by
 ```python
 cs = h.connectivity
 print(cs.usb)           # True
-print(cs.headset_power) # True
+print(cs.headset_power) # None (before first query/battery event); True/False after
 print(cs.wireless)      # True
 print(cs.bt)            # BtStatus.CONNECTED
 ```
@@ -573,10 +573,10 @@ Returned by `get_connectivity()` and exposed as the `headset.connectivity` prope
 ```python
 @dataclass
 class ConnectivityStatus:
-    usb:           bool       # True from instance creation; False while USB HID is disconnected
-    headset_power: bool       # True if the headset is powered on (from 0xB0[15] or 0xB7[4])
-    wireless:      bool       # True if the 2.4 GHz wireless link is active (wireless_raw == 0x08)
-    bt:            BtStatus   # Derived BT state: OFF / ON / PAIRING / CONNECTED
+    usb:           bool            # True from instance creation; False while USB HID is disconnected
+    headset_power: bool | None     # True/False = on or off; None = not yet received (no 0xB0/0xB7 yet)
+    wireless:      bool            # True if the 2.4 GHz wireless link is active (wireless_raw == 0x08)
+    bt:            BtStatus        # Derived BT state: OFF / ON / PAIRING / CONNECTED
 ```
 
 The `bt` field is derived from multiple sources using priority order:
@@ -600,7 +600,7 @@ The `bt` field is derived from multiple sources using priority order:
 ```python
 cs = h.connectivity
 print(cs.usb)           # True
-print(cs.headset_power) # True
+print(cs.headset_power) # None (before first query/battery event); True/False after
 print(cs.wireless)      # True
 print(cs.bt)            # BtStatus.CONNECTED
 ```
@@ -659,7 +659,7 @@ Each event is a dataclass. The callback receives a single instance.
 | Class | Trigger | Fields |
 |-------|---------|--------|
 | `VolumeEvent` | Volume wheel turned | `percent: float` (0–100) |
-| `BatteryEvent` | Battery level update | `headset_pct: float`, `dock_pct: float` |
+| `BatteryEvent` | Battery level update | `headset_pct: float`, `dock_pct: float`, `headset_powered: bool` |
 | `ConnectivityEvent` | Wireless connection changed or battery event with power state change | `connectivity: ConnectivityStatus` — the full live state at the moment of the event |
 | `AncModeEvent` | ANC button pressed | `mode: AncMode` |
 | `MicMuteEvent` | Mic mute button pressed | `muted: bool` |
