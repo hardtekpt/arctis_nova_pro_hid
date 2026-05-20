@@ -777,3 +777,43 @@ class TestReconnectEventFlow:
         assert len(events) == 2
         assert isinstance(events[0], DeviceDisconnectedEvent)
         assert isinstance(events[1], DeviceReconnectedEvent)
+
+    def test_connectivity_event_emitted_with_usb_false_on_disconnect(self, mock_headset, mock_transport):
+        conn_events = []
+        mock_headset.on("ConnectivityEvent", conn_events.append)
+
+        mock_transport.poll.side_effect = DeviceIOError("disconnected")
+        stop = threading.Event()
+        mock_headset._stop_event = stop
+
+        with patch.object(mock_headset, "_reconnect_until_found", return_value=False):
+            mock_headset._poll_loop(stop)
+
+        assert any(isinstance(e, ConnectivityEvent) for e in conn_events)
+        disconnect_evt = next(e for e in conn_events if isinstance(e, ConnectivityEvent))
+        assert disconnect_evt.connectivity.usb is False
+
+    def test_connectivity_event_emitted_with_usb_true_after_reconnect(self, mock_headset, mock_transport):
+        conn_events = []
+        mock_headset.on("ConnectivityEvent", conn_events.append)
+
+        stop = threading.Event()
+        poll_calls = 0
+
+        def poll_side_effect(*args, **kwargs):
+            nonlocal poll_calls
+            poll_calls += 1
+            if poll_calls == 1:
+                raise DeviceIOError("disconnected")
+            stop.set()
+            return []
+
+        mock_transport.poll.side_effect = poll_side_effect
+        mock_headset._stop_event = stop
+
+        with patch.object(mock_headset, "_reconnect_until_found", return_value=True):
+            mock_headset._poll_loop(stop)
+
+        assert len(conn_events) == 2
+        assert conn_events[0].connectivity.usb is False   # emitted after disconnect
+        assert conn_events[1].connectivity.usb is True    # emitted after reconnect
