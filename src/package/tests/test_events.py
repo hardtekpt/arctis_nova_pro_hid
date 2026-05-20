@@ -9,23 +9,20 @@ from arctis_hid.core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
-    ConnectivityMode,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
     WirelessMode,
 )
-from arctis_hid.devices.nova_pro.codec import decode_event
+from arctis_hid.devices.nova_pro.codec import _B5EventRaw, _B7EventRaw, decode_event
 from arctis_hid.devices.nova_pro.models import (
     AncModeEvent,
     AudioOutputEvent,
     AutoOffEvent,
-    BatteryEvent,
     BtAutoMuteEvent,
     BtDefaultEvent,
     ChatMixEvent,
-    ConnectivityEvent,
     DimTimeoutEvent,
     EqBandEvent,
     EqPresetEvent,
@@ -99,7 +96,7 @@ def test_volume_event_0_pct():
 
 
 def test_battery_event_type():
-    assert isinstance(evt(0xB7, 8, 4), BatteryEvent)
+    assert isinstance(evt(0xB7, 8, 4), _B7EventRaw)
 
 
 def test_battery_event_fields():
@@ -112,33 +109,33 @@ def test_battery_event_fields():
 
 
 def test_connectivity_event_type():
-    assert isinstance(evt(0xB5, 0x04, 0x01, 0x08), ConnectivityEvent)
+    assert isinstance(evt(0xB5, 0x04, 0x01, 0x08), _B5EventRaw)
 
 
 def test_connectivity_event_bt_active_true():
+    # mode_raw=0x04 (WIRELESS_AND_BT) → bt_active derived as True by headset
     result = evt(0xB5, 0x04, 0x01, 0x08)
-    assert result.bt_active is True
-    assert result.mode == ConnectivityMode.WIRELESS_AND_BT
+    assert result.mode_raw == 0x04
 
 
 def test_connectivity_event_bt_active_true_when_data3_is_0x02():
     # Regression: mode=0x04 with data[3]=0x02 (BT device not connected)
-    # bt_active must still be True because mode already indicates WIRELESS_AND_BT.
+    # mode_raw=0x04 still signals BT active, regardless of bt_connected.
     result = evt(0xB5, 0x04, 0x02, 0x08)
-    assert result.bt_active is True
-    assert result.mode == ConnectivityMode.WIRELESS_AND_BT
+    assert result.mode_raw == 0x04
+    assert result.bt_connected is False
 
 
 def test_connectivity_event_bt_active_false_when_wireless_only():
+    # mode_raw=0x01 (WIRELESS_ONLY) → bt_active derived as False by headset
     result = evt(0xB5, 0x01, 0x00, 0x08)
-    assert result.bt_active is False
-    assert result.mode == ConnectivityMode.WIRELESS_ONLY
+    assert result.mode_raw == 0x01
 
 
 def test_connectivity_event_bt_pairing_mode():
+    # mode_raw=0x02 (BT_PAIRING) → BtStatus.PAIRING derived by headset
     result = evt(0xB5, 0x02, 0x00, 0x08)
-    assert result.mode == ConnectivityMode.BT_PAIRING
-    assert result.bt_active is True
+    assert result.mode_raw == 0x02
 
 
 def test_connectivity_event_bt_connected_true():
@@ -158,12 +155,12 @@ def test_connectivity_event_bt_connected_false_when_wireless_only():
 
 def test_connectivity_event_wireless_true():
     result = evt(0xB5, 0x01, 0x00, 0x08)
-    assert result.wireless is True
+    assert result.wireless_raw == 0x08  # 0x08 → wireless=True when applied by headset
 
 
 def test_connectivity_event_wireless_false():
     result = evt(0xB5, 0x01, 0x00, 0x04)   # SEARCHING (0x04) → wireless=False
-    assert result.wireless is False
+    assert result.wireless_raw == 0x04  # 0x04 → wireless=False when applied by headset
 
 
 # ── OledBrightnessEvent (0x85) ──────────────────────────────────────────────────

@@ -11,7 +11,7 @@ from arctis_hid.core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
-    ConnectivityMode,
+    BtStatus,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
@@ -23,7 +23,9 @@ from arctis_hid.exceptions import DeviceIOError
 from arctis_hid.devices.nova_pro import constants as C
 from arctis_hid.devices.nova_pro.models import (
     BatteryData,
-    ConnectivityData,
+    BatteryEvent,
+    ConnectivityEvent,
+    ConnectivityStatus,
     DeviceDisconnectedEvent,
     DeviceReconnectedEvent,
     DisplayData,
@@ -51,6 +53,17 @@ class TestGetStatus:
         assert result.headset_battery_pct == pytest.approx(100.0)
         assert result.dock_battery_pct == pytest.approx(50.0)
         assert result.mic_muted is True
+
+    def test_updates_connectivity_state(self, mock_headset, mock_transport):
+        # get_status() must update the internal connectivity state
+        mock_transport.query.return_value = make_b0_packet(
+            conn=0x04, bt=0x01, wireless_link=0x08, powered=0x08
+        )
+        mock_headset.get_status()
+        conn = mock_headset.connectivity
+        assert conn.wireless is True
+        assert conn.headset_power is True
+        assert conn.bt in (BtStatus.ON, BtStatus.CONNECTED)  # bt_connected unknown at this point
 
 
 class TestGetMicEq:
@@ -99,18 +112,35 @@ class TestGetConnectivity:
         mock_headset.get_connectivity()
         mock_transport.query.assert_called_once_with(C.CMD_CONNECTIVITY)
 
-    def test_returns_connectivity_data(self, mock_headset, mock_transport):
+    def test_returns_connectivity_status(self, mock_headset, mock_transport):
         mock_transport.query.return_value = make_b5_packet(conn=0x04, bt_connected=0x01)
         result = mock_headset.get_connectivity()
-        assert isinstance(result, ConnectivityData)
-        assert result.connectivity_mode == ConnectivityMode.WIRELESS_AND_BT
-        assert result.bt_connected is True
+        assert isinstance(result, ConnectivityStatus)
 
-    def test_bt_not_connected(self, mock_headset, mock_transport):
-        mock_transport.query.return_value = make_b5_packet(conn=0x01, bt_connected=0x00)
+    def test_bt_connected(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b5_packet(conn=0x04, bt_connected=0x01)
         result = mock_headset.get_connectivity()
-        assert result.connectivity_mode == ConnectivityMode.WIRELESS_ONLY
-        assert result.bt_connected is False
+        assert result.bt == BtStatus.CONNECTED
+
+    def test_bt_on(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b5_packet(conn=0x04, bt_connected=0x02)
+        result = mock_headset.get_connectivity()
+        assert result.bt == BtStatus.ON
+
+    def test_bt_pairing(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b5_packet(conn=0x02, bt_connected=0x02)
+        result = mock_headset.get_connectivity()
+        assert result.bt == BtStatus.PAIRING
+
+    def test_bt_off(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b5_packet(conn=0x01, bt_connected=0x02)
+        result = mock_headset.get_connectivity()
+        assert result.bt == BtStatus.OFF
+
+    def test_usb_is_true(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b5_packet()
+        result = mock_headset.get_connectivity()
+        assert result.usb is True
 
 
 class TestGetDisplay:
@@ -167,6 +197,136 @@ class TestGetBattery:
         result = mock_headset.get_battery()
         assert result.headset_pct == pytest.approx(0.0)
         assert result.dock_pct == pytest.approx(0.0)
+
+    def test_no_headset_powered_field(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b7_packet()
+        result = mock_headset.get_battery()
+        assert not hasattr(result, "headset_powered")
+
+    def test_updates_headset_power(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b7_packet(powered=0x08)
+        mock_headset.get_battery()
+        assert mock_headset.connectivity.headset_power is True
+
+    def test_headset_power_off(self, mock_headset, mock_transport):
+        mock_transport.query.return_value = make_b7_packet(powered=0x01)
+        mock_headset.get_battery()
+        assert mock_headset.connectivity.headset_power is False
+
+
+# ── Connectivity state management ─────────────────────────────────────────────
+
+
+def _make_b5_event(mode: int = 0x01, bt_connected: int = 0x02, wireless: int = 0x08) -> list[int]:
+    pkt = [0] * 64
+    pkt[0] = 0x07
+    pkt[1] = 0xB5
+    pkt[2] = mode
+    pkt[3] = bt_connected
+    pkt[4] = wireless
+    return pkt
+
+
+def _make_b7_event(hbat: int = 8, dbat: int = 8, powered: int = 0x08) -> list[int]:
+    pkt = [0] * 64
+    pkt[0] = 0x07
+    pkt[1] = 0xB7
+    pkt[2] = hbat
+    pkt[3] = dbat
+    pkt[4] = powered
+    return pkt
+
+
+class TestConnectivityStateManagement:
+    def test_initial_usb_is_true(self, mock_headset, mock_transport):
+        assert mock_headset.connectivity.usb is True
+
+    def test_b5_event_emits_connectivity_event(self, mock_headset, mock_transport):
+        received = []
+        mock_headset.on("ConnectivityEvent", received.append)
+        mock_headset._process_packet("evt", _make_b5_event(0x04, 0x01, 0x08))
+        assert len(received) == 1
+        assert isinstance(received[0], ConnectivityEvent)
+        assert isinstance(received[0].connectivity, ConnectivityStatus)
+
+    def test_b5_event_bt_connected(self, mock_headset, mock_transport):
+        mock_headset._process_packet("evt", _make_b5_event(mode=0x04, bt_connected=0x01, wireless=0x08))
+        assert mock_headset.connectivity.bt == BtStatus.CONNECTED
+
+    def test_b5_event_bt_on(self, mock_headset, mock_transport):
+        mock_headset._process_packet("evt", _make_b5_event(mode=0x04, bt_connected=0x02, wireless=0x08))
+        assert mock_headset.connectivity.bt == BtStatus.ON
+
+    def test_b5_event_bt_pairing(self, mock_headset, mock_transport):
+        mock_headset._process_packet("evt", _make_b5_event(mode=0x02, bt_connected=0x02, wireless=0x04))
+        assert mock_headset.connectivity.bt == BtStatus.PAIRING
+
+    def test_b5_event_wireless_true(self, mock_headset, mock_transport):
+        mock_headset._process_packet("evt", _make_b5_event(wireless=0x08))
+        assert mock_headset.connectivity.wireless is True
+
+    def test_b5_event_wireless_false_searching(self, mock_headset, mock_transport):
+        mock_headset._process_packet("evt", _make_b5_event(wireless=0x04))
+        assert mock_headset.connectivity.wireless is False
+
+    def test_b5_event_wireless_zero_ignored(self, mock_headset, mock_transport):
+        # Set a known wireless state first
+        mock_headset._cs_wireless_raw = 0x08
+        # Then fire event with 0x00 — should NOT overwrite
+        mock_headset._process_packet("evt", _make_b5_event(wireless=0x00))
+        assert mock_headset.connectivity.wireless is True  # preserved
+
+    def test_b7_event_emits_battery_and_connectivity_events(self, mock_headset, mock_transport):
+        battery_events = []
+        conn_events = []
+        mock_headset.on("BatteryEvent", battery_events.append)
+        mock_headset.on("ConnectivityEvent", conn_events.append)
+        mock_headset._process_packet("evt", _make_b7_event(hbat=8, dbat=4, powered=0x08))
+        assert len(battery_events) == 1
+        assert len(conn_events) == 1
+        assert battery_events[0].headset_pct == pytest.approx(100.0)
+
+    def test_b7_event_updates_headset_power(self, mock_headset, mock_transport):
+        mock_headset._process_packet("evt", _make_b7_event(powered=0x08))
+        assert mock_headset.connectivity.headset_power is True
+
+    def test_b7_event_headset_power_off(self, mock_headset, mock_transport):
+        mock_headset._process_packet("evt", _make_b7_event(powered=0x01))
+        assert mock_headset.connectivity.headset_power is False
+
+    def test_b7_event_no_headset_powered_field_in_battery_event(self, mock_headset, mock_transport):
+        received = []
+        mock_headset.on("BatteryEvent", received.append)
+        mock_headset._process_packet("evt", _make_b7_event())
+        assert not hasattr(received[0], "headset_powered")
+
+    def test_usb_disconnects_sets_false(self, mock_headset, mock_transport):
+        mock_transport.poll.side_effect = DeviceIOError("read error")
+        stop = threading.Event()
+        mock_headset._stop_event = stop
+        with patch.object(mock_headset, "_reconnect_until_found", return_value=False):
+            mock_headset._poll_loop(stop)
+        assert mock_headset._cs_usb is False
+
+    def test_usb_reconnects_sets_true(self, mock_headset, mock_transport):
+        stop = threading.Event()
+        poll_calls = 0
+
+        def poll_side_effect(*args, **kwargs):
+            nonlocal poll_calls
+            poll_calls += 1
+            if poll_calls == 1:
+                raise DeviceIOError("disconnected")
+            stop.set()
+            return []
+
+        mock_transport.poll.side_effect = poll_side_effect
+        mock_headset._stop_event = stop
+
+        with patch.object(mock_headset, "_reconnect_until_found", return_value=True):
+            mock_headset._poll_loop(stop)
+
+        assert mock_headset._cs_usb is True
 
 
 # ── Write methods — correct command byte + payload + save ─────────────────────

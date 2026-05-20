@@ -13,6 +13,7 @@ from ...core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    BtStatus,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
@@ -24,7 +25,18 @@ from ...exceptions import DeviceIOError
 from ..base import AbstractHeadset, AbstractOled
 from . import constants as C
 from . import codec
-from .models import BatteryData, ConnectivityData, DeviceDisconnectedEvent, DeviceReconnectedEvent, DisplayData, MicEqData, StatusData, VolumeLimiterData
+from .models import (
+    BatteryData,
+    BatteryEvent,
+    ConnectivityEvent,
+    ConnectivityStatus,
+    DeviceDisconnectedEvent,
+    DeviceReconnectedEvent,
+    DisplayData,
+    MicEqData,
+    StatusData,
+    VolumeLimiterData,
+)
 
 
 class ArctisNovaProWireless(AbstractHeadset):
@@ -34,12 +46,13 @@ class ArctisNovaProWireless(AbstractHeadset):
 
         with discover() as h:
             print(h.get_status())
+            print(h.connectivity)
             h.set_volume(75)
 
     Usage — event mode::
 
         with discover() as h:
-            h.on("VolumeEvent", lambda e: print(e.percent))
+            h.on("ConnectivityEvent", lambda e: print(e.connectivity))
             h.listen()   # blocks; Ctrl-C to exit
     """
 
@@ -52,6 +65,15 @@ class ArctisNovaProWireless(AbstractHeadset):
         self._thread:     threading.Thread | None = None
         self._oled_controller: AbstractOled | None = None
 
+        # ── internal connectivity state ────────────────────────────────────
+        # Updated incrementally by queries and events; never exposed directly.
+        self._cs_usb:           bool = True   # True from the moment the instance is created
+        self._cs_headset_power: bool = False  # unknown until first query
+        self._cs_wireless_raw:  int  = 0x00  # 0x00=unknown, 0x04=searching, 0x08=active
+        self._cs_mode_raw:      int  = 0x01  # default: WIRELESS_ONLY
+        self._cs_bt_active:     bool = False
+        self._cs_bt_connected:  bool = False
+
     # ── lifecycle ──────────────────────────────────────────────────────────
 
     def open(self) -> None:
@@ -61,10 +83,27 @@ class ArctisNovaProWireless(AbstractHeadset):
         self.stop()
         self._transport.close()
 
+    # ── connectivity ───────────────────────────────────────────────────────
+
+    @property
+    def connectivity(self) -> ConnectivityStatus:
+        """Current connectivity state, updated by queries and events."""
+        return ConnectivityStatus(
+            usb           = self._cs_usb,
+            headset_power = self._cs_headset_power,
+            wireless      = (self._cs_wireless_raw == 0x08),
+            bt            = codec._derive_bt_status(
+                                self._cs_mode_raw,
+                                self._cs_bt_active,
+                                self._cs_bt_connected,
+                            ),
+        )
+
     # ── queries ────────────────────────────────────────────────────────────
 
     def get_status(self) -> StatusData:
         data = self._transport.query(C.CMD_STATUS)
+        self._apply_b0_conn(codec.decode_b0_conn(data))
         return codec.decode_status_packet(data)
 
     def get_mic_eq(self) -> MicEqData:
@@ -79,9 +118,11 @@ class ArctisNovaProWireless(AbstractHeadset):
         data = self._transport.query(C.CMD_SERIAL)
         return codec.decode_ascii_response(data)
 
-    def get_connectivity(self) -> ConnectivityData:
+    def get_connectivity(self) -> ConnectivityStatus:
+        """Query 0xB5 and return the updated ConnectivityStatus."""
         data = self._transport.query(C.CMD_CONNECTIVITY)
-        return codec.decode_connectivity_packet(data)
+        self._apply_b5_conn(codec.decode_b5_query(data), from_event=False)
+        return self.connectivity
 
     def get_display(self) -> DisplayData:
         data = self._transport.query(C.CMD_DISPLAY)
@@ -93,6 +134,7 @@ class ArctisNovaProWireless(AbstractHeadset):
 
     def get_battery(self) -> BatteryData:
         data = self._transport.query(C.CMD_BATTERY)
+        self._cs_headset_power = data[C.B7_PWR] == 0x08
         return codec.decode_battery_packet(data)
 
     # ── writes ─────────────────────────────────────────────────────────────
@@ -247,7 +289,38 @@ class ArctisNovaProWireless(AbstractHeadset):
             self._oled_controller = ArctisNovaProOled(self._transport)
         return self._oled_controller  # type: ignore[return-value]
 
-    # ── internal ───────────────────────────────────────────────────────────
+    # ── internal — connectivity state ──────────────────────────────────────
+
+    def _apply_b0_conn(self, raw: codec._B0ConnRaw) -> None:
+        """Apply connectivity/power fields from a 0xB0 status packet.
+
+        Updates mode_raw, bt_active, headset_power, and wireless_raw
+        (wireless_raw is only updated when the packet carries a non-zero value).
+        bt_connected is NOT available in 0xB0 and is intentionally left unchanged.
+        """
+        self._cs_mode_raw      = raw.mode_raw
+        self._cs_bt_active     = raw.bt_active
+        self._cs_headset_power = raw.headset_power
+        if raw.wireless_raw != 0x00:
+            self._cs_wireless_raw = raw.wireless_raw
+
+    def _apply_b5_conn(self, raw: codec._B5QueryRaw | codec._B5EventRaw, *, from_event: bool) -> None:
+        """Apply connectivity fields from a 0xB5 query or event packet.
+
+        For query (from_event=False): updates mode_raw, bt_connected.
+        For event (from_event=True): also updates wireless_raw (if non-zero)
+        and derives bt_active from mode_raw.
+        bt_active is NOT carried in the 0xB5 query path.
+        """
+        self._cs_mode_raw    = raw.mode_raw
+        self._cs_bt_connected = raw.bt_connected
+        if from_event:
+            # Derive bt_active from mode: BT is "active" when mode includes BT
+            self._cs_bt_active = raw.mode_raw in (0x02, 0x04)
+            if hasattr(raw, "wireless_raw") and raw.wireless_raw != 0x00:  # type: ignore[union-attr]
+                self._cs_wireless_raw = raw.wireless_raw  # type: ignore[union-attr]
+
+    # ── internal — poll loop ───────────────────────────────────────────────
 
     def _save(self) -> None:
         self._transport.write(C.CMD_SAVE)
@@ -258,9 +331,11 @@ class ArctisNovaProWireless(AbstractHeadset):
                 packets = self._transport.poll(C.POLL_TIMEOUT_MS)
             except DeviceIOError:
                 self._transport.close()
+                self._cs_usb = False
                 self._dispatcher.emit_typed(DeviceDisconnectedEvent())
                 if not self._reconnect_until_found(stop_event):
                     break
+                self._cs_usb = True
                 self._dispatcher.emit_typed(DeviceReconnectedEvent())
                 continue
             for source, data in packets:
@@ -307,5 +382,17 @@ class ArctisNovaProWireless(AbstractHeadset):
         if len(data) < 2:
             return
         event = codec.decode_event(data)
-        if event is not None:
+        if event is None:
+            return
+        if isinstance(event, codec._B5EventRaw):
+            self._apply_b5_conn(event, from_event=True)
+            self._dispatcher.emit_typed(ConnectivityEvent(connectivity=self.connectivity))
+        elif isinstance(event, codec._B7EventRaw):
+            self._cs_headset_power = event.headset_power
+            self._dispatcher.emit_typed(BatteryEvent(
+                headset_pct=event.headset_pct,
+                dock_pct=event.dock_pct,
+            ))
+            self._dispatcher.emit_typed(ConnectivityEvent(connectivity=self.connectivity))
+        else:
             self._dispatcher.emit_typed(event)

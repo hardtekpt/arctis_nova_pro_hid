@@ -74,8 +74,7 @@ from arctis_hid import (
     AudioOutput,
     BatteryData,
     BtAutoMute,
-    ConnectivityData,
-    ConnectivityMode,
+    ConnectivityStatus,
     DisplayData,
     GainLevel,
     HomeScreenMode,
@@ -116,8 +115,6 @@ def _print_status(s: StatusData) -> None:
     _sep("Status (0xB0)")
     print(f"  Headset battery  : {s.headset_battery_pct:.0f}%")
     print(f"  Dock battery     : {s.dock_battery_pct:.0f}%")
-    print(f"  Connectivity     : {s.connectivity_mode.name}  (0xB0[4]={s.connectivity_mode.value:#04x})")
-    print(f"  BT active        : {s.bt_active}")
     print(f"  BT default       : {'on' if s.bt_default else 'off'}  (0xB0[2])")
     print(f"  BT auto-mute     : {s.bt_auto_mute.name}  (0xB0[3]={s.bt_auto_mute.value:#04x})")
     print(f"  Transparency     : {s.transparency_level}/10  (0xB0[8])")
@@ -126,8 +123,6 @@ def _print_status(s: StatusData) -> None:
     print(f"  Mic LED brightness: {s.mic_led_brightness}/10  (0xB0[11]={s.mic_led_brightness:#04x})")
     print(f"  Auto-off timeout : {s.auto_off_timeout.name}  (0xB0[12]={s.auto_off_timeout.value:#04x})")
     print(f"  Wireless mode    : {s.wireless_mode.name}  (0xB0[13]={s.wireless_mode.value:#04x})")
-    print(f"  Wireless link    : {s.wireless_link_state.name}  (0xB0[14]={s.wireless_link_state.value:#04x})")
-    print(f"  Headset powered  : {s.headset_powered}  (0xB0[15]={'0x08' if s.headset_powered else '0x01'})")
 
 
 def _print_display(d: DisplayData) -> None:
@@ -138,10 +133,12 @@ def _print_display(d: DisplayData) -> None:
     print(f"  GG Sonar running : {d.sonar_running}  (0x80[7])")
 
 
-def _print_connectivity(c: ConnectivityData) -> None:
+def _print_connectivity(c: ConnectivityStatus) -> None:
     _sep("Connectivity (0xB5)")
-    print(f"  Connectivity mode: {c.connectivity_mode.name}  (0xB5[3]={c.connectivity_mode.value:#04x})")
-    print(f"  BT connected     : {c.bt_connected}  (0xB5[4])")
+    print(f"  USB connected    : {c.usb}")
+    print(f"  Headset power    : {c.headset_power}")
+    print(f"  Wireless active  : {c.wireless}")
+    print(f"  BT status        : {c.bt}")
 
 
 def _print_vol_limiter(vl: VolumeLimiterData) -> None:
@@ -153,7 +150,6 @@ def _print_battery(b: BatteryData) -> None:
     _sep("Battery (0xB7)")
     print(f"  Headset battery  : {b.headset_pct:.0f}%  (0xB7[2])")
     print(f"  Dock battery     : {b.dock_pct:.0f}%  (0xB7[3])")
-    print(f"  Headset powered  : {b.headset_powered}  (0xB7[4]={'0x08' if b.headset_powered else '0x01'})")
 
 
 def _print_miceq(m: MicEqData) -> None:
@@ -263,7 +259,7 @@ def cmd_listen(args) -> None:
         h.on("MicVolumeEvent",      lambda e: print(f"[MicVolume]       {e.level}"))
         h.on("OledBrightnessEvent", lambda e: print(f"[OledBrightness]  {e.level}/10"))
         h.on("TransparencyEvent",   lambda e: print(f"[Transparency]    {e.level}/10"))
-        h.on("ConnectivityEvent",   lambda e: print(f"[Connectivity]    mode={e.mode.name} ({e.mode.value:#04x})  bt={e.bt_active}  bt_connected={e.bt_connected}  wireless={e.wireless}"))
+        h.on("ConnectivityEvent",   lambda e: print(f"[Connectivity]    usb={e.connectivity.usb}  power={e.connectivity.headset_power}  wireless={e.connectivity.wireless}  bt={e.connectivity.bt}"))
         h.on("WirelessModeEvent",   lambda e: print(f"[WirelessMode]    {e.mode.name}"))
         h.on("BtDefaultEvent",      lambda e: print(f"[BtDefault]       {'on' if e.enabled else 'off'}"))
         h.on("BtAutoMuteEvent",     lambda e: print(f"[BtAutoMute]      {e.mode.name}"))

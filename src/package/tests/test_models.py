@@ -9,12 +9,12 @@ from arctis_hid.core.types import (
     AncMode,
     AudioOutput,
     BtAutoMute,
+    BtStatus,
     ConnectivityMode,
     GainLevel,
     HomeScreenMode,
     SidetoneLevel,
     TimeoutStep,
-    WirelessLinkState,
     WirelessMode,
 )
 from arctis_hid.devices.nova_pro.models import (
@@ -26,12 +26,12 @@ from arctis_hid.devices.nova_pro.models import (
     BtDefaultEvent,
     ChatMixEvent,
     ConnectivityEvent,
+    ConnectivityStatus,
     DimTimeoutEvent,
     DisplayData,
     EqBandEvent,
     EqPresetEvent,
     GainEvent,
-    HeadsetPoweredEvent,
     HomeScreenEvent,
     MicEqData,
     MicLedEvent,
@@ -47,6 +47,61 @@ from arctis_hid.devices.nova_pro.models import (
 )
 
 
+# ── ConnectivityStatus ─────────────────────────────────────────────────────────
+
+
+class TestConnectivityStatus:
+    def _make(self, **kwargs) -> ConnectivityStatus:
+        defaults = dict(usb=True, headset_power=True, wireless=True, bt=BtStatus.OFF)
+        return ConnectivityStatus(**{**defaults, **kwargs})
+
+    def test_is_dataclass(self):
+        assert dataclasses.is_dataclass(ConnectivityStatus)
+
+    def test_usb_is_bool(self):
+        assert isinstance(self._make(usb=True).usb, bool)
+
+    def test_headset_power_is_bool(self):
+        assert isinstance(self._make(headset_power=False).headset_power, bool)
+
+    def test_wireless_is_bool(self):
+        assert isinstance(self._make(wireless=True).wireless, bool)
+
+    def test_bt_is_bt_status(self):
+        assert isinstance(self._make(bt=BtStatus.CONNECTED).bt, BtStatus)
+
+    def test_field_values_stored_correctly(self):
+        cs = ConnectivityStatus(usb=True, headset_power=False, wireless=True, bt=BtStatus.ON)
+        assert cs.usb is True
+        assert cs.headset_power is False
+        assert cs.wireless is True
+        assert cs.bt == BtStatus.ON
+
+
+# ── BtStatus ───────────────────────────────────────────────────────────────────
+
+
+class TestBtStatus:
+    def test_off_value(self):
+        assert BtStatus.OFF == "OFF"
+
+    def test_on_value(self):
+        assert BtStatus.ON == "ON"
+
+    def test_pairing_value(self):
+        assert BtStatus.PAIRING == "PAIRING"
+
+    def test_connected_value(self):
+        assert BtStatus.CONNECTED == "CONNECTED"
+
+    def test_is_str_enum(self):
+        assert isinstance(BtStatus.OFF, str)
+
+    def test_all_members(self):
+        members = {m.value for m in BtStatus}
+        assert members == {"OFF", "ON", "PAIRING", "CONNECTED"}
+
+
 # ── StatusData ─────────────────────────────────────────────────────────────────
 
 
@@ -55,8 +110,6 @@ class TestStatusData:
         defaults = dict(
             headset_battery_pct=100.0,
             dock_battery_pct=50.0,
-            connectivity_mode=ConnectivityMode.WIRELESS_ONLY,
-            bt_active=False,
             transparency_level=5,
             mic_muted=False,
             anc_mode=AncMode.OFF,
@@ -65,8 +118,6 @@ class TestStatusData:
             bt_default=False,
             bt_auto_mute=BtAutoMute.OFF,
             auto_off_timeout=TimeoutStep.OFF,
-            wireless_link_state=WirelessLinkState.ACTIVE,
-            headset_powered=True,
         )
         return StatusData(**{**defaults, **kwargs})
 
@@ -80,9 +131,6 @@ class TestStatusData:
     def test_dock_battery_pct_is_float(self):
         sd = self._make(dock_battery_pct=25.0)
         assert isinstance(sd.dock_battery_pct, float)
-
-    def test_bt_active_is_bool(self):
-        assert isinstance(self._make(bt_active=True).bt_active, bool)
 
     def test_mic_muted_is_bool(self):
         assert isinstance(self._make(mic_muted=True).mic_muted, bool)
@@ -98,6 +146,13 @@ class TestStatusData:
         assert sd.headset_battery_pct == 80.0
         assert sd.mic_muted is True
         assert sd.anc_mode == AncMode.ANC
+
+    def test_no_connectivity_fields(self):
+        sd = self._make()
+        assert not hasattr(sd, "connectivity_mode")
+        assert not hasattr(sd, "bt_active")
+        assert not hasattr(sd, "wireless_link_state")
+        assert not hasattr(sd, "headset_powered")
 
 
 # ── MicEqData ──────────────────────────────────────────────────────────────────
@@ -191,24 +246,17 @@ class TestEventDataclasses:
         assert isinstance(e.percent, float)
 
     def test_battery_event(self):
-        e = BatteryEvent(headset_pct=100.0, dock_pct=50.0, headset_powered=True)
+        e = BatteryEvent(headset_pct=100.0, dock_pct=50.0)
         assert e.headset_pct == 100.0
         assert e.dock_pct == 50.0
-        assert e.headset_powered is True
+        assert not hasattr(e, "headset_powered")
 
     def test_connectivity_event(self):
-        e = ConnectivityEvent(
-            mode=ConnectivityMode.WIRELESS_AND_BT,
-            bt_active=True,
-            bt_connected=True,
-            wireless=True,
-            wireless_link_state=WirelessLinkState.ACTIVE,
-        )
-        assert e.mode == ConnectivityMode.WIRELESS_AND_BT
-        assert e.bt_active is True
-        assert e.bt_connected is True
-        assert e.wireless is True
-        assert e.wireless_link_state == WirelessLinkState.ACTIVE
+        cs = ConnectivityStatus(usb=True, headset_power=True, wireless=True, bt=BtStatus.CONNECTED)
+        e = ConnectivityEvent(connectivity=cs)
+        assert e.connectivity is cs
+        assert e.connectivity.usb is True
+        assert e.connectivity.bt == BtStatus.CONNECTED
 
     def test_anc_mode_event(self):
         e = AncModeEvent(mode=AncMode.ANC)
@@ -276,10 +324,6 @@ class TestEventDataclasses:
     def test_auto_off_event(self):
         assert AutoOffEvent(step=TimeoutStep.SIXTY_MIN).step == TimeoutStep.SIXTY_MIN
 
-    def test_headset_powered_event(self):
-        assert HeadsetPoweredEvent(powered=True).powered is True
-        assert HeadsetPoweredEvent(powered=False).powered is False
-
 
 # ── All event dataclasses are regular (mutable) dataclasses ───────────────────
 
@@ -289,7 +333,7 @@ _ALL_EVENT_CLASSES = [
     ChatMixEvent, GainEvent, MicVolumeEvent, SidetoneEvent, OledBrightnessEvent,
     TransparencyEvent, WirelessModeEvent, BtDefaultEvent, BtAutoMuteEvent,
     AudioOutputEvent, StreamVolumesEvent, EqPresetEvent, EqBandEvent,
-    DimTimeoutEvent, HomeScreenEvent, MicLedEvent, AutoOffEvent, HeadsetPoweredEvent,
+    DimTimeoutEvent, HomeScreenEvent, MicLedEvent, AutoOffEvent,
 ]
 
 
@@ -344,6 +388,13 @@ class TestEnums:
         assert HomeScreenMode.SIMPLE == 1
 
     def test_connectivity_mode_values(self):
+        # ConnectivityMode remains as an internal type in core/types.py
         assert ConnectivityMode.WIRELESS_ONLY == 0x01
         assert ConnectivityMode.BT_PAIRING == 0x02
         assert ConnectivityMode.WIRELESS_AND_BT == 0x04
+
+    def test_bt_status_values(self):
+        assert BtStatus.OFF == "OFF"
+        assert BtStatus.ON == "ON"
+        assert BtStatus.PAIRING == "PAIRING"
+        assert BtStatus.CONNECTED == "CONNECTED"

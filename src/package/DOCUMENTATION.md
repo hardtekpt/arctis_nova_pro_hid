@@ -27,7 +27,7 @@ pip install -e 'src/package/[oled]'   # adds Pillow for OLED drawing
 6. [Data Models](#data-models)
    - [`StatusData`](#statusdata)
    - [`MicEqData`](#miceqdata)
-   - [`ConnectivityData`](#connectivitydata)
+   - [`ConnectivityStatus`](#connectivitystatus)
    - [`DisplayData`](#displaydata)
    - [`VolumeLimiterData`](#volumelimiterdata)
    - [`BatteryData`](#batterydata)
@@ -150,13 +150,13 @@ Return the firmware version string (ASCII, from command `0x10`).
 #### `get_serial_number() → str`
 Return the device serial number (ASCII, from command `0x12`).
 
-#### `get_connectivity() → ConnectivityData`
-Query the connectivity mode and BT connection state directly (from command `0xB5`).
+#### `get_connectivity() → ConnectivityStatus`
+Query command `0xB5` and return the live `ConnectivityStatus`. Also updates the `headset.connectivity` property.
 
 ```python
 c = h.get_connectivity()
-print(c.connectivity_mode)   # ConnectivityMode.WIRELESS_AND_BT
-print(c.bt_connected)        # True
+print(c.bt)        # BtStatus.CONNECTED
+print(c.wireless)  # True
 ```
 
 #### `get_display() → DisplayData`
@@ -166,7 +166,7 @@ Query the base-station display settings: dim screen timeout, OLED brightness, ho
 Query the volume limiter state (from command `0x26`).
 
 #### `get_battery() → BatteryData`
-Query the battery levels: headset and dock (from command `0xB7`).
+Query the battery levels: headset and dock (from command `0xB7`). Also updates `headset.connectivity.headset_power`.
 
 ```python
 d = h.get_display()
@@ -178,6 +178,17 @@ print(d.sonar_running)      # False
 b = h.get_battery()
 print(b.headset_pct)        # 85.0
 print(b.dock_pct)           # 100.0
+```
+
+#### `connectivity → ConnectivityStatus`  *(property)*
+Return the live connectivity state. Derived from six internal scalars updated by every query and event. Never stale relative to the last query or event.
+
+```python
+cs = h.connectivity
+print(cs.usb)           # True
+print(cs.headset_power) # True
+print(cs.wireless)      # True
+print(cs.bt)            # BtStatus.CONNECTED
 ```
 
 ---
@@ -506,26 +517,24 @@ with discover() as h:
 
 ### `StatusData`
 
-Returned by `get_status()`. Snapshot of headset status.
+Returned by `get_status()`. Snapshot of headset status. Calling `get_status()` also updates `headset.connectivity` for the fields available in the `0xB0` response.
 
 ```python
 @dataclass
 class StatusData:
-    headset_battery_pct: float          # 0.0–100.0
-    dock_battery_pct:    float          # 0.0–100.0
-    connectivity_mode:   ConnectivityMode  # WIRELESS_ONLY, BT_PAIRING, or WIRELESS_AND_BT
-    bt_active:           bool           # True if Bluetooth stream is active
-    transparency_level:  int            # 1–10  (0xB0[8]; meaningful in TRANSPARENCY mode)
+    headset_battery_pct: float       # 0.0–100.0
+    dock_battery_pct:    float       # 0.0–100.0
+    transparency_level:  int         # 1–10  (0xB0[8]; meaningful in TRANSPARENCY mode)
     mic_muted:           bool
     anc_mode:            AncMode
-    mic_led_brightness:  int            # 1–10  (0xB0[11])
+    mic_led_brightness:  int         # 1–10  (0xB0[11])
     wireless_mode:       WirelessMode
-    bt_default:          bool              # 0xB0[2]: True=on (BT auto-connect enabled)
-    bt_auto_mute:        BtAutoMute        # 0xB0[3]: OFF / DB_MINUS_12 / FULL
-    auto_off_timeout:    TimeoutStep       # 0xB0[12]: OFF=0 … SIXTY_MIN=6
-    wireless_link_state: WirelessLinkState # 0xB0[14]: ABSENT / SEARCHING / ACTIVE
-    headset_powered:     bool              # 0xB0[15]: True=on, False=off/removed
+    bt_default:          bool        # 0xB0[2]: True=on (BT auto-connect enabled)
+    bt_auto_mute:        BtAutoMute  # 0xB0[3]: OFF / DB_MINUS_12 / FULL
+    auto_off_timeout:    TimeoutStep # 0xB0[12]: OFF=0 … SIXTY_MIN=6
 ```
+
+For connectivity and power state use the `headset.connectivity` property (a `ConnectivityStatus` object), which is updated by every query and event.
 
 ---
 
@@ -553,15 +562,43 @@ class MicEqData:
 
 ---
 
-### `ConnectivityData`
+### `ConnectivityStatus`
 
-Returned by `get_connectivity()`. Snapshot of connectivity state from command `0xB5`.
+Returned by `get_connectivity()` and exposed as the `headset.connectivity` property. Represents the full live connectivity state maintained by the headset instance.
 
 ```python
 @dataclass
-class ConnectivityData:
-    connectivity_mode: ConnectivityMode  # 0xB5[3]: WIRELESS_ONLY, BT_PAIRING, or WIRELESS_AND_BT
-    bt_connected:      bool              # 0xB5[4]: True if a BT device is connected
+class ConnectivityStatus:
+    usb:           bool       # True from instance creation; False while USB HID is disconnected
+    headset_power: bool       # True if the headset is powered on (from 0xB0[15] or 0xB7[4])
+    wireless:      bool       # True if the 2.4 GHz wireless link is active (wireless_raw == 0x08)
+    bt:            BtStatus   # Derived BT state: OFF / ON / PAIRING / CONNECTED
+```
+
+The `bt` field is derived from multiple sources using priority order:
+
+| Priority | Condition | Result |
+|----------|-----------|--------|
+| 1 | `bt_connected` is True | `BtStatus.CONNECTED` |
+| 2 | `mode_raw == 0x02` | `BtStatus.PAIRING` |
+| 3 | `mode_raw == 0x04` or `bt_active` | `BtStatus.ON` |
+| 4 | otherwise | `BtStatus.OFF` |
+
+**`headset.connectivity` property:** The headset instance maintains six internal scalars (`_cs_usb`, `_cs_headset_power`, `_cs_wireless_raw`, `_cs_mode_raw`, `_cs_bt_active`, `_cs_bt_connected`) and derives a fresh `ConnectivityStatus` on each access. These are updated by:
+
+- `get_status()` — updates `mode_raw`, `bt_active`, `headset_power`, `wireless_raw` (if non-zero)
+- `get_connectivity()` — updates `mode_raw`, `bt_connected`
+- `get_battery()` — updates `headset_power`
+- `0xB5` connectivity events — updates all fields including `wireless_raw`
+- `0xB7` battery events — updates `headset_power`
+- USB disconnect/reconnect — updates `usb`
+
+```python
+cs = h.connectivity
+print(cs.usb)           # True
+print(cs.headset_power) # True
+print(cs.wireless)      # True
+print(cs.bt)            # BtStatus.CONNECTED
 ```
 
 ---
@@ -597,14 +634,13 @@ class VolumeLimiterData:
 
 ### `BatteryData`
 
-Returned by `get_battery()`. Battery levels for headset and dock from command `0xB7`.
+Returned by `get_battery()`. Battery levels for headset and dock from command `0xB7`. Calling `get_battery()` also updates `headset.connectivity.headset_power`.
 
 ```python
 @dataclass
 class BatteryData:
     headset_pct: float   # 0xB7[2]: raw ÷ 8 × 100 = %
     dock_pct:    float   # 0xB7[3]: raw ÷ 8 × 100 = %
-    headset_powered: bool   # 0xB7[4]: True=on, False=off/removed
 ```
 
 ---
@@ -618,9 +654,8 @@ Each event is a dataclass. The callback receives a single instance.
 | Class | Trigger | Fields |
 |-------|---------|--------|
 | `VolumeEvent` | Volume wheel turned | `percent: float` (0–100) |
-| `BatteryEvent` | Battery level update | `headset_pct: float`, `dock_pct: float`, `headset_powered: bool` |
-| `HeadsetPoweredEvent` | Headset powered on/removed | `powered: bool` |
-| `ConnectivityEvent` | Wireless connection changed | `mode: ConnectivityMode`, `bt_active: bool` (True when mode is `WIRELESS_AND_BT` or `BT_PAIRING`), `bt_connected: bool` (True when a BT device is paired and connected, data[3]==0x01), `wireless: bool` (True only when link is ACTIVE), `wireless_link_state: WirelessLinkState` (SEARCHING=0x04 or ACTIVE=0x08) |
+| `BatteryEvent` | Battery level update | `headset_pct: float`, `dock_pct: float` |
+| `ConnectivityEvent` | Wireless connection changed or battery event with power state change | `connectivity: ConnectivityStatus` — the full live state at the moment of the event |
 | `AncModeEvent` | ANC button pressed | `mode: AncMode` |
 | `MicMuteEvent` | Mic mute button pressed | `muted: bool` |
 | `ChatMixEvent` | ChatMix dial turned | `game: int` (0–100), `chat: int` (0–100) |
@@ -655,7 +690,7 @@ Each event is a dataclass. The callback receives a single instance.
 
 ## Enums
 
-All enums are `IntEnum` subclasses and can be compared directly with their integer values.
+All enums are `IntEnum` subclasses (or `str, Enum` for `BtStatus`) and can be compared directly with their values.
 
 ### `AncMode`
 ```python
@@ -665,13 +700,14 @@ class AncMode(IntEnum):
     ANC          = 2
 ```
 
-### `ConnectivityMode`
-Which radio links are active (returned by `StatusData.connectivity_mode` and `ConnectivityEvent.mode`).
+### `BtStatus`
+Bluetooth state, derived from the raw connectivity bytes and exposed via `ConnectivityStatus.bt`.
 ```python
-class ConnectivityMode(IntEnum):
-    WIRELESS_ONLY   = 0x01   # 2.4 GHz wireless link only
-    BT_PAIRING      = 0x02   # Bluetooth pairing mode active
-    WIRELESS_AND_BT = 0x04   # 2.4 GHz wireless + Bluetooth active
+class BtStatus(str, Enum):
+    OFF       = "OFF"        # BT not active
+    ON        = "ON"         # BT active (mode=0x04 or bt_active flag set)
+    PAIRING   = "PAIRING"    # BT pairing mode active (mode=0x02)
+    CONNECTED = "CONNECTED"  # a BT device is connected (bt_connected=True)
 ```
 
 ### `GainLevel`
@@ -705,15 +741,6 @@ class AudioOutput(IntEnum):
 class HomeScreenMode(IntEnum):
     DETAILED = 0
     SIMPLE   = 1
-```
-
-### `WirelessLinkState`
-State of the 2.4 GHz wireless link, decoded from `0xB0[14]` (query snapshot) and `0xB5` event `[4]` (live update).
-```python
-class WirelessLinkState(IntEnum):
-    ABSENT   = 0x02   # headset completely absent or powered off (B0[14] only)
-    SEARCHING = 0x04  # base station searching / pairing in progress
-    ACTIVE   = 0x08   # 2.4 GHz wireless link established
 ```
 
 ### `WirelessMode`
